@@ -1,0 +1,13 @@
+{
+  "@type": "Person",
+  "@id": "#{{entity_id}}",
+  "name": "{{canonical_name}}",
+  "description": "{{description}}",
+  "jobTitle": "{{job_title}}",
+  "worksFor": {
+    "@id": "#{{works_for}}"
+  },
+  "url": "{{url}}",
+  "image": "{{image_url}}",
+  "sameAs": []
+}

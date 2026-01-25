@@ -1,0 +1,35 @@
+{
+  "client_id": "example-client",
+  "client_name": "Example Client Inc.",
+  
+  "entity_library_url": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID_HERE",
+  "site_index_source": "https://example-client.com/sitemap.xml",
+  "publisher_entity_id": "org-example-client-inc",
+  
+  "confidence_thresholds": {
+    "auto_add_active": 85,
+    "auto_add_pending": 60,
+    "minimum_for_schema": 60
+  },
+  
+  "factor_weights": {
+    "exact_site_match": 30,
+    "partial_site_match": 15,
+    "consistent_context": 20,
+    "linked_entity": 15,
+    "structured_data_found": 10,
+    "web_corroboration": 10
+  },
+  
+  "staleness_config": {
+    "days_until_stale": 90,
+    "auto_reverify_on_use": true,
+    "flag_conflicts_for_review": true
+  },
+  
+  "source_priority": ["library", "site_content", "site_schema", "web_search"],
+  
+  "google_credentials_path": "/path/to/service-account.json",
+  
+  "notes": "Replace YOUR_SPREADSHEET_ID_HERE with the actual Google Sheets ID"
+}

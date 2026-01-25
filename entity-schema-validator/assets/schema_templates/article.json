@@ -1,0 +1,12 @@
+{
+  "@type": "Article",
+  "@id": "#article",
+  "headline": "{{headline}}",
+  "datePublished": "{{date_published}}",
+  "author": {
+    "@id": "#{{author_entity_id}}"
+  },
+  "publisher": {
+    "@id": "#{{publisher_entity_id}}"
+  }
+}

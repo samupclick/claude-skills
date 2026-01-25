@@ -1,0 +1,347 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 950">
+  <defs>
+    <style>
+      .title { font: bold 28px Arial, sans-serif; fill: #1a1a2e; }
+      .subtitle { font: 14px Arial, sans-serif; fill: #666; }
+      .stage-label { font: bold 12px Arial, sans-serif; fill: white; }
+      .stage-num { font: bold 10px Arial, sans-serif; fill: rgba(255,255,255,0.8); }
+      .stage-desc { font: 10px Arial, sans-serif; fill: #444; }
+      .section-label { font: bold 14px Arial, sans-serif; fill: #1a1a2e; }
+      .subsection { font: bold 12px Arial, sans-serif; fill: #555; }
+      .note { font: 11px Arial, sans-serif; fill: #555; }
+      .note-small { font: 10px Arial, sans-serif; fill: #666; }
+      .note-italic { font: italic 11px Arial, sans-serif; fill: #777; }
+      .checkpoint { font: 10px Arial, sans-serif; fill: #555; }
+      .checkpoint-code { font: bold 10px monospace; fill: #2196F3; }
+      .arrow { fill: none; stroke: #999; stroke-width: 2; }
+      .version { font: bold 12px Arial, sans-serif; fill: #9C27B0; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#999"/>
+    </marker>
+    <marker id="arrowhead-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#f57c00"/>
+    </marker>
+    <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4CAF50"/>
+    </marker>
+
+    <!-- Gradient for header -->
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2d2d44;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1400" height="950" fill="#fafafa"/>
+
+  <!-- Header bar -->
+  <rect width="1400" height="70" fill="url(#headerGrad)"/>
+
+  <!-- Title -->
+  <text x="700" y="38" text-anchor="middle" style="font: bold 26px Arial, sans-serif; fill: white;">AEO Agency Pipeline Overview</text>
+  <text x="700" y="58" text-anchor="middle" style="font: 13px Arial, sans-serif; fill: rgba(255,255,255,0.8);">Complete workflow with skill orchestration, checkpoint validation, and human review gates</text>
+
+  <!-- Version badge -->
+  <rect x="1280" y="15" width="80" height="40" rx="6" fill="#9C27B0"/>
+  <text x="1320" y="32" text-anchor="middle" style="font: bold 11px Arial; fill: white;">v1.1.0</text>
+  <text x="1320" y="47" text-anchor="middle" style="font: 10px Arial; fill: rgba(255,255,255,0.8);">Final</text>
+
+  <!-- ==================== ROW 1: SALES + SETUP ==================== -->
+
+  <!-- Section Labels Row 1 -->
+  <text x="200" y="105" text-anchor="middle" class="section-label">SALES</text>
+  <text x="200" y="120" text-anchor="middle" class="note-small">(Manual)</text>
+  <text x="520" y="105" text-anchor="middle" class="section-label">SETUP</text>
+
+  <!-- Section backgrounds Row 1 -->
+  <rect x="40" y="130" width="380" height="120" rx="10" fill="#e3f2fd" opacity="0.6"/>
+  <rect x="440" y="130" width="160" height="120" rx="10" fill="#fff3e0" opacity="0.6"/>
+
+  <!-- SALES STAGES -->
+  <!-- Lead -->
+  <rect x="55" y="150" width="95" height="70" rx="8" fill="#2196F3"/>
+  <text x="102" y="175" text-anchor="middle" class="stage-label">LEAD</text>
+  <text x="102" y="195" text-anchor="middle" class="stage-num">1</text>
+  <text x="102" y="240" text-anchor="middle" class="stage-desc">New inquiry</text>
+  <text x="102" y="253" text-anchor="middle" class="note-small" style="fill:#1976D2">Schedule discovery</text>
+
+  <line x1="150" y1="185" x2="175" y2="185" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <!-- Discovery -->
+  <rect x="175" y="150" width="105" height="70" rx="8" fill="#2196F3"/>
+  <text x="227" y="175" text-anchor="middle" class="stage-label">DISCOVERY</text>
+  <text x="227" y="195" text-anchor="middle" class="stage-num">2</text>
+  <text x="227" y="240" text-anchor="middle" class="stage-desc">Assess fit</text>
+  <text x="227" y="253" text-anchor="middle" class="note-small" style="fill:#1976D2">30-min call template</text>
+
+  <line x1="280" y1="185" x2="305" y2="185" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <!-- Quoted -->
+  <rect x="305" y="150" width="95" height="70" rx="8" fill="#2196F3"/>
+  <text x="352" y="175" text-anchor="middle" class="stage-label">QUOTED</text>
+  <text x="352" y="195" text-anchor="middle" class="stage-num">3</text>
+  <text x="352" y="240" text-anchor="middle" class="stage-desc">Proposal sent</text>
+
+  <line x1="400" y1="185" x2="455" y2="185" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <!-- SETUP -->
+  <!-- Approved -->
+  <rect x="455" y="150" width="120" height="70" rx="8" fill="#FF9800"/>
+  <text x="515" y="175" text-anchor="middle" class="stage-label">APPROVED</text>
+  <text x="515" y="195" text-anchor="middle" class="stage-num">4</text>
+  <text x="515" y="240" text-anchor="middle" class="stage-desc">Contract signed</text>
+  <text x="515" y="253" text-anchor="middle" class="note-small" style="fill:#E65100">Kick-off + assign</text>
+
+  <!-- Arrow down to Production -->
+  <path d="M 515 220 L 515 275 L 140 275 L 140 305" fill="none" stroke="#999" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- ==================== ROW 2: PRODUCTION ==================== -->
+
+  <text x="480" y="295" text-anchor="middle" class="section-label">PRODUCTION</text>
+  <text x="480" y="310" text-anchor="middle" class="note-small">(Skill + AEO Advisor + Human Review)</text>
+
+  <!-- Production background -->
+  <rect x="40" y="320" width="920" height="220" rx="10" fill="#e8f5e9" opacity="0.5"/>
+
+  <!-- RESEARCH -->
+  <g transform="translate(60, 340)">
+    <rect width="150" height="90" rx="8" fill="#4CAF50"/>
+    <text x="75" y="25" text-anchor="middle" class="stage-label">RESEARCH</text>
+    <text x="75" y="45" text-anchor="middle" class="stage-num">5</text>
+    <text x="75" y="65" text-anchor="middle" style="font:10px Arial;fill:white">Manual + Advisor</text>
+    <text x="75" y="82" text-anchor="middle" style="font:bold 10px monospace;fill:rgba(255,255,255,0.9)">R01-R06</text>
+
+    <!-- Human review indicator -->
+    <circle cx="75" cy="110" r="14" fill="#2196F3"/>
+    <text x="75" y="115" text-anchor="middle" style="font:bold 10px Arial;fill:white">H</text>
+    <text x="75" y="135" text-anchor="middle" class="stage-desc">Strategy Approval</text>
+  </g>
+
+  <line x1="210" y1="385" x2="250" y2="385" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <!-- DRAFTING -->
+  <g transform="translate(250, 340)">
+    <rect width="150" height="90" rx="8" fill="#4CAF50"/>
+    <text x="75" y="25" text-anchor="middle" class="stage-label">DRAFTING</text>
+    <text x="75" y="45" text-anchor="middle" class="stage-num">6</text>
+    <text x="75" y="65" text-anchor="middle" style="font:10px Arial;fill:white">Writer Skill + Advisor</text>
+    <text x="75" y="82" text-anchor="middle" style="font:bold 10px monospace;fill:rgba(255,255,255,0.9)">D01-D08</text>
+
+    <circle cx="75" cy="110" r="14" fill="#2196F3"/>
+    <text x="75" y="115" text-anchor="middle" style="font:bold 10px Arial;fill:white">H</text>
+    <text x="75" y="135" text-anchor="middle" class="stage-desc">Content Approval</text>
+  </g>
+
+  <line x1="400" y1="385" x2="440" y2="385" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <!-- REVIEW (Client) -->
+  <g transform="translate(440, 340)">
+    <rect width="130" height="90" rx="8" fill="#81C784"/>
+    <text x="65" y="25" text-anchor="middle" class="stage-label">REVIEW</text>
+    <text x="65" y="45" text-anchor="middle" class="stage-num">7</text>
+    <text x="65" y="65" text-anchor="middle" style="font:10px Arial;fill:white">Client Feedback</text>
+    <text x="65" y="135" text-anchor="middle" class="stage-desc">Approve or Revise</text>
+  </g>
+
+  <!-- Branch arrows from Review -->
+  <line x1="570" y1="370" x2="610" y2="370" class="arrow" marker-end="url(#arrowhead)"/>
+  <text x="590" y="362" text-anchor="middle" style="font:bold 11px Arial;fill:#4CAF50">✓</text>
+
+  <!-- REVISIONS (below Review) -->
+  <g transform="translate(440, 495)">
+    <rect width="130" height="60" rx="8" fill="#8BC34A"/>
+    <text x="65" y="25" text-anchor="middle" class="stage-label">REVISIONS</text>
+    <text x="65" y="45" text-anchor="middle" class="stage-num">8</text>
+  </g>
+
+  <line x1="505" y1="430" x2="505" y2="495" class="arrow" marker-end="url(#arrowhead)"/>
+  <text x="520" y="465" style="font:10px Arial;fill:#f57c00">Feedback</text>
+
+  <!-- Loop from Revisions back to Drafting -->
+  <path d="M 440 525 L 325 525 L 325 430" fill="none" stroke="#f57c00" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead-orange)"/>
+  <text x="380" y="545" text-anchor="middle" class="note-italic">Feedback loop → SOP learning</text>
+
+  <!-- SCHEMA -->
+  <g transform="translate(610, 340)">
+    <rect width="150" height="90" rx="8" fill="#4CAF50"/>
+    <text x="75" y="25" text-anchor="middle" class="stage-label">SCHEMA</text>
+    <text x="75" y="45" text-anchor="middle" class="stage-num">9a</text>
+    <text x="75" y="65" text-anchor="middle" style="font:10px Arial;fill:white">Entity Master + Advisor</text>
+    <text x="75" y="82" text-anchor="middle" style="font:bold 10px monospace;fill:rgba(255,255,255,0.9)">S01-S06</text>
+
+    <circle cx="75" cy="110" r="14" fill="#2196F3"/>
+    <text x="75" y="115" text-anchor="middle" style="font:bold 10px Arial;fill:white">H</text>
+    <text x="75" y="135" text-anchor="middle" class="stage-desc">Schema Approval</text>
+  </g>
+
+  <line x1="760" y1="385" x2="800" y2="385" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <!-- ==================== DELIVERY ==================== -->
+
+  <text x="1080" y="295" text-anchor="middle" class="section-label">DELIVERY</text>
+
+  <!-- Delivery background -->
+  <rect x="800" y="320" width="380" height="220" rx="10" fill="#f3e5f5" opacity="0.5"/>
+
+  <!-- PUBLISHING -->
+  <g transform="translate(820, 340)">
+    <rect width="160" height="90" rx="8" fill="#9C27B0"/>
+    <text x="80" y="25" text-anchor="middle" class="stage-label">PUBLISHING</text>
+    <text x="80" y="45" text-anchor="middle" class="stage-num">9</text>
+    <text x="80" y="65" text-anchor="middle" style="font:10px Arial;fill:white">Deploy + Verify</text>
+    <text x="80" y="82" text-anchor="middle" style="font:9px Arial;fill:rgba(255,255,255,0.8)">6-item checklist</text>
+
+    <text x="80" y="115" text-anchor="middle" class="stage-desc">CMS upload</text>
+    <text x="80" y="128" text-anchor="middle" class="stage-desc">Rich Results Test</text>
+    <text x="80" y="141" text-anchor="middle" class="stage-desc">Live URL verify</text>
+  </g>
+
+  <line x1="980" y1="385" x2="1020" y2="385" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <!-- COMPLETE -->
+  <g transform="translate(1020, 340)">
+    <rect width="140" height="90" rx="8" fill="#9C27B0"/>
+    <text x="70" y="25" text-anchor="middle" class="stage-label">COMPLETE</text>
+    <text x="70" y="45" text-anchor="middle" class="stage-num">10</text>
+    <text x="70" y="65" text-anchor="middle" style="font:10px Arial;fill:white">Close + Archive</text>
+
+    <text x="70" y="115" text-anchor="middle" class="stage-desc">Content Library entry</text>
+    <text x="70" y="128" text-anchor="middle" class="stage-desc">Invoice sent</text>
+    <text x="70" y="141" text-anchor="middle" class="stage-desc">Client notified</text>
+  </g>
+
+  <!-- Content Library arrow -->
+  <path d="M 1090 430 L 1090 480 L 1200 480" fill="none" stroke="#9C27B0" stroke-width="2" stroke-dasharray="5,3"/>
+  <rect x="1200" y="465" width="120" height="30" rx="5" fill="#9C27B0" opacity="0.2" stroke="#9C27B0"/>
+  <text x="1260" y="485" text-anchor="middle" style="font:10px Arial;fill:#7B1FA2">Content Library</text>
+
+  <!-- ==================== LEGEND SECTION ==================== -->
+
+  <rect x="40" y="580" width="1320" height="350" rx="10" fill="white" stroke="#e0e0e0" stroke-width="2"/>
+
+  <!-- Legend Title -->
+  <text x="700" y="610" text-anchor="middle" style="font:bold 16px Arial;fill:#1a1a2e">Reference Guide</text>
+
+  <!-- Column 1: Stage Types -->
+  <g transform="translate(60, 630)">
+    <text x="0" y="0" class="section-label">Stage Types</text>
+
+    <rect x="0" y="20" width="20" height="20" rx="4" fill="#2196F3"/>
+    <text x="30" y="35" class="note">Sales (manual process)</text>
+
+    <rect x="0" y="50" width="20" height="20" rx="4" fill="#FF9800"/>
+    <text x="30" y="65" class="note">Setup (contract + kick-off)</text>
+
+    <rect x="0" y="80" width="20" height="20" rx="4" fill="#4CAF50"/>
+    <text x="30" y="95" class="note">Production (skill + advisor loop)</text>
+
+    <rect x="0" y="110" width="20" height="20" rx="4" fill="#81C784"/>
+    <text x="30" y="125" class="note">Client review</text>
+
+    <rect x="0" y="140" width="20" height="20" rx="4" fill="#9C27B0"/>
+    <text x="30" y="155" class="note">Delivery (publish + close)</text>
+
+    <circle cx="10" cy="180" r="12" fill="#2196F3"/>
+    <text x="10" y="184" text-anchor="middle" style="font:bold 9px Arial;fill:white">H</text>
+    <text x="30" y="184" class="note">Human review gate</text>
+
+    <text x="0" y="220" class="subsection">Retry Escalation</text>
+    <text x="0" y="238" class="note-small">Max 3 skill retries per stage</text>
+    <text x="0" y="253" class="note-small">Exceeded → Escalate to human</text>
+  </g>
+
+  <!-- Column 2: Skill Orchestration -->
+  <g transform="translate(280, 630)">
+    <text x="0" y="0" class="section-label">Production Orchestration</text>
+
+    <text x="0" y="25" class="note">1. Production skill creates output</text>
+    <text x="0" y="45" class="note">2. AEO Advisor validates checkpoints</text>
+    <text x="0" y="65" class="note">3. FAIL → Skill retries with feedback</text>
+    <text x="0" y="85" class="note">4. PASS → Human reviews output</text>
+    <text x="0" y="105" class="note">5. Approved → Proceed to next stage</text>
+    <text x="0" y="125" class="note">6. Rejected → Back to skill for fixes</text>
+
+    <text x="0" y="160" class="subsection">Skills Used</text>
+    <text x="0" y="180" class="checkpoint">• hst-comparison-writer (Comparisons)</text>
+    <text x="0" y="197" class="checkpoint">• hst-listicle-writer (Listicles)</text>
+    <text x="0" y="214" class="checkpoint">• aeo-entity-master (Schema)</text>
+    <text x="0" y="231" class="checkpoint">• hst-aeo-advisor (Validation)</text>
+  </g>
+
+  <!-- Column 3: Checkpoints -->
+  <g transform="translate(540, 630)">
+    <text x="0" y="0" class="section-label">Checkpoint Reference</text>
+
+    <text x="0" y="25" class="subsection">Research (R01-R06)</text>
+    <text x="0" y="42" class="checkpoint">R01 Keyword target | R02 Anchor questions</text>
+    <text x="0" y="57" class="checkpoint">R03 Competitor analysis | R04 Entity list</text>
+    <text x="0" y="72" class="checkpoint">R05 Content type | R06 Client alignment</text>
+
+    <text x="0" y="97" class="subsection">Drafting (D01-D08)</text>
+    <text x="0" y="114" class="checkpoint">D01 Keyword placement | D02 Anchor questions</text>
+    <text x="0" y="129" class="checkpoint">D03 Entity references | D04 Structure</text>
+    <text x="0" y="144" class="checkpoint">D05 Word count | D06 AEO formatting</text>
+    <text x="0" y="159" class="checkpoint">D07 Internal links | D08 Complete</text>
+
+    <text x="0" y="184" class="subsection">Schema (S01-S06)</text>
+    <text x="0" y="201" class="checkpoint">S01 Article schema | S02 Entity markup</text>
+    <text x="0" y="216" class="checkpoint">S03 FAQ schema | S04 HowTo schema</text>
+    <text x="0" y="231" class="checkpoint">S05 Syntax valid | S06 Speakable</text>
+  </g>
+
+  <!-- Column 4: Checkpoint States & Protocols -->
+  <g transform="translate(820, 630)">
+    <text x="0" y="0" class="section-label">Checkpoint States</text>
+
+    <rect x="0" y="15" width="60" height="22" rx="4" fill="#4CAF50"/>
+    <text x="30" y="31" text-anchor="middle" style="font:bold 10px Arial;fill:white">PASS</text>
+    <text x="70" y="31" class="note">Criteria met</text>
+
+    <rect x="0" y="45" width="60" height="22" rx="4" fill="#f44336"/>
+    <text x="30" y="61" text-anchor="middle" style="font:bold 10px Arial;fill:white">FAIL</text>
+    <text x="70" y="61" class="note">Needs correction</text>
+
+    <rect x="0" y="75" width="60" height="22" rx="4" fill="#9e9e9e"/>
+    <text x="30" y="91" text-anchor="middle" style="font:bold 10px Arial;fill:white">N/A</text>
+    <text x="70" y="91" class="note">Doesn't apply (with reason)</text>
+
+    <text x="0" y="125" class="subsection">Override Protocol</text>
+    <text x="0" y="143" class="checkpoint">When client requests deviation:</text>
+    <text x="0" y="160" class="checkpoint">1. Flag as OVERRIDE_REQUESTED</text>
+    <text x="0" y="177" class="checkpoint">2. Human reviews with context</text>
+    <text x="0" y="194" class="checkpoint">3. If approved: Log override + proceed</text>
+    <text x="0" y="211" class="checkpoint">4. If denied: Continue retry loop</text>
+  </g>
+
+  <!-- Column 5: Publishing & Content Library -->
+  <g transform="translate(1070, 630)">
+    <text x="0" y="0" class="section-label">Publishing Checklist</text>
+
+    <text x="0" y="22" class="checkpoint">☐ Upload to client CMS</text>
+    <text x="0" y="39" class="checkpoint">☐ Run Rich Results Test</text>
+    <text x="0" y="56" class="checkpoint">☐ Verify live URL accessible</text>
+    <text x="0" y="73" class="checkpoint">☐ Test internal links work</text>
+    <text x="0" y="90" class="checkpoint">☐ Notify client of publication</text>
+    <text x="0" y="107" class="checkpoint">☐ Add to Content Library</text>
+
+    <text x="0" y="140" class="subsection">Content Library</text>
+    <text x="0" y="158" class="checkpoint">Tracks all published content</text>
+    <text x="0" y="175" class="checkpoint">per client for internal linking</text>
+    <text x="0" y="192" class="checkpoint">Fields: Title, URL, Keywords,</text>
+    <text x="0" y="209" class="checkpoint">Entities, Content Type, Date</text>
+
+    <text x="0" y="242" class="subsection">Feedback Loop</text>
+    <text x="0" y="260" class="checkpoint">2+ similar revisions = SOP update</text>
+  </g>
+
+  <!-- Footer -->
+  <line x1="40" y1="915" x2="1360" y2="915" stroke="#e0e0e0" stroke-width="1"/>
+  <text x="700" y="940" text-anchor="middle" class="note-italic">AEO Agency SOP v1.1.0 — Full documentation in /skills/aeo-agency-workflow/references/full-sop.md</text>
+
+  <!-- North Star callout -->
+  <rect x="1150" y="560" width="200" height="50" rx="8" fill="#1a1a2e"/>
+  <text x="1250" y="582" text-anchor="middle" style="font:11px Arial;fill:white">North Star</text>
+  <text x="1250" y="600" text-anchor="middle" style="font:italic 10px Arial;fill:#aaa">Automate everything possible</text>
+</svg>

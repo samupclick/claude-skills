@@ -1,0 +1,10 @@
+{
+  "@type": "Organization",
+  "@id": "#{{entity_id}}",
+  "name": "{{canonical_name}}",
+  "description": "{{description}}",
+  "url": "{{url}}",
+  "logo": "{{logo_url}}",
+  "foundingDate": "{{founding_date}}",
+  "sameAs": []
+}
