@@ -2,13 +2,18 @@
 
 **Learner:** Sam
 **Started:** 2026-08-25
-**Current lesson:** 1.1 — taught 2026-08-25, grill in progress (awaiting answers)
+**Current lesson:** 1.1 — retaught from zero 2026-08-25, grill v2 in progress (awaiting answers)
+
+## Standing adjustments
+
+- **Learner starts from zero** (requested 2026-08-25): define every acronym and term at first
+  use in all lessons and grills. Rule added to SKILL.md; `glossary.md` tracks taught terms.
 
 ## Lesson log
 
 | Date | Lesson | Score | Result | Notes |
 |---|---|---|---|---|
-| 2026-08-25 | 1.1 The AOV stack and break-even ROAS | — | Grill pending | First lesson delivered with syllabus |
+| 2026-08-25 | 1.1 The AOV stack and break-even ROAS | — | Grill pending | First version assumed vocabulary; retaught from zero with all acronyms defined. Grill v2 issued (3 recall + 2 application; judgment round held back) |
 
 ## Weak areas (re-grill at next session start)
 
