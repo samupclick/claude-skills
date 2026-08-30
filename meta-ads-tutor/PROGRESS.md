@@ -9,6 +9,8 @@ formula-direction anchors; re-grill v3 issued, awaiting answers.
 
 - **Learner starts from zero** (requested 2026-08-25): define every acronym and term at first
   use in all lessons and grills. Rule added to SKILL.md; `glossary.md` tracks taught terms.
+- **One question at a time** (requested 2026-08-30): deliver every grill as single questions,
+  waiting for each answer before the next — no batched volleys. Rule added to SKILL.md.
 
 ## Lesson log
 

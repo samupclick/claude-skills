@@ -69,8 +69,8 @@ Grill after every lesson. Never skip it, never soften it.
   reasoning.
 
 **Conduct:**
-- Ask in volleys suited to the medium: in async chat, send a full round at once; drill follow-ups
-  based on the answers before advancing to the next round.
+- Ask ONE question at a time and wait for the answer before asking the next. Drill follow-ups on
+  a shaky answer before moving on. Never batch a round into one message unless Sam asks for it.
 - Never accept a vague answer. "It depends" without the dependencies named = wrong. Push:
   "Depends on what? Give me the threshold."
 - If an answer is half-right, don't supply the missing half — ask the follow-up that forces them
