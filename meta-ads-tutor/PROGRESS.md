@@ -2,7 +2,8 @@
 
 **Learner:** Sam
 **Started:** 2026-08-25
-**Current lesson:** 1.1 — retaught from zero 2026-08-25, grill v2 in progress (awaiting answers)
+**Current lesson:** 1.1 — grill v2 scored 40% (below pass). Weak concepts retaught with
+formula-direction anchors; re-grill v3 issued, awaiting answers.
 
 ## Standing adjustments
 
@@ -13,11 +14,19 @@
 
 | Date | Lesson | Score | Result | Notes |
 |---|---|---|---|---|
-| 2026-08-25 | 1.1 The AOV stack and break-even ROAS | — | Grill pending | First version assumed vocabulary; retaught from zero with all acronyms defined. Grill v2 issued (3 recall + 2 application; judgment round held back) |
+| 2026-08-25 | 1.1 The AOV stack and break-even ROAS | 4/10 (40%) | Below pass | Retaught from zero (acronyms defined), then grill v2. Strong: bump vs upsell mechanics (2/2), AOV construction method. Failed: break-even ROAS and max CPA formulas (divided vs multiplied — concluded profit on a losing funnel), CPM→CPC→CPA chain arithmetic, metric meanings (gave expansions only) |
+| 2026-08-25 | 1.1 re-grill (v3) | — | Pending | Formula-direction anchors taught (cost-per-X = spend ÷ count; BE ROAS = 1 ÷ margin, always just above 1; max CPA = AOV × margin, always below AOV). 4 new questions on the failed concepts |
 
 ## Weak areas (re-grill at next session start)
 
-_None logged yet._
+- **Break-even ROAS formula** (= 1 ÷ contribution margin): answered "AOV ÷ margin"; also used
+  the leak (fees + refunds) where the margin belongs instead of 1 − leak.
+- **Max CPA formula** (= AOV × margin): divided by margin instead, producing a max CPA *above*
+  AOV and an inverted profit verdict (+$11 claimed on a funnel losing ~$1.46/buyer).
+- **Cost chain arithmetic** (CPM → CPC → CPA): multiplied CPM by CTR instead of dividing spend
+  by click count; did not reach CPA.
+- **Metric meanings**: gave acronym expansions only, not what each measures; skipped
+  "impression" entirely.
 
 ## Cleared weak areas
 

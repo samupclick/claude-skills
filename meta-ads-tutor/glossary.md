@@ -26,6 +26,7 @@ lessons teach them.
 | Refund rate | — | % of revenue handed back to unhappy buyers; arrives days–weeks after purchase | 5–10% for info products |
 | Contribution margin | — | The share of each revenue dollar left after costs that scale with sales (card processing ~3%, refunds) | ~0.90 (i.e. 90%) |
 | ROAS | Return on ad spend | Revenue ÷ ad spend. The number this whole business is steered by, read at 1-day / 7-day / 30-day windows | break-even ≈ 1.11 at 90% margin |
-| Break-even ROAS | — | The ROAS at which profit is exactly zero. 1 ÷ contribution margin | 1.11 at 0.90 margin |
-| Max CPA | — | The most a buyer can cost before you lose money. AOV × contribution margin | $54.59 in our worked example |
+| Break-even ROAS | — | The ROAS at which profit is exactly zero. 1 ÷ contribution margin. Sanity check: always a ratio a little above 1 (typically 1.05–1.4) — never a dollar amount | 1.11 at 0.90 margin |
+| Max CPA | — | The most a buyer can cost before you lose money. AOV × contribution margin. Sanity check: always *below* the AOV — you can't afford to pay more for a customer than they bring in | $54.59 in our worked example |
+| Cost-per-anything rule | — | Every "cost per X" = money spent ÷ number of X received. Never a price × a rate | CPC = spend ÷ clicks |
 | KPI | Key performance indicator | A number a business steers by | here: 1/7/30-day ROAS |
