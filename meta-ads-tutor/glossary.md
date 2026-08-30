@@ -24,7 +24,8 @@ lessons teach them.
 | Take rate | — | % of buyers who accept a given bump or upsell | see above |
 | AOV | Average order value | Average total revenue per buyer across front-end + bumps + upsells. Sum of (price × take rate) | ~$60 in our worked example |
 | Refund rate | — | % of revenue handed back to unhappy buyers; arrives days–weeks after purchase | 5–10% for info products |
-| Contribution margin | — | The share of each revenue dollar left after costs that scale with sales (card processing ~3%, refunds) | ~0.90 (i.e. 90%) |
+| Leak | — | The share of each revenue dollar lost to costs that scale with sales: processing fees + refunds. The margin is what's left: margin = 1 − leak | ~9–12% here |
+| Contribution margin | — | The share of each revenue dollar left after the leak (card processing ~3%, refunds) | ~0.90 (i.e. 90%) |
 | ROAS | Return on ad spend | Revenue ÷ ad spend. The number this whole business is steered by, read at 1-day / 7-day / 30-day windows | break-even ≈ 1.11 at 90% margin |
 | Break-even ROAS | — | The ROAS at which profit is exactly zero. 1 ÷ contribution margin. Sanity check: always a ratio a little above 1 (typically 1.05–1.4) — never a dollar amount | 1.11 at 0.90 margin |
 | Max CPA | — | The most a buyer can cost before you lose money. AOV × contribution margin. Sanity check: always *below* the AOV — you can't afford to pay more for a customer than they bring in | $54.59 in our worked example |

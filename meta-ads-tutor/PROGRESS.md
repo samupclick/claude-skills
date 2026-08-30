@@ -2,8 +2,9 @@
 
 **Learner:** Sam
 **Started:** 2026-08-25
-**Current lesson:** 1.1 — grill v2 scored 40% (below pass). Weak concepts retaught with
-formula-direction anchors; re-grill v3 issued, awaiting answers.
+**Current lesson:** 1.1 — v3 drill complete (2026-08-30): all four failed concepts rebuilt and
+answered cleanly in-session. Official pass gate: **v4 — four fresh questions asked cold at next
+session start** (warm-up re-grill first, then v4). Do not teach 1.2 until v4 scores ≥ 80%.
 
 ## Standing adjustments
 
@@ -17,18 +18,37 @@ formula-direction anchors; re-grill v3 issued, awaiting answers.
 | Date | Lesson | Score | Result | Notes |
 |---|---|---|---|---|
 | 2026-08-25 | 1.1 The AOV stack and break-even ROAS | 4/10 (40%) | Below pass | Retaught from zero (acronyms defined), then grill v2. Strong: bump vs upsell mechanics (2/2), AOV construction method. Failed: break-even ROAS and max CPA formulas (divided vs multiplied — concluded profit on a losing funnel), CPM→CPC→CPA chain arithmetic, metric meanings (gave expansions only) |
-| 2026-08-25 | 1.1 re-grill (v3) | — | Pending | Formula-direction anchors taught (cost-per-X = spend ÷ count; BE ROAS = 1 ÷ margin, always just above 1; max CPA = AOV × margin, always below AOV). 4 new questions on the failed concepts |
+| 2026-08-30 | 1.1 re-grill (v3, one question at a time → drill mode) | — | Concepts rebuilt | R1 1/2 (CTR/CVR confusion; fixed via check question — 25/1000 vs 1/25 answered with correct numerators/denominators). R2 0/2 → paused for full margin-math reteach; R2′ with fresh numbers clean (0.91 margin, 1.10 ratio, $47.32) including both sanity whys. R3 clean after fixing an inverted CPC (15/36 → $36/15) via the multiply-back check and teaching divide-by-fraction for CPA ($96); CTR named as first lever with correct control/upstream reasoning. R4 — the verdict question inverted in v2 — clean first try: max CPA $42.54, losing $1.46/buyer, ~227 purchases/day, $331.81/day bleed. v4 pass-round pending |
 
 ## Weak areas (re-grill at next session start)
 
-- **Break-even ROAS formula** (= 1 ÷ contribution margin): answered "AOV ÷ margin"; also used
-  the leak (fees + refunds) where the margin belongs instead of 1 − leak.
-- **Max CPA formula** (= AOV × margin): divided by margin instead, producing a max CPA *above*
-  AOV and an inverted profit verdict (+$11 claimed on a funnel losing ~$1.46/buyer).
-- **Cost chain arithmetic** (CPM → CPC → CPA): multiplied CPM by CTR instead of dividing spend
-  by click count; did not reach CPA.
-- **Metric meanings**: gave acronym expansions only, not what each measures; skipped
-  "impression" entirely.
+All four were rebuilt and answered cleanly on 2026-08-30 — verify each cold in the next warm-up,
+then run the v4 pass-round:
+
+- **Break-even ROAS formula** (= 1 ÷ margin): rebuilt — computed 1/0.91 = 1.10 correctly and gave
+  the why (the leak means more than $1 must come back per $1 spent).
+- **Max CPA formula** (= AOV × margin): rebuilt — computed twice correctly ($47.32, $42.54);
+  sanity check (always below AOV) recalled with the why.
+- **Cost chain** (CPM → CPC → CPA): rebuilt — counts people correctly; one CPC inversion (15/36)
+  corrected via the multiply-back check; dividing by fractional purchases needed a teach, then
+  executed clean ($96).
+- **CTR vs CVR**: confusion fixed with the two-gates model (ad gate vs page gate) and a clean
+  check computation (25/1000 vs 1/25); verify cold.
+
+Watch-fors (not yet cleared):
+
+- Under uncertainty, tends to stop before the final number. Much improved by R4 (all four outputs
+  driven unprompted) — keep requiring the full operator sentence with the number in it.
+- Fraction direction slips under pressure — prompt the natural-language tool below rather than
+  re-teaching.
+
+## Learner tools (Sam's own devices — reuse these when teaching)
+
+- **"Per = divide":** say the fraction as a sentence — "$36 per 15 clicks" puts the money on top
+  automatically.
+- **Multiply-back check:** any cost-per × its count must rebuild the total spend.
+- **Sanity anchors:** break-even ROAS is a ratio a whisker above 1; max CPA is dollars, below AOV.
+- **Percent = per hundred:** run examples on $100 of revenue so percentages turn into dollars.
 
 ## Cleared weak areas
 
