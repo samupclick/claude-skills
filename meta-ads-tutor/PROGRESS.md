@@ -2,9 +2,13 @@
 
 **Learner:** Sam
 **Started:** 2026-08-25
-**Current lesson:** 1.1 — v3 drill complete (2026-08-30): all four failed concepts rebuilt and
-answered cleanly in-session. Official pass gate: **v4 — four fresh questions asked cold at next
-session start** (warm-up re-grill first, then v4). Do not teach 1.2 until v4 scores ≥ 80%.
+**Current lesson:** 1.1 — v4 taken hot same-session (Sam's choice, 2026-08-30): **5/8 (62.5%),
+below the 7/8 bar — not passed.** Every formula direction was right (the original failure mode is
+gone); all points lost to precision slips: one inverted CPC, spend ÷ AOV for purchases/day, a
+dropped digit on the ×30, one skipped judgment line, one mislabeled margin, one inconsistent
+margin value. Gate: **v5 — four fresh questions, cold, at next session** after a warm-up on the
+slip types. Require the three checks run aloud on every line ("per" sentence, multiply-back,
+magnitude). Do not teach 1.2 until v5 scores ≥ 80%.
 
 ## Standing adjustments
 
@@ -18,6 +22,7 @@ session start** (warm-up re-grill first, then v4). Do not teach 1.2 until v4 sco
 | Date | Lesson | Score | Result | Notes |
 |---|---|---|---|---|
 | 2026-08-25 | 1.1 The AOV stack and break-even ROAS | 4/10 (40%) | Below pass | Retaught from zero (acronyms defined), then grill v2. Strong: bump vs upsell mechanics (2/2), AOV construction method. Failed: break-even ROAS and max CPA formulas (divided vs multiplied — concluded profit on a losing funnel), CPM→CPC→CPA chain arithmetic, metric meanings (gave expansions only) |
+| 2026-08-30 | 1.1 pass-round v4 (taken hot, same session) | 5/8 (62.5%) | Below pass | V1 definitions 2/2 (CTR/CVR clean cold). V2 margin math 1/2 (max CPA right; margin labeled as $52.44 instead of 0.92; BE ROAS used an inconsistent 0.98 → 1.02 instead of 1/0.92 = 1.09). V3 cost chain 1/2 (crates bridge — taught mid-test as a new mechanic — executed clean, CPA $56 and verdict sentence right; CPC inverted again 75/84, bury-or-fix line skipped). V4 verdict 1/2 (max CPA $55.08 and +$3.08/buyer right, all outputs driven unprompted; purchases/day = spend ÷ AOV instead of ÷ CPA; 30 × 603.89 written as 1,816.70). Concepts held; precision under pressure is the remaining gap |
 | 2026-08-30 | 1.1 re-grill (v3, one question at a time → drill mode) | — | Concepts rebuilt | R1 1/2 (CTR/CVR confusion; fixed via check question — 25/1000 vs 1/25 answered with correct numerators/denominators). R2 0/2 → paused for full margin-math reteach; R2′ with fresh numbers clean (0.91 margin, 1.10 ratio, $47.32) including both sanity whys. R3 clean after fixing an inverted CPC (15/36 → $36/15) via the multiply-back check and teaching divide-by-fraction for CPA ($96); CTR named as first lever with correct control/upstream reasoning. R4 — the verdict question inverted in v2 — clean first try: max CPA $42.54, losing $1.46/buyer, ~227 purchases/day, $331.81/day bleed. v4 pass-round pending |
 
 ## Weak areas (re-grill at next session start)
@@ -35,12 +40,21 @@ then run the v4 pass-round:
 - **CTR vs CVR**: confusion fixed with the two-gates model (ad gate vs page gate) and a clean
   check computation (25/1000 vs 1/25); verify cold.
 
+New weak area from v4:
+
+- **CPA vs AOV roles**: computed purchases/day as spend ÷ AOV instead of spend ÷ CPA. Anchor:
+  "you BUY purchases at the CPA, you EARN revenue at the AOV." Re-grill this in the v5 warm-up.
+
 Watch-fors (not yet cleared):
 
-- Under uncertainty, tends to stop before the final number. Much improved by R4 (all four outputs
-  driven unprompted) — keep requiring the full operator sentence with the number in it.
-- Fraction direction slips under pressure — prompt the natural-language tool below rather than
-  re-teaching.
+- **Precision under pressure is now the whole gap** — v4 lost all three dropped points to
+  unchecked lines (inverted CPC, spend ÷ AOV, dropped digit on ×30), not to concepts. In v5,
+  require the checks run visibly on every line: the "per" sentence, multiply-back, and a
+  magnitude check on any period total (a month ≈ 30× a day).
+- Under uncertainty, tends to stop before the final number. Largely fixed (R4 and V4 drove all
+  outputs unprompted; V3 skipped one judgment line) — keep requiring every asked output.
+- Fraction direction slips under pressure (recurred in V3 despite the tool existing) — the tool
+  works when used; push habit, not re-teaching.
 
 ## Learner tools (Sam's own devices — reuse these when teaching)
 
@@ -49,6 +63,10 @@ Watch-fors (not yet cleared):
 - **Multiply-back check:** any cost-per × its count must rebuild the total spend.
 - **Sanity anchors:** break-even ROAS is a ratio a whisker above 1; max CPA is dollars, below AOV.
 - **Percent = per hundred:** run examples on $100 of revenue so percentages turn into dollars.
+- **Buy at CPA, earn at AOV:** spend ÷ CPA = purchases bought; purchases × AOV = revenue earned.
+- **Crates:** CPM is the price of a 1,000-impression crate; spend ÷ CPM = crates; × 1,000 = impressions.
+- **Magnitude check:** any monthly figure must be ~30× the daily one; one margin value per page,
+  computed once and reused.
 
 ## Cleared weak areas
 
