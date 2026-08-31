@@ -2,13 +2,12 @@
 
 **Learner:** Sam
 **Started:** 2026-08-25
-**Current lesson:** 1.1 — v4 taken hot same-session (Sam's choice, 2026-08-30): **5/8 (62.5%),
-below the 7/8 bar — not passed.** Every formula direction was right (the original failure mode is
-gone); all points lost to precision slips: one inverted CPC, spend ÷ AOV for purchases/day, a
-dropped digit on the ×30, one skipped judgment line, one mislabeled margin, one inconsistent
-margin value. Gate: **v5 — four fresh questions, cold, at next session** after a warm-up on the
-slip types. Require the three checks run aloud on every line ("per" sentence, multiply-back,
-magnitude). Do not teach 1.2 until v5 scores ≥ 80%.
+**Current lesson:** 1.2 (The three ROAS windows and cash velocity) — taught 2026-08-31, grill in
+progress. **Learner override:** Sam chose to advance before passing 1.1 (v4 scored 5/8; the v5
+cold check is still owed). Fold the owed 1.1 verification into warm-ups: open upcoming sessions
+with 1.1 slip-type questions (fraction direction, buy-at-CPA-earn-at-AOV, magnitude checks) and
+mark 1.1 passed only after a clean cold round. 1.1 stays unchecked on the checklist until then.
+Require the three checks run visibly on every computed line in all grills.
 
 ## Standing adjustments
 
@@ -16,12 +15,16 @@ magnitude). Do not teach 1.2 until v5 scores ≥ 80%.
   use in all lessons and grills. Rule added to SKILL.md; `glossary.md` tracks taught terms.
 - **One question at a time** (requested 2026-08-30): deliver every grill as single questions,
   waiting for each answer before the next — no batched volleys. Rule added to SKILL.md.
+- **Gate overrides** (2026-08-31): Sam may choose to advance past an unpassed gate. When that
+  happens, comply without re-litigating, log the override here, and fold the owed verification
+  into subsequent warm-ups until cleanly passed.
 
 ## Lesson log
 
 | Date | Lesson | Score | Result | Notes |
 |---|---|---|---|---|
 | 2026-08-25 | 1.1 The AOV stack and break-even ROAS | 4/10 (40%) | Below pass | Retaught from zero (acronyms defined), then grill v2. Strong: bump vs upsell mechanics (2/2), AOV construction method. Failed: break-even ROAS and max CPA formulas (divided vs multiplied — concluded profit on a losing funnel), CPM→CPC→CPA chain arithmetic, metric meanings (gave expansions only) |
+| 2026-08-31 | 1.2 The three ROAS windows and cash velocity | — | Taught, grill in progress | Advanced by learner override (v5 for 1.1 still owed, folded into warm-ups). New terms added to glossary: cohort, window, M7/M30 multiplier, day-1 self-liquidation, cash float, backend. Grill: 5 questions, one at a time |
 | 2026-08-30 | 1.1 pass-round v4 (taken hot, same session) | 5/8 (62.5%) | Below pass | V1 definitions 2/2 (CTR/CVR clean cold). V2 margin math 1/2 (max CPA right; margin labeled as $52.44 instead of 0.92; BE ROAS used an inconsistent 0.98 → 1.02 instead of 1/0.92 = 1.09). V3 cost chain 1/2 (crates bridge — taught mid-test as a new mechanic — executed clean, CPA $56 and verdict sentence right; CPC inverted again 75/84, bury-or-fix line skipped). V4 verdict 1/2 (max CPA $55.08 and +$3.08/buyer right, all outputs driven unprompted; purchases/day = spend ÷ AOV instead of ÷ CPA; 30 × 603.89 written as 1,816.70). Concepts held; precision under pressure is the remaining gap |
 | 2026-08-30 | 1.1 re-grill (v3, one question at a time → drill mode) | — | Concepts rebuilt | R1 1/2 (CTR/CVR confusion; fixed via check question — 25/1000 vs 1/25 answered with correct numerators/denominators). R2 0/2 → paused for full margin-math reteach; R2′ with fresh numbers clean (0.91 margin, 1.10 ratio, $47.32) including both sanity whys. R3 clean after fixing an inverted CPC (15/36 → $36/15) via the multiply-back check and teaching divide-by-fraction for CPA ($96); CTR named as first lever with correct control/upstream reasoning. R4 — the verdict question inverted in v2 — clean first try: max CPA $42.54, losing $1.46/buyer, ~227 purchases/day, $331.81/day bleed. v4 pass-round pending |
 

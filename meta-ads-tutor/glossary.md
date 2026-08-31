@@ -31,3 +31,16 @@ lessons teach them.
 | Max CPA | — | The most a buyer can cost before you lose money. AOV × contribution margin. Sanity check: always *below* the AOV — you can't afford to pay more for a customer than they bring in | $54.59 in our worked example |
 | Cost-per-anything rule | — | Every "cost per X" = money spent ÷ number of X received. Never a price × a rate | CPC = spend ÷ clicks |
 | KPI | Key performance indicator | A number a business steers by | here: 1/7/30-day ROAS |
+
+## Taught in Lesson 1.2
+
+| Term | Stands for | Plain meaning | Remember |
+|---|---|---|---|
+| Cohort | — | The group of buyers acquired from a given day's (or week's) ad spend, tracked together over time | "Monday's buyers" |
+| Window (1/7/30-day) | — | How long after the ad click you keep counting a cohort's revenue. Same cohort, three totals | 1d steers, 7d checks, 30d sets targets |
+| Backend | — | Revenue earned from existing buyers *after* the funnel: email promos to the buyer list, cross-sells, later offers | the reason 30-day > 1-day |
+| M7 / M30 | Delayed-revenue multiplier | Cohort revenue by day 7 (or 30) ÷ its day-1 revenue. Converts a 30-day judgment into a day-1 rule | ~1.2–1.4 typical here; recompute monthly, per funnel |
+| Day-1 ROAS floor | — | Lowest acceptable day-1 ROAS = break-even ROAS ÷ M30. Below it, even the backend can't save the cohort | e.g. 1.11 ÷ 1.30 ≈ 0.85 |
+| Day-1 self-liquidation | — | The low-ticket doctrine: run so day-1 revenue ≈ covers the day's ad spend (day-1 ROAS ≈ 1+), so scaling is financed by same-day sales and the backend is profit | why the job ad worships 1-day ROAS |
+| Cash float | — | Money already spent on ads that hasn't come back yet. Running below day-1 break-even means floating the gap until the backend repays it | float scales with spend — fine at $10k/day, brutal at $33k/day |
+| Refund lag | — | (extends 1.1 entry) Refunds land days–weeks after purchase, so day-1 is gross; 30-day ROAS must be net of refunds — the one force that can pull a later window *down* | info products: refunds cluster in weeks 1–2 |
