@@ -16,6 +16,8 @@ That is why your setup failed in two directions. The login on jacob@circadianres
 
 Nobody is asked to prove they are human to create a Business Manager. Those checks only appear once Meta suspects something. What Meta weighs all the time is identity plus history: one account per person, how old it is, whether it has paid its bills, whether it has ever been enforced against.
 
+There is one exception, and it is worth knowing about because it shows the rule is structural rather than personal. Meta does offer work-only logins that are not personal accounts, called managed Meta accounts. A company's IT team provisions them through single sign-on, they carry no personal profile, and they exist so that employees of large advertisers can use Business tools without their own Facebook accounts. Meta's help centre documents them, but they are only available to organisations Meta has admitted to the programme, in practice large enterprises, and there is no public way to apply. For a company Dough Labs's size the rule is what it is: one human, one account. The other things Meta offers, additional profiles and professional mode, all hang off that one account. They let you separate your public face from your personal one, but they do not create a second login.
+
 So the scarce thing is not a Business Manager. It is a person with one clean, established Facebook account who is willing to be the accountable human for Circadian. Your personal account is one. A co-owner's or partner's is another. Mine is a third, but if mine is the only one, Circadian is in the same shape it was in April 2025: one human's login between the business and nothing.
 
 **What I got wrong last time**

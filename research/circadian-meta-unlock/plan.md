@@ -40,6 +40,8 @@ Suggested wording, in Sam's voice, to sit at the top of the next email.
 >
 > Nobody is asked to prove they are human to create a Business Manager. Those checks only appear once Meta suspects something. What Meta weighs all the time is identity plus history: one account per person, how old it is, whether it has paid its bills, whether it has ever been enforced against.
 >
+> There is one exception, and it is worth knowing about because it shows the rule is structural rather than personal. Meta does offer work-only logins that are not personal accounts, called managed Meta accounts. A company's IT team provisions them through single sign-on, they carry no personal profile, and they exist so that employees of large advertisers can use Business tools without their own Facebook accounts. Meta's help centre documents them, but they are only available to organisations Meta has admitted to the programme, in practice large enterprises, and there is no public way to apply. For a company Dough Labs's size the rule is what it is: one human, one account. The other things Meta offers, additional profiles and professional mode, all hang off that one account. They let you separate your public face from your personal one, but they do not create a second login.
+>
 > So the scarce thing is not a Business Manager. It is a person with one clean, established Facebook account who is willing to be the accountable human for Circadian. Your personal account is one. A co-owner's or partner's is another. Mine is a third, but if mine is the only one, Circadian is in the same shape it was in April 2025: one human's login between the business and nothing.
 
 ## 3. Adversarial review of Jacob's proposal (UpClick creates and owns the portfolio)
@@ -185,6 +187,7 @@ Ranked by realistic odds, none high:
 - Instagram can be owned by one business: https://www.facebook.com/business/help/1125825714110549
 - Add or change the Page connected to Instagram: https://help.instagram.com/570895513091465
 - Boost an Instagram post without a Meta ad account: https://www.facebook.com/business/help/630632987544366
+- Managed Meta accounts (SSO, enterprise): https://www.facebook.com/business/help/1073146071553567 (the "invitation only" status is from secondary sources, not Meta's text)
 - Meta Verified for businesses: https://help.instagram.com/979477020028617 and https://www.facebook.com/business/help/832027668252804
 - Recover a hacked or compromised business portfolio: https://www.facebook.com/business/help/25302697499431030
 - Commercial Terms (arbitration, small claims): https://www.facebook.com/legal/commercial_terms
