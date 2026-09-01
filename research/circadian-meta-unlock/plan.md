@@ -30,6 +30,18 @@ What Jacob actually did in 2024 or earlier was create a second personal Facebook
 
 The practical consequence: **nobody can "recover the business account", because it was never the business. What is recoverable in principle is the orphaned portfolio, and only through a channel that reaches a human at Meta.**
 
+## 2b. How to explain it to Jacob
+
+Suggested wording, in Sam's voice, to sit at the top of the next email.
+
+> Meta does not let a business log in. Every Page, ad account and Business Manager has to be run by a person, through that person's own Facebook account, and Meta allows each person exactly one. The company gets verified with documents and an EIN, but the company cannot act. A person acts for it. So the personal account is Meta's unit of trust: account age, payment history and every enforcement decision attach to the human, not to Dough Labs.
+>
+> That is why your setup failed in two directions. The login on jacob@circadianrest.com was a second account for one human, which Meta treats as inauthentic even when the human is real. When it was hacked and disabled, everything it administered was orphaned. When you built a fresh account in June, Meta recognised the same person behind a removed account and shut it as evasion. Passing the selfie did not help, because the selfie proves you are you, and "you" is what was flagged.
+>
+> Nobody is asked to prove they are human to create a Business Manager. Those checks only appear once Meta suspects something. What Meta weighs all the time is identity plus history: one account per person, how old it is, whether it has paid its bills, whether it has ever been enforced against.
+>
+> So the scarce thing is not a Business Manager. It is a person with one clean, established Facebook account who is willing to be the accountable human for Circadian. Your personal account is one. A co-owner's or partner's is another. Mine is a third, but if mine is the only one, Circadian is in the same shape it was in April 2025: one human's login between the business and nothing.
+
 ## 3. Adversarial review of Jacob's proposal (UpClick creates and owns the portfolio)
 
 Tested against Meta's documents. Verdict: workable as a last resort, but it should not be the default, and never with Sam as sole admin.
