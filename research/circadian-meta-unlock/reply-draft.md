@@ -73,7 +73,7 @@ So:
 
 Two outcomes.
 
-**It runs.** Meta's review looked at the Instagram, the domain and the card, and let an ad through. None of them is carrying a restriction. We build.
+**It runs.** Meta's review looked at the Instagram, the domain and the card, and let an ad through. None of them is carrying a restriction. We build. One thing it does not test is the legal entity, Dough Labs LLC, which Meta only sees at business verification. That is why verification is submitted early and small, before any real spend.
 
 **It is refused with an advertising restriction.** The Instagram itself is flagged, and it would have dragged the new Business Manager down with it. We have just learned that for ten dollars instead of with someone's account. The order changes: the first job becomes clearing the Instagram through Meta Verified support, and nothing gets built until it is clear.
 
