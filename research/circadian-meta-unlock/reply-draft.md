@@ -22,7 +22,7 @@ That one rule explains your last sixteen months:
 
 There is exactly one exception, and it is not for us. Meta runs work-only logins for large enterprises, provisioned by corporate IT through single sign-on. No profile, no personal account. There is no way to apply. For a company our size, the rule is absolute: one human, one account. Additional profiles and professional mode hang off that one account. They do not create a second login.
 
-Which means the scarce thing is not a Business Manager. It is a clean, aged personal Facebook account attached to a human willing to be accountable for Circadian.
+Which means the scarce thing is not a Business Manager. It is a clean, aged personal Facebook account attached to a human at Dough Labs willing to be accountable for Circadian.
 
 **Where I was wrong**
 
