@@ -1,4 +1,4 @@
-# Draft reply to Jacob (not sent) — v2, concise
+# Reply to Jacob, sent 2 September 2026 on thread "Re: Your Meta relaunch plan, as promised"
 
 To: jacob@circadianrest.com
 Cc: kris@upclicklabs.com
