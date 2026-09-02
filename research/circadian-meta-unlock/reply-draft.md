@@ -57,9 +57,27 @@ Yes, the link to the dead Page must change. Yes, it is safe. Done from inside th
 
 One unknown: whether the old Business Manager owned the Instagram outright or only reached it through the Page. If it owned it, the new one will say "already owned by another business". Ads still run through the Page connection. It becomes the first thing we ask a human at Meta to fix.
 
-**Step zero, before any Facebook account is committed**
+**Step zero: a ten-dollar test before anyone risks an account**
 
-A ten-dollar canary. Boost one existing post from the Instagram app, website-visits goal, brand-new card that has never touched Meta. No Page, no Facebook login needed. Runs: the Instagram, the domain and the card are clean where it matters. Refused for an advertising restriction: we stop, because the Instagram itself is carrying something, and the order changes.
+Before any human puts their Facebook account behind Circadian, we find out whether Circadian itself is flagged. Cheaply.
+
+Here is the logic. Three things from the old setup carry over into the new one whatever we do: the Instagram account, the domain circadianrest.com, and the name Circadian. If Meta has marked any of them, a brand-new Business Manager will get restricted the first time it runs an ad, and the person who created it wears the restriction. We want that answer before that person exists.
+
+Instagram gives us a way to ask. Meta lets a professional Instagram account boost a post straight from the app with no Facebook Page and no Facebook login. It is a documented feature, not a loophole. The boost runs through Meta's ad review like any other ad, and the only identity behind it is the Instagram itself.
+
+So:
+
+1. From the Instagram app, pick an existing post that links to circadianrest.com.
+2. Boost it. Goal: website visits. Budget: ten dollars, one day.
+3. Pay with a brand-new card that has never been on Meta. Not the card that carried the fraud.
+
+Two outcomes.
+
+**It runs.** Meta's review looked at the Instagram, the domain and the card, and let an ad through. None of them is carrying a restriction. We build.
+
+**It is refused with an advertising restriction.** The Instagram itself is flagged, and it would have dragged the new Business Manager down with it. We have just learned that for ten dollars instead of with someone's account. The order changes: the first job becomes clearing the Instagram through Meta Verified support, and nothing gets built until it is clear.
+
+Either way, the test costs ten dollars and a few minutes, and it involves nobody's Facebook account. That is why it goes first.
 
 **Recovery, in parallel, never on the path**
 
