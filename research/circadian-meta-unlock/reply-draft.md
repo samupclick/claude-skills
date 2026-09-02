@@ -30,26 +30,26 @@ Facebook.com/hacked is for live accounts. Your disabled login's appeal window cl
 
 **Your ask: I build it and own it**
 
-I can. Here is the price, and it is all in Meta's own documents:
+No. Here is why, and it is all in Meta's own documents:
 
 1. **The ad account and pixel never leave the Business Manager that created them.** If it is mine, Dough Labs can never extract them. Handing back means handing you the whole container.
 2. **Meta's Account Integrity rule targets business assets "created or repurposed to evade a previous removal" with "common ownership".** A new Business Manager verified as Dough Labs LLC on circadianrest.com is the same business by definition. If Meta links the two, the restriction lands on the person who created it. If that is me, it hits every client I run, and it hits you a second time through me.
 3. **Shopify only lets someone with full control of the Business Manager and Page connect the store.** If I own it, you cannot connect your own shop.
 
-So: yes as a last resort. No as the default. Never with one admin. One admin is precisely how you lost everything.
+One admin between your business and nothing is precisely how you lost everything. I will not rebuild the thing that failed. My job is to tell you exactly what to click, in what order, and then run the ads once you hand me partner access. Dough Labs owns every asset from day one.
 
 **What we do instead**
 
-Dough Labs owns the Business Manager. UpClick works inside it as a partner from our own agency account. All the labour is still mine. What I need from Dough Labs is one human with a clean account to do about twenty minutes of clicking, once, from their own phone or laptop: create the Business Manager, turn on two-factor, invite a second admin, invite UpClick as partner. Then never touch it again if they choose.
+Dough Labs owns the Business Manager. UpClick works inside it as a partner from our own agency account. One human at Dough Labs with a clean account does about twenty minutes of clicking, once, from their own phone or laptop: create the Business Manager, turn on two-factor, invite a second admin, start business verification, invite UpClick as partner. Then never touch it again if they choose.
 
-You will not need me on a call for it. Tell me which path you pick and I will send a walkthrough written for that exact path: every screen, every button, what to type in each field, and what to do if Meta throws a verification prompt mid-way. Follow it at your own pace. The moment the partner invite lands on my side, I take over and you are done.
+You do not need me on a call for it, and you do not need to send me anything. Tell me which path you pick and I will send a walkthrough written for that exact path: every screen, every button, what to type in each field, and what to do if Meta throws a verification prompt mid-way. The Dough Labs formation documents and EIN go into Meta's verification form from your side. I never need to see them. The moment the partner invite lands on my side, I take over the advertising and you are done.
 
 Two candidates, in order, each with its own walkthrough:
 
 1. **Someone at Dough Labs other than you.** Co-owner, partner, spouse, employee. Their Facebook account must be years old, real name, never restricted. This keeps your personal account out entirely, which is what you asked for.
 2. **Your personal account.** Your reason for holding it back does not fit the facts. The June account died as evasion of the business login, not as a copy of your personal one, which has sat alive beside both the entire time. It is the one account Meta already treats as legitimately yours. There is risk in using it to rebuild the same business. That same risk attaches to whoever does this.
 
-If both are no, I build it under my account with a Dough Labs person as second admin from day one, a signed authorisation naming UpClick as your agent, and a written agreement that the container is yours on request. That path gets a walkthrough too, a shorter one, because the only thing the Dough Labs person does is accept an invite. I would rather you picked one or two.
+There is no third path. If neither person exists, we have a different conversation, but it will not end with me owning Circadian's account.
 
 **Your Instagram question**
 
@@ -88,9 +88,9 @@ Two routes you have not used. Small claims court: Meta's terms allow it, your th
 1. Is there a second person at Dough Labs with the account described above? This one answer decides the structure.
 2. If not, will you use your personal account, with a second admin added the same day?
 3. Who controls DNS for circadianrest.com and an @circadianrest.com mailbox other than jacob@?
-4. Send the Meta correspondence and screenshots. Two matter most: whether circadianrest.com was verified in the old Business Manager, and whether the Instagram was added by login or only through the Page.
+4. Two facts from your old screenshots, if they show it. Was circadianrest.com verified in the old Business Manager? Was the Instagram added to it by logging in, or only through the Page? Just the answers; I do not need the file.
 5. In Metricool, is the Instagram connected by Instagram login or Facebook login?
-6. Dough Labs formation documents and EIN letter. Legal name, address and phone exactly as printed. Meta rejects on any mismatch.
+6. Have the Dough Labs formation documents and EIN letter to hand. You will upload them to Meta yourself. The legal name, address and phone you type must match them exactly. Meta rejects on any mismatch.
 
 Money: the new card is yours, on the ad account, under a hard monthly cap. UpClick never fronts spend.
 
