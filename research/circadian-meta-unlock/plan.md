@@ -42,7 +42,7 @@ Suggested wording, in Sam's voice, to sit at the top of the next email.
 >
 > There is one exception, and it is worth knowing about because it shows the rule is structural rather than personal. Meta does offer work-only logins that are not personal accounts, called managed Meta accounts. A company's IT team provisions them through single sign-on, they carry no personal profile, and they exist so that employees of large advertisers can use Business tools without their own Facebook accounts. Meta's help centre documents them, but they are only available to organisations Meta has admitted to the programme, in practice large enterprises, and there is no public way to apply. For a company Dough Labs's size the rule is what it is: one human, one account. The other things Meta offers, additional profiles and professional mode, all hang off that one account. They let you separate your public face from your personal one, but they do not create a second login.
 >
-> So the scarce thing is not a Business Manager. It is a person with one clean, established Facebook account who is willing to be the accountable human for Circadian. Your personal account is one. A co-owner's or partner's is another. Mine is a third, but if mine is the only one, Circadian is in the same shape it was in April 2025: one human's login between the business and nothing.
+> So the scarce thing is not a Business Manager. It is a person with one clean, established Facebook account who is willing to be the accountable human for Circadian. Your personal account is one. A co-owner's or partner's is another. Mine is not on the list. If mine were the only one, Circadian would be in the same shape it was in April 2025: one human's login between the business and nothing.
 
 ## 3. Adversarial review of Jacob's proposal (UpClick creates and owns the portfolio)
 
@@ -77,10 +77,10 @@ Corrections to put in front of Jacob so the second plan is trusted.
 |---|---|---|---|---|---|
 | **B1. A Dough Labs person other than Jacob** (co-owner, spouse, employee) with an aged, clean personal Facebook account, two admins from day one, UpClick as partner | Client | Best. Restriction lands on the client's portfolio and one non-Jacob login. | Meta's intended model: client owns, agency gets revocable partner access. | None needed. | **Recommended if such a person exists.** |
 | **B2. Jacob's living personal account** creates it, second admin added immediately, UpClick as partner | Client | Good for UpClick. Exposes Jacob's last surviving Facebook identity. | Compliant. The personal account is his one permitted account. | None needed. | Recommended fallback. Jacob's reluctance is understandable but rests on a misdiagnosis (see section 4, point 3). His call. |
-| **A. Sam's personal account creates a separate "Dough Labs LLC" portfolio**, verified as Dough Labs, Sam sole admin | UpClick | Poor. Portfolio-level isolation only; person-level restriction hits all UpClick clients. | Allowed with written authorisation, but the authorisation rejection ground applies. | Whole-portfolio handover; ad account and pixel never leave. | Last resort only, and only with a second admin and a written agreement. |
-| **C. Circadian assets inside UpClick's existing verified portfolio** (agency-owned ad account, agency-owned Page) | UpClick | Worst for UpClick's other clients if their ad accounts live in the same portfolio: a portfolio restriction "impacts the ad accounts, shops and business assets they own". | Standard agency practice. | Page is transferable later; ad account and pixel are not. | Avoid unless UpClick's portfolio holds no other client assets. |
+| **A. Sam's personal account creates a separate "Dough Labs LLC" portfolio**, verified as Dough Labs, Sam sole admin | UpClick | Poor. Portfolio-level isolation only; person-level restriction hits all UpClick clients. | Allowed with written authorisation, but the authorisation rejection ground applies. | Whole-portfolio handover; ad account and pixel never leave. | Declined. Sam will not own or verify client assets. |
+| **C. Circadian assets inside UpClick's existing verified portfolio** (agency-owned ad account, agency-owned Page) | UpClick | Worst for UpClick's other clients if their ad accounts live in the same portfolio: a portfolio restriction "impacts the ad accounts, shops and business assets they own". | Standard agency practice. | Page is transferable later; ad account and pixel are not. | Declined, same reason. |
 
-Recommendation to put to Jacob: **B1 if there is a second real person at Dough Labs; otherwise B2.** If Jacob refuses both, do A with the safeguards in section 6, phase 2, and say plainly that it reproduces the risk that already cost him the business once.
+Recommendation to put to Jacob: **B1 if there is a second real person at Dough Labs; otherwise B2.** Sam has decided not to offer A or C at all: UpClick advises and runs ads through partner access, and does not own or verify Circadian's assets. If Jacob refuses both B options, that is a separate conversation.
 
 One more argument for B1 or B2 that Jacob will care about: the Shopify channel requires the connecting person to have "full control of the business portfolio and Facebook Page", and the portfolio "has to be the owner of the Facebook Page". Under option A, Dough Labs cannot connect its own store; only Sam can.
 
@@ -90,8 +90,8 @@ Every phase has a stop condition. Do not proceed past a stop condition without d
 
 ### Phase 0. Paperwork and hardening (Jacob, this week)
 
-1. **Written agency authorisation** from Dough Labs LLC naming UpClick Labs as its agent for Meta advertising, signed by Jacob as managing member. Needed for business verification and for the Self-Serve Ad Terms "authority to bind the advertiser" warranty, whichever option is chosen.
-2. **Formation documents and EIN letter** for Dough Labs LLC, with legal name, address and phone exactly as they will be entered in the portfolio. Meta rejects on mismatch: "the legal entity name in the submitted document must match the legal entity name you provided".
+1. **UpClick's role is advisory.** Sam supplies written walkthroughs and runs ads via partner access. Sam never creates, owns or verifies the portfolio, and never receives Dough Labs's formation documents or EIN. They go straight into Meta's verification form from Jacob's side.
+2. **Formation documents and EIN letter** for Dough Labs LLC stay with Jacob, ready to upload. Legal name, address and phone entered in the portfolio must match them exactly. Meta rejects on mismatch: "the legal entity name in the submitted document must match the legal entity name you provided".
 3. **A fresh payment card** that has never been on Meta. The card that carried the fraud stays off every Meta surface. This is precautionary; Meta does not document card-level flags, but a new instrument costs nothing.
 4. **Instagram hardening.** Unique password, authenticator-app 2FA, review "Where you're logged in", download the account data. Confirm in Metricool whether the Instagram is connected by Instagram login or Facebook login. Leave the contact email alone: it has survived 16 months and changing it is a new signal for no gain.
 5. **Confirm nobody creates any new Facebook account.** A fourth would be treated as evasion on sight.
@@ -104,17 +104,17 @@ Every phase has a stop condition. Do not proceed past a stop condition without d
    - Stop condition: if the boost is refused with an advertising restriction, the Instagram itself carries a restriction. That changes the plan entirely (a Meta Verified support case on the Instagram becomes step one) and nobody's Facebook account should be spent on a build until it is cleared.
 2. **Instagram ownership probe** happens in phase 2, step 3, because it needs the new portfolio to exist.
 
-### Phase 2. Build the portfolio (owner per section 5, following a written walkthrough from Sam; no call)
+### Phase 2. Build the portfolio (owner per section 5, following a written walkthrough from Sam; no call; Sam never touches the account)
 
 1. Sam sends a walkthrough written for the chosen path (every screen, field and prompt). The chosen person, from their own device and their normal browser, creates the business portfolio. Name: Dough Labs LLC. Business email: an @circadianrest.com mailbox they control (email verification is Meta's fastest route and doubles as the "connection to the business" proof).
-2. **Add a second admin the same day.** Under B1 that is Jacob's personal account or Sam; under B2 it is a Dough Labs person or Sam; under A it is a Dough Labs person. Two admins is the entire lesson of the last sixteen months.
+2. **Add a second admin the same day.** Under B1 that is Jacob's personal account; under B2 it is another Dough Labs person. Sam is never an admin, only a partner. Two admins is the entire lesson of the last sixteen months.
 3. **Instagram ownership probe.** Business settings, Accounts, Instagram accounts, Add, log in as @circadianrest.
    - Success: the old portfolio only had a Page connection. The new portfolio now owns the Instagram. Continue.
    - "This Instagram account is already owned by another business": the dead portfolio claimed it. Meta's only documented remedies are the owner removing or transferring it, so this goes to the human-support track (phase 5). Ads on Instagram placements still work through the Page connection in phase 3, so the build continues.
 4. Create the new Page. Expect a username variant; facebook.com/circadianrest is held by the old Page. Add the Page to the portfolio. Add a second Page admin.
 5. Turn on **two-factor requirement for everyone** in Business settings, Security Center.
 6. **Submit business verification** with the Dough Labs documents. Try email verification first, documents second. Skip domain verification for now: expect "already verified by another business" and do not burn an appeal on it.
-7. **Add UpClick as a partner** by UpClick's portfolio ID and assign the Page with the permissions Sam needs. Under option A this step is reversed: the Dough Labs person is the partner.
+7. **Add UpClick as a partner** by UpClick's portfolio ID and assign the Page with the permissions Sam needs.
 8. Do not create the ad account yet.
 
 ### Phase 3. Move the Instagram (Jacob, from his phone, 15 minutes)
@@ -151,7 +151,8 @@ Ranked by realistic odds, none high:
 - Do not add any Facebook login to the Instagram's Accounts Center.
 - Do not put the fraud-affected card on any Meta surface.
 - Do not verify the domain until the human-support track has had a go at releasing it.
-- Do not make Sam the sole admin of anything Dough Labs is meant to own.
+- Do not make Sam an admin of anything Dough Labs is meant to own. Partner access only.
+- Do not send Dough Labs's formation documents or EIN to UpClick. They go into Meta's form directly.
 - Do not chargeback the old charges (they were refunded anyway) and do not try to log in to the disabled account: each attempt is a fresh signal tying the identity to a removed account.
 - Do not call any "Meta support" phone number. Meta publishes none.
 
