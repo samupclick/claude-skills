@@ -104,9 +104,9 @@ Every phase has a stop condition. Do not proceed past a stop condition without d
    - Stop condition: if the boost is refused with an advertising restriction, the Instagram itself carries a restriction. That changes the plan entirely (a Meta Verified support case on the Instagram becomes step one) and nobody's Facebook account should be spent on a build until it is cleared.
 2. **Instagram ownership probe** happens in phase 2, step 3, because it needs the new portfolio to exist.
 
-### Phase 2. Build the portfolio (owner per section 5; Sam assists on a call)
+### Phase 2. Build the portfolio (owner per section 5, following a written walkthrough from Sam; no call)
 
-1. The chosen person, from their own device and their normal browser, creates the business portfolio. Name: Dough Labs LLC. Business email: an @circadianrest.com mailbox they control (email verification is Meta's fastest route and doubles as the "connection to the business" proof).
+1. Sam sends a walkthrough written for the chosen path (every screen, field and prompt). The chosen person, from their own device and their normal browser, creates the business portfolio. Name: Dough Labs LLC. Business email: an @circadianrest.com mailbox they control (email verification is Meta's fastest route and doubles as the "connection to the business" proof).
 2. **Add a second admin the same day.** Under B1 that is Jacob's personal account or Sam; under B2 it is a Dough Labs person or Sam; under A it is a Dough Labs person. Two admins is the entire lesson of the last sixteen months.
 3. **Instagram ownership probe.** Business settings, Accounts, Instagram accounts, Add, log in as @circadianrest.
    - Success: the old portfolio only had a Page connection. The new portfolio now owns the Instagram. Continue.

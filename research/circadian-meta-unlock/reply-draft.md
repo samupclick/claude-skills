@@ -40,14 +40,16 @@ So: yes as a last resort. No as the default. Never with one admin. One admin is 
 
 **What we do instead**
 
-Dough Labs owns the Business Manager. UpClick works inside it as a partner from our own agency account. All the labour is still mine. What I need from Dough Labs is one human with a clean account to spend thirty minutes on a call with me: create the Business Manager, turn on two-factor, add a second admin the same day. Then never touch it again if they choose.
+Dough Labs owns the Business Manager. UpClick works inside it as a partner from our own agency account. All the labour is still mine. What I need from Dough Labs is one human with a clean account to do about twenty minutes of clicking, once, from their own phone or laptop: create the Business Manager, turn on two-factor, invite a second admin, invite UpClick as partner. Then never touch it again if they choose.
 
-Two candidates, in order:
+You will not need me on a call for it. Tell me which path you pick and I will send a walkthrough written for that exact path: every screen, every button, what to type in each field, and what to do if Meta throws a verification prompt mid-way. Follow it at your own pace. The moment the partner invite lands on my side, I take over and you are done.
+
+Two candidates, in order, each with its own walkthrough:
 
 1. **Someone at Dough Labs other than you.** Co-owner, partner, spouse, employee. Their Facebook account must be years old, real name, never restricted. This keeps your personal account out entirely, which is what you asked for.
 2. **Your personal account.** Your reason for holding it back does not fit the facts. The June account died as evasion of the business login, not as a copy of your personal one, which has sat alive beside both the entire time. It is the one account Meta already treats as legitimately yours. There is risk in using it to rebuild the same business. That same risk attaches to whoever does this.
 
-If both are no, I build it under my account with a Dough Labs person as second admin from day one, a signed authorisation naming UpClick as your agent, and a written agreement that the container is yours on request. I would rather you picked one or two.
+If both are no, I build it under my account with a Dough Labs person as second admin from day one, a signed authorisation naming UpClick as your agent, and a written agreement that the container is yours on request. That path gets a walkthrough too, a shorter one, because the only thing the Dough Labs person does is accept an invite. I would rather you picked one or two.
 
 **Your Instagram question**
 
