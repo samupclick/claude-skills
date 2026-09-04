@@ -170,3 +170,31 @@ Produced by the grill-me process, one component at a time. A build agent should 
 
 - Image model shortlist verification and API access (Sam, Friday).
 - Fidelity check implementation: vision-model comparison against the source ad, threshold to tune after batch one (Saturday S3).
+
+---
+
+## Component 5: Creative gate
+
+**Decided**
+
+- **Facts always block, automatically.** Hard checks run on every creative and any failure blocks: Meta ad policy, brand hard blocks from config, real-person likeness, translation coherence (routes to planner), missing `creative_components`, landing page mismatch, internal VOC phrase quoted without a `quote_release`.
+- **Taste is Sam's, and the gate learns it.** Initially Sam is the taste gate. On every creative the model rubric (hook strength, 3-second clarity, ICP specificity, VOC language present, single CTA, mobile legibility, layout fidelity) scores in *shadow mode*, then Sam gives approve/reject with an optional one-line reason. Both are stored in `gate_scores` (`scored_by='agent'` and `scored_by='sam'`). The taste gate is promoted to blocking when agent verdicts agree with Sam's at the configured rate over a window (graduated autonomy, same rule as every action).
+- **Taste is corrected by the market.** The Monday memo reports where Sam's rejections would have out-performed approvals (via ablation or later re-runs) and where rubric dimensions do or do not predict CTR. Quarterly: regress rubric dimensions on link CTR; drop or reweight the ones that predict nothing. Target is Sam's taste corrected by performance, not Sam's taste frozen.
+- **Review channel: email first.** When a batch clears fact checks, a `review_ready` event sends an email with each creative inline at mobile size, its source ad, and its recipe. One-click signed approve/reject links per creative write directly to the warehouse and expire after use. Replying to the email with numbered lines is parsed into `gate_scores.feedback`. A review page backed by the warehouse exists for the full view. Slack carries only the count waiting and the link. Sender: transactional email service with Sam's Gmail as reply-to (Gmail connector is the fallback sender).
+- **Retry loop:** a fact-check fail goes back to the producer (or planner for coherence) with the feedback object from `content-supervisor` §5.1; max 3 attempts, then it is dropped from the batch and logged.
+
+**Rejected**
+
+- Rubric blocking from day one (default). Rejected: rubric is unvalidated; Sam's taste is the initial filter.
+- Review in Drive + Slack. Rejected: verdict friction kills the reason data.
+
+**Schema changes (fold into 0001)**
+
+- `gate_scores`: `scored_by` becomes a required enum (`agent`, `sam`, later other humans); add `verdict text check in ('approve','reject')`, `mode check in ('shadow','blocking')`.
+- New `review_tokens(id, creative_id, verdict, token_hash, expires_at, used_at)` for one-click links.
+- `events.type`: add `review_ready`, `verdict_received`.
+
+**Open**
+
+- Transactional email sender choice (Resend vs Supabase SMTP vs Gmail connector) — Saturday S4.
+- Agreement rate and window for promoting the taste gate (default 85% over 40 creatives) — Sam, before Sunday U4.
