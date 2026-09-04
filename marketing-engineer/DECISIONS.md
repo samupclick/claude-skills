@@ -138,3 +138,35 @@ Produced by the grill-me process, one component at a time. A build agent should 
 
 - Underperformance margin for triggering an ablation (default 60% of source benchmark) — tune after batch 2.
 - How the intel worker infers a source ad's implied benchmark from Ad Library signals (days running, variant count, engagement where visible) — design in Saturday S2.
+
+---
+
+## Component 4: Creative producer
+
+**Decided**
+
+- **Renderer is an experiment, not a decision.** Two paths are built: (a) HTML templates per family rendered with Playwright, (b) image-to-image generation with the source ad as reference plus a layout-fidelity check. Batch one runs the same six recipes through both where a template exists, so pairs differ only in renderer. `renderer` is a `creative_components` row, so `mart_component_leaderboard` answers which wins. The gate scores both on legibility and layout fidelity before spend.
+- **Weekend scope:** three family templates (job photo + bubble, testimonial card, screenshot ad) plus the generation path wired to one model with the fidelity check, so both run on batch one.
+- **Imagery is generated, best-in-class only.** No stock, no budget image tools. The image model is a config value because the leader changes monthly; batch one runs two top-tier models side by side inside the renderer experiment. Shortlist to verify Friday: Google Nano Banana line, OpenAI image model, Flux Pro; Ideogram only if text must be generated in-image.
+- **People:** generated people allowed; real-person likeness is a gate hard block.
+- **Text is ours, never the model's.** The model generates a text-free image; the producer overlays all copy in HTML using the family template and renders with Playwright. Copy and layout are exact; the image is the only moving part. In-image text only when the recipe structure demands it (fake screenshot), and then still composed by us.
+- **Copy:** per brief the producer writes primary text (3 lengths), headline (5), hook lines (10), following `references/direct-response-copy.md` (one idea per ad, first-line hook, specificity, CTA matches landing page) and the translation rules from component 3 (only offer, product nouns, VOC phrases, imagery subject may change).
+- **Organic:** same recipes rewritten as X posts/threads and LinkedIn posts, sharing the hook bank; stored in `posts` with `creative_id` and `hook_id`.
+- **Outputs:** sizes 1080×1080, 1080×1350, 1080×1920 to Supabase Storage; `creatives.asset_urls` holds the URLs; every creative has full `creative_components` (hook, angle, family, variant, template, renderer, image_model, voc_phrase, cta, landing_page, offer) or the gate refuses it.
+
+**Rejected**
+
+- Own phone photos as the primary image source (default). Rejected: generated, best-in-class only.
+- Stock imagery. Rejected outright.
+- Model-painted text. Rejected: breaks copy-constant ablation.
+
+**Schema changes (fold into 0001)**
+
+- `creative_components.component_type`: add `renderer`, `image_model`, `variant`, `family` (replace `format`).
+- `creatives`: add `image_prompt text`, `source_reference_url text`, `fidelity_score numeric`.
+- `gate_scores.scores`: add `layout_fidelity` (numeric) and hard block `real_person_likeness`.
+
+**Open**
+
+- Image model shortlist verification and API access (Sam, Friday).
+- Fidelity check implementation: vision-model comparison against the source ad, threshold to tune after batch one (Saturday S3).
