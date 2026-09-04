@@ -290,3 +290,31 @@ Design in `WAREHOUSE.md` and `warehouse/schema.sql` stands; these decisions clos
 
 - Export format for client data requests (default: CSV per table + asset zip) — week 2.
 - Whether `events` needs partitioning by month from day one (default no; revisit at 1M rows).
+
+---
+
+## Component 9: Orchestrator
+
+**Decided**
+
+- **The runtime is ours.** The reactor is an always-on service on our platform (week 3), consuming the `events` table and calling models per task through their APIs: **Grok as the watcher** (competitor watch, ICP feed and trend mining, buying triggers later), **Claude for planning, copy, and the gate** (the skills in this repo via the Agent SDK), **best-in-class image models** for pictures. This weekend, Claude Code routines and webhook-triggered sessions stand in for the reactor; the warehouse carries state between wakes, so nothing in the skills changes when the reactor moves.
+- **Single executor enforces trust.** Workers never perform side effects. They write *proposed* `actions`. One executor inside the orchestrator reads proposed actions, checks the action type's trust level and approval counters, and either executes (marking `applied`) or routes the action into Sam's check-in. Every side effect — launch, activate, kill, scale, publish, push to Instantly, send email, quote release, taste promotion — goes through this path. **Promotions to a higher trust level are themselves actions only Sam can approve.**
+- **Three brakes.** (1) A pause flag per client and one global, settable from the check-in email, Slack, or the app; the executor checks it before every side effect. (2) Automatic pause when daily spend exceeds the cap by 20%, when the same action fails 3 times, or when any worker's error rate spikes. (3) A spend ceiling on the Meta ad account set in Business Manager, the brake that works when our code does not.
+- **Reactor loop:** read unprocessed events → coalesce per source over the window → dispatch to the worker for that event type with a per-worker daily budget → workers write entities and proposed actions → executor applies or routes → check-in composed from `actions`, `campaigns.active_lever`, `learnings`, and warnings.
+
+**Rejected**
+
+- Grok (or any vendor agent product) as the runtime. Rejected: the orchestrator holds the gates and trust logic and must live on our platform; model-per-task needs a neutral runtime. Grok is a first-class watcher, not the host.
+- Per-worker trust checks. Rejected: one bug spends money; single executor instead.
+
+**Schema changes (fold into 0001)**
+
+- `actions`: add `trust_level_at_proposal`, `routed_to_human boolean`, `executor_run_id`.
+- New `trust_levels(client_id, action_type, level check in ('propose','execute'), threshold int, approvals_unchanged int, promoted_at, promoted_by)`.
+- New `pause_flags(scope check in ('global','client'), client_id, paused boolean, reason, set_by, set_at)`.
+- New `worker_runs(id, worker, trigger_event_ids uuid[], started_at, finished_at, tokens_used, api_calls, status, error)`.
+
+**Open**
+
+- Reactor hosting when it moves into the app (same host as the app; decide with the app hosting choice) — Sam, Friday.
+- Error-rate spike definition for auto-pause (default: >30% of a worker's runs failing over 1 hour) — tune week 2.
