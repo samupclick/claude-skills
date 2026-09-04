@@ -1,10 +1,12 @@
-# Kickoff prompt for `/orchestrate` — Marketing Engineer Pipeline, phase 0
+# Kickoff prompt — Marketing Engineer Pipeline, phase 0 build session
+
+> There is no `orchestrate` skill in Matt Pocock's set. The equivalent flow is `/setup-matt-pocock-skills` once (choose the local markdown tracker in cloud sessions), then `/to-tickets` to turn the task graph below into tracer-bullet tickets with blocking edges, then `/implement` per ticket. This prompt drives that flow.
 
 Paste everything below the line into a fresh Claude Code session on branch `claude/marketing-engineer-pipeline-8d7hfs` of `samupclick/claude-skills`, after the Friday checklist in `marketing-engineer/CRUCIBLE.md` §4 is done.
 
 ---
 
-Use the orchestrate skill.
+Run `/setup-matt-pocock-skills` first if `docs/agents/issue-tracker.md` does not exist; choose the **local markdown** tracker under `.scratch/`, and default answers for the rest. Then run `/to-tickets` against the task graph in this message to publish one ticket per task (T1–T12) with the blocking edges shown, and stop for my approval of the breakdown. After I approve, work the tickets in dependency order with `/implement`, one ticket per fresh context, honouring the stop points below.
 
 ## What we are building
 
@@ -61,7 +63,7 @@ Parallelism allowed: T2 ∥ T3 ∥ T7 ∥ T8 after T1. T5 needs my picks (stop p
 
 ## Reviewer pass
 
-After each task's commit, run a reviewer subagent with only the task's diff, the PRD rows it claims, and the constraints list. The reviewer checks: acceptance criteria actually tested, no Meta write outside the executor, role used correctly, `runs` row present, untrusted-text handling, no secrets, no binaries. A failed review sends the task back once; a second failure stops the orchestration and reports to me.
+After each task's commit, run `/code-review` against the task's merge-base with only the task's diff, the PRD rows it claims, and the constraints list in scope. The reviewer checks: acceptance criteria actually tested, no Meta write outside the executor, role used correctly, `runs` row present, untrusted-text handling, no secrets, no binaries. A failed review sends the task back once; a second failure stops the orchestration and reports to me.
 
 ## Reporting
 
