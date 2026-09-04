@@ -1,8 +1,8 @@
 {
-  "_status": "DRAFT — placeholder values marked PLACEHOLDER; Sam replaces before go-live (see references/dev-mode.md)",
+  "_status": "DRAFT — placeholder values marked PLACEHOLDER; Sam replaces before go-live (see references/dev-mode.md). daily_cap 45 and adset_daily_budget 15 set 2026-09-04 so batch one (6 creatives) fits capacity 6; see .scratch/marketing-engineer-phase0/spec.md",
   "client": { "name": "upClickLabs", "slug": "upclicklabs", "site": "https://upclicklabs.com", "industry": "b2b_services" },
   "currency": "EUR",
-  "daily_cap": 30,
+  "daily_cap": 45,
   "offer": {
     "name": "AI visibility audit",
     "promise": "PLACEHOLDER: find out in 15 minutes whether ChatGPT and Google AI recommend you or your competitors",
@@ -36,7 +36,7 @@
   "floors": { "cost_per_link_click": 2.5, "quiz_start_rate": 0.5, "quiz_complete_rate": 0.4, "booking_rate": 0.15 },
   "cpm_estimate": 25,
   "batch": { "recipes": 3, "executions_per_recipe": 2, "proposals_multiplier": 4 },
-  "campaign": { "optimisation_event": "QuizStart", "adsets_max": 3, "adset_daily_budget": 10, "geo": ["GB", "IE", "NL", "DE"], "age": [25, 65] },
+  "campaign": { "optimisation_event": "QuizStart", "adsets_max": 3, "adset_daily_budget": 15, "geo": ["GB", "IE", "NL", "DE"], "age": [25, 65] },
   "renderer": "html_template",
   "image_model": "placeholder",
   "families_ref": "references/families.md",
