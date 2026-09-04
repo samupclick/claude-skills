@@ -198,3 +198,38 @@ Produced by the grill-me process, one component at a time. A build agent should 
 
 - Transactional email sender choice (Resend vs Supabase SMTP vs Gmail connector) — Saturday S4.
 - Agreement rate and window for promoting the taste gate (default 85% over 40 creatives) — Sam, before Sunday U4.
+
+---
+
+## Component 6: Launcher (paid, landing, tracking, nurture)
+
+**Decided**
+
+- **Meta structure per offer:** two testing campaigns matching the 70/30 split — *new recipes* and *ablations* — each with **one ad set per recipe** on its own budget so every recipe reaches sample size, both executions as ads inside it. A third **scaling campaign** with campaign budget optimisation holds proven winners only, where Meta is allowed to pick. Broad targeting (geo + age only). All ads created paused; activation follows the trust rule.
+- **Conversion event:** optimise for `Schedule` (booked call) from day one. `QuizStart`, `QuizStep`, `QuizComplete` fire as tracked events for funnel visibility. Documented fallback: switch to `QuizComplete` only if bookings stay under 5/week after two weeks.
+- **The quiz is the landing page and it lives on our platform.** One small app of ours on a subdomain (`go.upclicklabs.com`), separate from the WordPress brochure site, hosts: quiz funnels per offer, the creative review page (component 5), and later client dashboards. Backed by Supabase. Client funnels run on the same app under client domains via CNAME at onboarding. Rationale: first-party pixel/CAPI match quality, server-side writes to the warehouse, trust, and a product surface clients see.
+- **Quiz mechanics:** 3–5 questions, one per screen, progress bar; questions in client config; ad URL carries `utm_content = creative_id`; submission writes a `leads` row with creative attribution, `fbclid`, answers, and a qualification score; free-text answers emit VOC events for component 2. Server-side CAPI on every step. Event testing tool must show green before launch (Launch Gate hard check).
+- **Qualification: soft for month one.** Every completer can book; answers set `leads.qualification_score`, visible before the call. Hard mode (disqualifying answers never reach the calendar, `qualified` stage automatic) is turned on once the warehouse shows which answers predict a closed deal.
+- **Nurture via Instantly, by lead-stage events:** completed-not-booked within 1 hour → nurture sequence; booked → reminder sequence until the call; no-show → rebook sequence. Quiz starters who never complete are retargeted on Meta only, never emailed. "Push to Instantly" is an action under the trust rule (proposed first, auto once promoted). Replies and bookings flow back to `leads.stage`.
+- **Organic:** posts scheduled via Typefully with the same recipe and hook links; publishing is an action under the trust rule.
+
+**Rejected**
+
+- Single campaign with budget optimisation for testing. Rejected: starves creatives before sample size, breaks attribution and the 70/30 split.
+- Shallow optimisation events (clicks, LPV, QuizStart). Rejected per the deep-funnel rule.
+- Third-party quiz/landing tools. Rejected: tracking quality, data path, trust, ownership.
+- Emailing every quiz starter. Rejected: domain reputation.
+
+**Schema changes (fold into 0001)**
+
+- `leads`: add `qualification_score numeric`, `quiz_version text`, `nurture_sequence text`, `instantly_lead_id text`.
+- `ad_entities`: add `campaign_kind check in ('new_recipes','ablation','scaling')`, `recipe_pattern_id`.
+- `offers`: add `quiz_config jsonb`, `calendar_url`, `funnel_host text`.
+- `events.type`: add `quiz_start`, `quiz_step`, `quiz_complete`, `lead_booked`, `lead_no_show`, `lead_stage_changed`.
+- `actions.action`: add `push_to_instantly`, `activate`, `publish_post`.
+
+**Open**
+
+- Hosting for the app (Vercel vs Cloudflare Pages vs Supabase Edge) and the `go.` subdomain DNS — Sam, Friday.
+- Calendar tool behind the booking step (from component 0) — Sam, Friday.
+- Quiz questions v1 for the upClickLabs offer — draft Saturday S3, Sam approves Sunday U1.
