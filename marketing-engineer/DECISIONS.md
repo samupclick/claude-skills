@@ -104,3 +104,37 @@ Produced by the grill-me process, one component at a time. A build agent should 
 
 - Vault convention for which notes count (Sam, Friday).
 - Vault sync path into the build environment (local folder vs. Obsidian Sync vs. git) — decide Saturday S2.
+
+---
+
+## Component 3: Angle planner
+
+**Decided**
+
+- **Replicate then ablate, not one-variable-at-a-time and not a lottery.** The unit of planning is a *recipe*: the full decomposition of a proven ad — family, variant, hook type, angle, proof type, visual structure, copy structure, copy length, CTA mechanic, offer mechanic. The intel worker must capture the whole recipe; "format + hook" is not enough.
+- **A batch is a set of recipes replicated onto our offer**, each as a bundle. Attribution is at recipe level first, then flows to ingredients via `creative_components`.
+- **Ablation is the diagnostic.** When our replica underperforms its source by a clear margin at sample size (default: link CTR below 60% of the source's implied benchmark or below the client floor), the loop diffs our creative against the source recipe, lists the ingredients that changed in translation, and spins an ablation batch (3–4 creatives) restoring them one at a time. When the replica matches or beats the source, the recipe is marked `proven` for the ICP and its ingredients get leaderboard credit.
+- **Disciplined translation.** When translating a DTC recipe to our offer the planner may change only: the offer, product nouns, VOC phrases, and imagery subject. Carried over exactly: structure, hook type, angle, copy length, visual layout, CTA mechanic. Every translation records `changed_ingredients[]` so the ablation diff is computed, not guessed.
+- **Coherence check.** Every translated recipe passes a "translation coherence" hard check in the creative gate: does the structure still make sense with the swapped nouns (no "home grown smartphones"). A fail routes back to the *planner* with the contradiction named, not to the producer, because the fault is recipe choice.
+- **Human selection with 4× over-generation.** The planner proposes ~24 ranked recipes (by source strength and family diversity); Sam selects 6, each executed twice → 12 creatives. Each pick is recorded as a `selections` event: proposed set, chosen set, rejected set, optional one-line reason. Selections are training data for the ranker. Under graduated autonomy, once the planner's top-6 matches Sam's picks at the configured rate, selection is promoted to the planner.
+- **Spend split:** 70% of daily budget to the current new-recipe batch, 30% to ablations. Ablations run only when a replica has underperformed at sample size; otherwise the 30% goes to the next-ranked new recipes.
+- **Planner reads before proposing:** `learnings` (client, ICP, global), `mart_component_leaderboard` for the ICP, `mart_benchmarks` for a cold ICP, `voc_phrases` weighted by source, proven and candidate `patterns`. Cold start on a new ICP is handled by replication: the priors come from the source recipes.
+
+**Rejected**
+
+- One primary variable per batch (default proposal). Rejected: too slow and ignores the free prior that proven ads provide. Kept only as the ablation mechanism.
+- Free-form rewriting during translation. Rejected: makes the ablation diff meaningless.
+- Planner picks the 6 from day one. Rejected until trust is earned.
+
+**Schema changes (fold into 0001)**
+
+- `patterns`: add recipe fields `proof_type`, `copy_length`, `cta_mechanic`, `offer_mechanic`, `recipe jsonb` (full decomposition), `benchmark jsonb` (implied performance signals from source).
+- `briefs`: add `source_pattern_id`, `changed_ingredients text[]`, `kind check in ('replica','ablation')`, `ablation_of_creative_id`.
+- New `selections(id, client_id, experiment_id, proposed uuid[], chosen uuid[], rejected uuid[], reason text, selected_by, created_at)`.
+- `experiments`: add `budget_share numeric` and `kind check in ('new_recipes','ablation')`.
+- `gate_scores.scores`: add dimension `translation_coherence` (hard check, pass/fail).
+
+**Open**
+
+- Underperformance margin for triggering an ablation (default 60% of source benchmark) — tune after batch 2.
+- How the intel worker infers a source ad's implied benchmark from Ad Library signals (days running, variant count, engagement where visible) — design in Saturday S2.
