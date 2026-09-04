@@ -1,20 +1,22 @@
-# Project skills
+# Project Claude Code configuration
 
-Everything under `.claude/skills/` is exposed as a `/<name>` slash command in every Claude Code session on this repo (CLI, desktop, and cloud), per https://code.claude.com/docs/en/skills.
+## Matt Pocock's skills (plugin, project scope)
 
-## Vendored: Matt Pocock's skills (v1.2.3, MIT)
+`settings.json` enables the official `mattpocock-skills@claude-plugins-official` plugin for every session on this repo (CLI, desktop, cloud). Commands are namespaced by the plugin name:
 
-The 25 skills the official `mattpocock-skills` plugin ships, copied from https://github.com/mattpocock/skills so they work in cloud sessions without a per-user plugin install. Licence: `skills/LICENSE-mattpocock-skills`.
+- `/mattpocock-skills:grill-me`, `/mattpocock-skills:grill-with-docs` — design interrogation
+- `/mattpocock-skills:to-spec` (was `to-prd`), `/mattpocock-skills:to-tickets`, `/mattpocock-skills:implement` — spec → tickets → build
+- `/mattpocock-skills:wayfinder`, `/mattpocock-skills:tdd`, `/mattpocock-skills:code-review`, `/mattpocock-skills:triage`, and the rest
 
-Do **not** also install the plugin (`/plugin install mattpocock-skills`) or every skill appears twice. To update, re-copy from the upstream repo's `.claude-plugin/plugin.json` list, or run `npx skills@latest add mattpocock/skills` and choose these.
+Model-invoked ones (tdd, diagnosing-bugs, research, …) also trigger automatically when the task fits.
 
-First use in this repo: run `/setup-matt-pocock-skills` once. It configures the issue tracker the planning skills write to. Cloud sessions have no `gh` CLI, so choose **local markdown** (`.scratch/`) unless you run locally.
+First use in this repo: run `/mattpocock-skills:setup-matt-pocock-skills` once. Cloud sessions have no `gh` CLI, so choose the **local markdown** tracker (`.scratch/`) unless you run locally.
 
-Note: there is no `orchestrate`, `crucible`, or `to-prd` skill upstream. `to-prd` was renamed `to-spec`. The build flow is `/to-tickets` (spec → tracer-bullet tickets) then `/implement` (per ticket, uses `/tdd` and `/code-review`), with `/wayfinder` for work too big for one session and `/grill-with-docs` for design.
+There is no `orchestrate` or `crucible` skill upstream. The build flow is `to-tickets` then `implement` per ticket.
 
-## Ours (symlinks to the top-level folders)
+## Our skills (`skills/`, symlinks to the top-level folders)
 
-- `marketing-engineer` → orchestrator for the Marketing Engineer Pipeline (`marketing-engineer/SKILL.md`)
-- `to-prd` → our PRD generator, kept under the name we use; upstream's equivalent is `/to-spec`
+- `/marketing-engineer` — orchestrator for the Marketing Engineer Pipeline
+- `/to-prd` — our PRD generator
 
 The top-level folders remain the upload format for claude.ai skills.
