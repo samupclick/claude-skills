@@ -1,6 +1,6 @@
 # Growth Warehouse — the compounding asset
 
-**Status:** Design v0.1 (2026-09-02)
+**Status:** Design v0.1 (2026-09-02). **Superseded in detail by `warehouse/schema.sql` (migration 0001) and `warehouse/0002_roles.sql`**, which carry every decision from `DECISIONS.md` and every amendment from `CRUCIBLE.md`. Read this file for the *why*; read the SQL for the *what*. Known drift: §1 and §3.2 predate the two-level taxonomy, the recipe split, the actions state machine, roles, PII isolation, and the deferral of `events` to week 3.
 **One line:** every input the agents consume and every output they produce is written to one queryable store, decomposed into components, stamped with time and client, and joined to outcomes. Skills stay generic; the knowledge lives here.
 
 ---

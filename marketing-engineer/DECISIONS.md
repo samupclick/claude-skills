@@ -13,7 +13,7 @@ Produced by the grill-me process, one component at a time. A build agent should 
 - **Graduated autonomy, per action type.** Target end state: the system launches, kills, and scales on its own. Start supervised, like onboarding a new employee. Each action type (launch, kill, scale, publish organic, push lead to nurture) has its own trust level. An action is promoted from *propose* to *execute* after it has been approved unchanged N times. N lives in client config; approval counts come from the `actions` table (`approved_by`, `applied`).
 - **Stack.** Claude Code + skills remain the orchestrator, producer, and gate. Grok (xAI API with X search) powers the creative-intel worker and, in week 3, the buying-trigger agent; it is a worker behind a warehouse-write boundary, not the orchestrator. Supabase is the warehouse and asset store. Instantly is the nurture layer: quiz leads are pushed into sequences by API, replies and bookings flow back to `leads.stage`. Meta Marketing API for paid. Typefully for organic scheduling. Playwright HTML templates for statics; Canva later for brand templates. Notion stays the job board, Slack the alert channel. Rule: no new tool without a warehouse write.
 - **Machine budget cap:** 250 USD/month for the first quarter, excluding ad spend and model usage on existing plans. Vendor prices to verify: xAI API, scrapecreators tier, Typefully.
-- **Owner:** Sam owns the pipeline. Cadence is a **daily check-in**: the daily routine reports to Slack, Sam approves or rejects proposed actions there, and those decisions feed the trust counters. Monday learnings memo remains the weekly accountability artefact.
+- **Owner:** Sam owns the pipeline. Cadence is a **daily check-in** delivered by email (Slack carries only the count and a link); Sam approves or rejects proposed actions from it, and those decisions feed the trust counters. Monday learnings memo remains the weekly accountability artefact.
 
 **Rejected**
 
@@ -318,3 +318,21 @@ Design in `WAREHOUSE.md` and `warehouse/schema.sql` stands; these decisions clos
 
 - Reactor hosting when it moves into the app (same host as the app; decide with the app hosting choice) — Sam, Friday.
 - Error-rate spike definition for auto-pause (default: >30% of a worker's runs failing over 1 hour) — tune week 2.
+
+
+---
+
+## Crucible amendments (2026-09-02)
+
+Three adversarial reviews (economics, safety, feasibility) produced 40 findings, consolidated in `CRUCIBLE.md`. Twenty-four amendments are applied to `ARCHITECTURE.md` v1.1, `warehouse/schema.sql`, `warehouse/0002_roles.sql`, and `PLAN.md` v1.1. Six of them reverse choices made above and stand as v1.1 defaults **pending Sam's veto**:
+
+| # | Component | Reversed | Now |
+|---|-----------|----------|-----|
+| V1 | C3, C6 | 6 recipes × 2 = 12 creatives at $30/day | capacity-derived batch (≈4 creatives/week at $30/day); batch one = 3 recipes × 2 = 6, Sam picks 3 of 12; or raise budget to ~€90/day |
+| V2 | C6 | optimise ad sets for `Schedule` day one | testing ad sets optimise for `QuizStart`; `Schedule` is the warehouse-measured terminal metric; promote the Meta event with volume |
+| V3 | C4 | both renderers + two image models inside batch one | renderer and image model are between-batch factors; in-batch only via Meta A/B tool |
+| V4 | C5 | email review with one-click GET links this weekend | chat verdicts this weekend; email in week 2 with POST-confirmed tokens; spend approvals behind a session; never in Slack |
+| V5 | C4 | testimonial-card template with generated people | testimonial/quote families hard-blocked without a real client's `quote_release` and no depicted person |
+| V6 | C0 | 250 USD/month cap, Grok wk2, Instantly day one | staged stack; Grok wk3 with $/day budget; Instantly at ≥10 leads/week; Sam to raise cap to ~$500 or accept slower cadence |
+
+The remaining amendments (A1–A24 in `CRUCIBLE.md` §2) add enforcement, statistics, compliance, and scope discipline without reversing a decision. Schema changes listed in the component blocks above are now folded into migration 0001; the "fold into 0001" notes are historical.

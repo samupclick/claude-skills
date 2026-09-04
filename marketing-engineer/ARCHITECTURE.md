@@ -1,6 +1,6 @@
 # Marketing Engineer Pipeline — High-Level Architecture
 
-**Status:** v1.0, consolidated from `DECISIONS.md` (components 0–9) on 2026-09-02. This is the document a build agent implements from. `PLAN.md` holds the schedule, `WAREHOUSE.md` the data design, `DECISIONS.md` the reasoning and rejected options.
+**Status:** v1.1, consolidated from `DECISIONS.md` (components 0–9) and amended by `CRUCIBLE.md` on 2026-09-02. This is the document a build agent implements from. `warehouse/schema.sql` + `0002_roles.sql` are the data source of truth, `PLAN.md` the schedule, `DECISIONS.md` the reasoning, `CRUCIBLE.md` the amendments and the six items awaiting Sam's veto (V1–V6).
 
 ---
 
@@ -11,11 +11,14 @@ An always-on, event-driven creative engine that acquires clients for upClickLabs
 **Non-negotiables**
 
 1. Facts always block (policy, brand, likeness, coherence, tracking). Taste starts with Sam and is learned.
-2. No side effect without the executor. Workers propose; one executor applies under the trust rule.
+2. No side effect without the executor. Workers propose; one executor applies under the trust rule. **Enforced in Postgres** (roles + `actions_guard` trigger), not in prose; the Meta write token exists only in the executor process.
 3. Every creative is decomposed into components. No attribution key, no ship.
 4. Read learnings before planning; write learnings after measuring. Zero learnings at sample size is a warning.
 5. Nothing lives only in a file. Warehouse is the system of record; git holds code, prompts, schema, and rendered memos.
 6. The runtime is ours. Models are workers.
+7. **Batch size is derived from impressions, not ambition.** Capacity = `floor(daily_budget × 7 × 1000 / (cpm × kill_impressions))`; a batch never exceeds it.
+8. **Money signals must be verified.** Scale and conversion-stage kills use warehouse-verified bookings, never Meta-reported leads.
+9. **Ingested text is untrusted.** Every row carries a `trust_tier`; models receive it as delimited data and return schema-validated JSON.
 
 ---
 
@@ -66,11 +69,11 @@ An always-on, event-driven creative engine that acquires clients for upClickLabs
 |------|--------|-----------------|-------|--------|-------------|
 | Intel | creative-intel | scrapecreators pull (weekend); Grok watcher findings (wk 2) | seed brand lists, families | `raw_ingest`, `patterns` (full recipe, `family`+`variant`, `source_list`, `status`), `intel_runs` | approve variant→family promotions (Monday) |
 | Language | customer-language | vault change, quiz submit, watcher finding | vault notes, public sources | `voc_phrases` (verbatim, tagged, weighted, anonymised, `visibility`) | `quote_release` for internal phrases |
-| Plan | angle-planner | batch requested, ablation triggered | `learnings`, leaderboards, benchmarks, VOC, patterns | `experiments`, ~24 `briefs` (replicas w/ `changed_ingredients`), `selections` | **picks 6 of 24** until promoted |
-| Produce | creative-producer | briefs selected | briefs, brand kit, templates | `creatives` ×2 per recipe ×2 renderers, `creative_components`, assets in Storage | none |
-| Gate | creative-gate | creatives ready | policy, brand, source ad | `gate_scores` (agent shadow + Sam verdict), `review_tokens` | **approve/reject by email** until promoted |
-| Ship | launcher | creatives approved | campaigns, offer, quiz config | `campaigns`, `ad_entities` (paused), `posts`, proposed `activate` | activate (trust rule) |
-| Measure | performance-loop | insights arrival, sample_size_reached | metrics, benchmarks, value model | `ad_metrics_daily`, `benchmarks`, `campaigns.active_lever`, proposed kill/scale `actions`, `learnings` | approve kill/scale until promoted |
+| Plan | angle-planner | `capacity_freed` (in-flight below sample < capacity − batch), ablation triggered | `learnings`, leaderboards (LCB-ranked, ≥3 creatives), config floors, VOC, patterns | `experiments` (with `capacity`), 4× `briefs` (replicas w/ `changed_ingredients`), `selections` | **picks N of 4N** (N = capacity/2) until promoted |
+| Produce | creative-producer | briefs selected | briefs, brand kit, templates | `creatives` ×2 per recipe (one renderer per batch), `creative_components`, assets in Storage | none |
+| Gate | creative-gate | creatives ready | policy, brand, source ad | `gate_scores` (agent shadow + Sam verdict) | **approve/reject in chat** (weekend) → email with POST-confirmed links (week 2) until promoted |
+| Ship | launcher | creatives approved | campaigns, offer, quiz config | proposed `build_campaign` → executor creates `campaigns`, `ad_entities` (paused); proposed `activate` | activate (trust rule, cap invariant) |
+| Measure | performance-loop | insights arrival, sample_size_reached | `ad_metrics_latest`, verified bookings, config floors, value model | `ad_metrics_daily` (append, restatements by `fetched_on`), `account_spend_hourly`, `campaigns.active_lever`, proposed kill/scale `actions`, `learnings` (statistically gated) | approve kill/scale until promoted |
 | Close | launcher (nurture) | lead stage events | leads | proposed `push_to_instantly`, `leads.stage` from replies | approve until promoted |
 | Learn | performance-loop | Monday | everything | Monday memo, promotions proposed, next batch requested | reads memo, picks recipes |
 
@@ -79,7 +82,7 @@ An always-on, event-driven creative engine that acquires clients for upClickLabs
 ## 4. Component summaries
 
 ### 0. Value model
-Per campaign: a **terminal metric** fixed at launch (e.g. booked call) and a **lever chain** per platform (Meta: hook rate → link CTR → CPM → CVR → cost per booked call). The loop works the first lever below benchmark at sample size. Terminal metric changes need a human.
+Per campaign: a **terminal metric** fixed at launch (booked call, measured in the warehouse) and a **lever chain** per platform. For static ads on Meta: **cost per link click → quiz-start rate → quiz-complete rate → booking rate → cost per booked call**. CPM is context reported alongside, not a lever. Hook rate is rung zero only for video families. The loop works the first lever below benchmark at sample size. Terminal metric changes need a human. **Meta's optimisation event is a separate setting** (`campaigns.optimisation_event`, `QuizStart` for testing ad sets) and is promoted as volume allows; it never redefines the terminal metric.
 
 ### 1. Creative intelligence
 Three sub-workers: format library (weekend, scrapecreators), competitor watch and trend mining (week 2, Grok). Seed: best DTC testers; category peers as fallback after a family fails in-niche (3 creatives under floor). Two-level taxonomy: fixed **families** (attribution key) + free **variants** (exploration); variants promoted at the Monday memo. **Proven** = ≥30 days running or ≥3 concurrent variants. Every run logs counts; empty is valid; two consecutive source failures block the batch.
@@ -88,25 +91,25 @@ Three sub-workers: format library (weekend, scrapecreators), competitor watch an
 Sources: Obsidian vault (weight 3) → quiz answers (2) → Reddit/Quora, G2/Clutch, LinkedIn/X replies (1). Unit: verbatim phrase, tagged pain/outcome/objection/identity/trigger. Anonymised at extraction; pointer to source only; vault phrases `internal` and quotable only with a `quote_release`. Event-driven per source; deduplicated by source pointer.
 
 ### 3. Angle planner
-**Replicate then ablate.** Unit is the *recipe* (full decomposition of a proven ad). A batch replicates recipes onto our offer; translation may change only offer, product nouns, VOC phrases, imagery subject, and records `changed_ingredients`. Underperformance vs source → ablation batch restoring ingredients one at a time. Coherence check routes back to the planner. Planner proposes ~24, Sam picks 6 (×2 executions = 12 creatives); selections train the ranker. Spend 70% new recipes / 30% ablations.
+**Replicate then ablate.** Unit is the *recipe*, split into a **format layer** (family, visual structure, copy structure, copy length, hook type) carried exactly from DTC sources, and an **offer layer** (offer mechanic, proof type, CTA mechanic) fixed per offer from `offers.offer_layer` or category peers. Translation may change only offer, product nouns, VOC phrases, imagery subject, and records `changed_ingredients`. Attribution and ablation operate on the format layer. Ablation triggers when a replica is below the CTR floor at sample size **and** the recipe is proven **and** ≤3 ingredients changed; one ablation at a time, two creatives. Source strength is ordinal, for ranking only; there is no implied source benchmark. Coherence check routes back to the planner. Planner proposes 4× capacity, Sam picks (batch one: 3 of 12); selections train the ranker; deterministic ranker (source strength × family diversity) until four batches of selections exist. Spend: 100% new recipes until the first ablation exists, then 70/30. A new batch is requested when capacity frees, not on a calendar.
 
 ### 4. Creative producer
-Two renderers, both built, both tested on batch one: HTML family templates via Playwright, and image-to-image from the source ad with a fidelity check. Imagery generated by best-in-class models only (config value; two models side by side in batch one); no stock; generated people ok, real likeness blocked. **Text is always ours**, overlaid in HTML. Copy per direct-response rules and translation discipline. Organic posts share recipes and hooks. Full `creative_components` or no ship.
+Two renderers, both built, compared **between batches**: batch one = HTML family templates via Playwright with one image model; batch two = image-to-image from the source ad with a fidelity check on the same recipes. In-batch renderer comparisons only through Meta's A/B tool, never two ads inside one ad set. Imagery generated by best-in-class models only (config value); no stock; generated people ok, real likeness blocked; **testimonial/quote families blocked** unless the quote is a real client's with a `quote_release` and no depicted person. **Text is always ours**, overlaid in HTML. Source images are copied to Storage at ingest (CDN URLs expire). Copy per direct-response rules and translation discipline. Organic posts share recipes and hooks (publishing deferred). Full `creative_components` (family, variant, hook, angle, template, renderer, image_model, voc_phrase, cta, landing_page, offer) or no ship.
 
 ### 5. Creative gate
-Facts block automatically. Taste is Sam's verdict by **email** (inline creatives, one-click signed approve/reject, reasons by reply); the model rubric scores in shadow mode and is promoted to blocking when it agrees with Sam at the configured rate. Taste is corrected by the market in the Monday memo; rubric dimensions regressed on CTR quarterly.
+Facts block automatically: Meta policy, brand hard blocks, real-person likeness, fabricated testimonial, translation coherence, missing components, landing mismatch, verbatim `public`/`inbound`/`internal` phrase without release. Taste is Sam's verdict: **in chat this weekend**, by **email from week 2** (inline creatives; links open a confirmation page that POSTs; one token per item, 72h expiry; spend-affecting approvals behind a magic-link session; never in Slack; reply parsing requires DMARC + `In-Reply-To` and lands as untrusted feedback). The model rubric scores in shadow mode and is promoted to blocking when it agrees with Sam at the configured rate over only human-channel decisions. Taste is corrected by the market in the Monday memo; rubric dimensions regressed on CTR quarterly.
 
 ### 6. Launcher
-Meta per offer: **new-recipes** and **ablation** campaigns with one ad set per recipe (own budget), plus a **scaling** campaign (CBO) for proven winners. Broad targeting. Optimise for **booked call** from day one; quiz events tracked; `QuizComplete` fallback documented. **Quiz funnel on our platform** (`go.upclicklabs.com`), first-party pixel + CAPI, `utm_content = creative_id`, soft qualification with a score in month one. Nurture via Instantly on lead-stage events (nurture / reminder / rebook); starters never emailed. Organic via Typefully.
+Meta per offer: a **new-recipes** campaign with one ad set per recipe (own budget, ≤3 ad sets at $30/day); the **ablation** and **scaling** (CBO) campaigns are created when the first ablation or proven winner exists. Broad targeting. Testing ad sets optimise for **`QuizStart`**; `QuizComplete` when an ad set exceeds ~30/week; `Schedule` only in the scaling campaign. Budget moves in ≤20% steps; `object_story_id` reused when moving to scaling; origin ad paused in the same action. `review_status` synced from Meta; a disapproval blocks `activate`; N disapprovals in 7 days pauses the client. The launcher **proposes** `build_campaign`; the executor creates the objects. **Quiz funnel on our platform** (`go.upclicklabs.com`, separate repo), first-party pixel + server-side CAPI with `event_id` dedup, consent step before any pixel fires, Turnstile + rate limits, `utm_content = creative_id`, soft qualification with a score in month one. `Schedule` fires only on a booking verified through the calendar tool's API (`leads.booked_verified_at`). Nurture via Instantly on lead-stage events once ≥10 leads/week (nurture / reminder / rebook), marketing consent required; starters never emailed. Organic publishing deferred.
 
 ### 7. Performance loop
-Benchmarks per lever resolved: own history → cross-client mart → source recipe → config floor. Chain walked top-down; first lever below benchmark becomes the active lever. Kill/scale rules under the trust rule with evidence snapshots. Learnings in three tiers: proposed (any benchmark hit/miss at sample size) → supported (replication or ablation) → global (3 clients). **Daily check-in**: actions waiting, actions taken, active levers, new learnings, warnings. Monday memo: promotions, taste-vs-market, next batch.
+Benchmarks per lever resolved: own history → cross-client mart (≥3 clients) → config floor. Chain walked top-down; first lever below benchmark becomes the active lever. Kill/scale under the trust rule with evidence snapshots: CTR-stage kill per ad at sample size; conversion-stage kill only when expected bookings ≥5 and observed < expected/3; scale only on ≥5 verified bookings at or under `cpl_target`, which is derived from the funnel after 100 clicks. Missing config is `config_missing`, never a default. Learnings need statistics: ≥50 clicks per arm, effect ≥0.3pp or ≥30% relative, posterior ≥0.9; tiers proposed → supported (replication or ablation) → global (3 clients); below the gates = zero weight. Leaderboards rank by lower confidence bound and hide levels under 3 creatives. **Daily check-in** by email via the Gmail connector: actions waiting, actions taken, active levers, new learnings, warnings. Monday memo: promotions, taste-vs-market, next batch.
 
 ### 8. Growth warehouse
-Supabase Postgres + pgvector + Storage. Clients see the app, never the DB; exports on request; benchmarks are ours by contract. Schema growth: raw → JSONB (documented) → column (migration) once read twice. Migrations only.
+Supabase Postgres (EU region) + pgvector + Storage. Clients see the app, never the DB; exports on request; benchmarks are ours by contract and suppressed under 3 clients. PII isolated in `lead_contacts` with column grants; consent on every lead; retention and erasure fan-out (`erasure_requests`); DPAs with every processor; Meta Data Processing Terms accepted. Every ingested row carries `trust_tier`. Views are `security_invoker`. Schema growth: raw → JSONB (documented) → column (migration) once read twice. Migrations only.
 
 ### 9. Orchestrator
-Our runtime. Reactor consumes `events`, coalesces, dispatches to workers with daily budgets. **Grok is the watcher; Claude plans, writes, gates; image models draw.** Single executor applies proposed actions under per-action-type trust levels; promotions are Sam-only actions. Brakes: pause flags (global/client), auto-pause on spend +20% / 3 failures / error spike, and a Business Manager spend ceiling. Weekend stand-in: Claude Code routines + webhooks; app service in week 3.
+Our runtime. From week 3 a reactor consumes `events`, coalesces, dispatches to workers with daily budgets. **Grok is the watcher (week 3); Claude plans, writes, gates; image models draw.** Single executor applies proposed actions under per-action-type trust levels computed from `trust_streaks` (human decisions only, unchanged payload, reset on rejection; `activate` counted per batch; `kill` also needs ≥80% back-test accuracy); promotions are Sam-only actions enforced by trigger; autonomous actions are rate-limited and demoted on any executor failure. Concurrency: advisory lock per executor run, `for update skip locked`, `applying` written before any external call, `applied` only after reading the object back from Meta, stuck `applying` reconciled never re-sent. Brakes: (1) the cap invariant `check_daily_cap()` before every create/activate/scale; (2) `clients.paused` + global env flag, re-checked inside the applying transaction; (3) hourly account-level spend pull; (4) auto-pause on 3 failures / error spike / lead velocity >3× median; (5) one ad account per client, system user on Advertiser role, account spending limit set by Sam's admin, prepaid card. Weekend stand-in: two fixed Claude Code wakes per day (08:00, 20:00), fresh session, SessionStart hook, no session webhooks (Edge Functions write to the warehouse). App service in week 3.
 
 ---
 
@@ -114,17 +117,18 @@ Our runtime. Reactor consumes `events`, coalesces, dispatches to workers with da
 
 | Action type | Starts as | Promoted after (default) | Who promotes |
 |-------------|-----------|--------------------------|--------------|
-| recipe selection (planner picks the 6) | Sam picks | planner top-6 matches Sam's picks ≥80% over 4 batches | Sam |
-| taste gate (rubric blocks) | Sam verdicts | agent verdict agrees with Sam ≥85% over 40 creatives | Sam |
-| activate campaign / ad | propose | 20 unchanged approvals | Sam |
-| kill | propose | 10 unchanged approvals | Sam |
+| recipe selection (planner picks) | Sam picks | planner top-N matches Sam's picks ≥80% over 4 batches | Sam |
+| taste gate (rubric blocks) | Sam verdicts | agent verdict agrees with Sam ≥85% over 40 creatives, human-channel only | Sam |
+| build_campaign | propose | 10 unchanged approvals (per batch) | Sam |
+| activate campaign / ad | propose | 20 unchanged approvals, **counted per batch** | Sam |
+| kill | propose | 10 unchanged approvals **and** back-test accuracy ≥80% | Sam |
 | scale / move to scaling campaign | propose | 20 unchanged approvals | Sam |
 | publish organic post | propose | 20 unchanged approvals | Sam |
 | push lead to Instantly | propose | 20 unchanged approvals | Sam |
-| quote_release (internal VOC verbatim) | Sam only | never auto | — |
-| trust promotion | Sam only | never auto | — |
+| quote_release (internal / public verbatim) | Sam only | never auto | — |
+| set_pause_flag, promote_trust | Sam only | never auto (trigger-enforced) | — |
 
-Counters come from `actions` (`approved_by`, `applied`, unchanged vs edited). Any rejection resets the streak for that type.
+Streaks are the `trust_streaks` view over `actions`: only `decision_channel in (chat, token_post, app)`, only `approved_payload = proposal`, reset at the last rejection. Auto-applied actions never count. Even when promoted: max kills per day, never >50% of live ads in one day, one scale per ad per 72h; any executor failure demotes the type to `propose`.
 
 ---
 
@@ -132,31 +136,27 @@ Counters come from `actions` (`approved_by`, `applied`, unchanged vs edited). An
 
 `intel_finding`, `pattern_added`, `vault_note_changed`, `voc_extracted`, `batch_requested`, `briefs_proposed`, `selection_made`, `creatives_rendered`, `review_ready`, `verdict_received`, `creatives_approved`, `campaign_built`, `action_proposed`, `action_applied`, `quiz_start`, `quiz_step`, `quiz_complete`, `lead_booked`, `lead_no_show`, `lead_stage_changed`, `insights_arrived`, `sample_size_reached`, `lever_changed`, `learning_proposed`, `checkin_sent`, `pause_set`, `worker_failed`.
 
-Coalescing window 15 minutes per source. Each worker has a daily token and API-call budget in client config.
+Coalescing window 15 minutes per `(source, entity_ref)`; lifecycle types (`lead_*`, `verdict_received`, `pause_set`) are never coalesced; `quiz_step` is sampled at the app. Each worker has a daily token and API-call budget in client config. **The `events` table and reactor land in week 3**; until then routines poll the entity tables directly.
 
 ---
 
 ## 7. What ships this weekend vs later
 
-| Weekend | Week 2 | Week 3 | Week 4 |
-|---------|--------|--------|--------|
-| Warehouse (migration 0001 incl. all component schema changes), client lib, seed | Grok competitor watch + trend mining | Reactor service in the app | AEO pipeline tables share the warehouse |
-| Format library from scrapecreators, DTC seed list, families v1 | Embeddings refresh, CRM/Instantly stage sync | Buying-trigger agent (Grok) | Client dashboard on the app |
-| VOC from vault + public sources | Auto-pause on kill rule enabled | Image-to-image path for families without templates | Video scripts |
-| Planner: 24 recipes → Sam picks 6 | First client onboarded (cloned config) | Hard qualification if data supports | Rubric regression v1 |
-| Producer: 3 templates + 1 generation path, 2 image models | | | |
-| Gate: fact checks + email review with one-click verdicts | | | |
-| Launcher: 3-campaign structure (paused), quiz on `go.` subdomain, CAPI tested | | | |
-| Loop: insights pull, lever selection, proposed kill/scale, first learning | | | |
-| Orchestrator stand-in: routines + webhooks, executor, pause flag | | | |
-| Daily check-in email | | | |
+The weekend scope is the **cut line in `CRUCIBLE.md` §3** (6 creatives, one renderer, one image model, one campaign, chat verdicts, config-floor benchmarks, routine stand-in). It closes ad live → metrics in warehouse → one learning row with honest sub-sample numbers.
 
-Definition of done for the weekend is unchanged in spirit from `PLAN.md` §3: one live loop for upClickLabs with batch one fully in the warehouse, but with the decisions above applied (both renderers, email review, three-campaign structure, quiz on our platform, executor + pause flag).
+| Week 2 | Week 3 | Week 4 |
+|--------|--------|--------|
+| Email review with POST-confirmed links; `review_tokens` | Reactor service in the app; `events` + coalescing + worker budgets | AEO pipeline tables share the warehouse |
+| Batch two: image-to-image renderer on batch-one recipes | Grok competitor watch + trend mining with $/day source budget | Client dashboard on the app |
+| First ablation / scaling campaign if a winner exists | Buying-trigger agent (Grok) | Rubric regression v1 |
+| Embeddings refresh; `competitors` table | Instantly nurture once ≥10 leads/week | Video scripts |
+| Client-scoped RLS (`0003`) and first client onboarded | Hard qualification if data supports | Export tooling |
+| Auto-pause on kill rule; Standard Access review lands | Organic publishing via X API | |
 
 ---
 
 ## 8. Open items (from DECISIONS.md)
 
-Friday (Sam): Meta access; Supabase project; DTC and category seed lists; vault note convention; image model access; app hosting + `go.` DNS; calendar tool; vendor prices; promotion thresholds.
-Saturday: families v1 (S2); recipe benchmark inference (S2); vault sync path (S2); fidelity check threshold (S3); email sender (S4); quiz questions v1 (S3).
-Post-weekend: ablation margin, conversion-stage sample sizes, Monday memo timing, export format, events partitioning, error-spike definition, reactor hosting.
+**Awaiting Sam's veto (see `CRUCIBLE.md` §1):** V1 batch size / budget, V2 `QuizStart` optimisation, V3 renderer across batches, V4 chat verdicts this weekend, V5 testimonial block, V6 machine budget cap.
+**Friday:** the corrected checklist in `CRUCIBLE.md` §4 (Meta on Advertiser role + spending limit + Standard Access review; `go.` on Vercel; Supabase EU; scrapecreators test call; Gemini image key; `families.md` + DTC list; config; vault seed; DPAs; SessionStart hook).
+**Post-weekend:** ablation margin, conversion-stage sample sizes, Monday memo timing, export format, `events` partitioning, error-spike definition, reactor hosting, X API for organic metrics.
