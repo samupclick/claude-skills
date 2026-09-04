@@ -1,0 +1,57 @@
+{
+  "_status": "DRAFT — placeholder values marked PLACEHOLDER; Sam replaces before go-live (see references/dev-mode.md)",
+  "client": { "name": "upClickLabs", "slug": "upclicklabs", "site": "https://upclicklabs.com", "industry": "b2b_services" },
+  "currency": "EUR",
+  "daily_cap": 30,
+  "offer": {
+    "name": "AI visibility audit",
+    "promise": "PLACEHOLDER: find out in 15 minutes whether ChatGPT and Google AI recommend you or your competitors",
+    "price_anchor": "free 15-minute call",
+    "proof_points": ["PLACEHOLDER: proof point 1", "PLACEHOLDER: proof point 2"],
+    "terminal_metric": "booked_call",
+    "calendar_url": "PLACEHOLDER: https://cal.com/…",
+    "funnel_host": "http://localhost:8788",
+    "offer_layer": { "offer_mechanic": "free_audit_call", "proof_type": "process_transparency", "cta_mechanic": "book_15_min" },
+    "quiz_config": {
+      "version": "v1-draft",
+      "questions": [
+        { "id": "q1", "text": "PLACEHOLDER: What best describes your business?", "options": ["B2B services", "SaaS", "Agency", "Other"] },
+        { "id": "q2", "text": "PLACEHOLDER: Where do most of your leads come from today?", "options": ["Referrals", "SEO", "Paid ads", "Outbound", "Not sure"] },
+        { "id": "q3", "text": "PLACEHOLDER: If a prospect asked ChatGPT for a provider like you, would it name you?", "options": ["Yes", "No", "No idea"] }
+      ],
+      "qualification": { "q1": { "B2B services": 2, "SaaS": 2, "Agency": 1, "Other": 0 }, "q3": { "No": 2, "No idea": 2, "Yes": 0 } }
+    }
+  },
+  "icp": {
+    "label": "founder / marketing lead, B2B services, Europe",
+    "role": "founder or head of marketing",
+    "company_type": "B2B services",
+    "industry": "b2b_services",
+    "geo": ["GB", "IE", "NL", "DE"],
+    "size_band": "10-200",
+    "pains": ["PLACEHOLDER: invisible in AI answers", "PLACEHOLDER: SEO agency burned budget"],
+    "outcomes": ["PLACEHOLDER: named by ChatGPT for our category"]
+  },
+  "targets": { "ctr_floor": 0.01, "kill_impressions": 2000, "cpl_target": null },
+  "floors": { "cost_per_link_click": 2.5, "quiz_start_rate": 0.5, "quiz_complete_rate": 0.4, "booking_rate": 0.15 },
+  "cpm_estimate": 25,
+  "batch": { "recipes": 3, "executions_per_recipe": 2, "proposals_multiplier": 4 },
+  "campaign": { "optimisation_event": "QuizStart", "adsets_max": 3, "adset_daily_budget": 10, "geo": ["GB", "IE", "NL", "DE"], "age": [25, 65] },
+  "renderer": "html_template",
+  "image_model": "placeholder",
+  "families_ref": "references/families.md",
+  "brand": { "colors": { "primary": "#111111", "accent": "#3B82F6", "bg": "#FFFFFF" }, "font": "Inter", "hard_blocks": ["no pricing", "no client names without release", "no income claims"] },
+  "trust": {
+    "build_campaign": { "threshold": 10, "unit": "batch", "level": "propose" },
+    "activate": { "threshold": 20, "unit": "batch", "level": "propose" },
+    "kill": { "threshold": 10, "unit": "action", "level": "propose", "backtest_min_accuracy": 0.8 },
+    "scale": { "threshold": 20, "unit": "action", "level": "propose" },
+    "publish_post": { "threshold": 20, "unit": "action", "level": "propose" },
+    "push_to_instantly": { "threshold": 20, "unit": "action", "level": "propose" }
+  },
+  "rate_limits": { "max_kills_per_day": 3, "max_share_of_live_ads_killed_per_day": 0.5, "scale_cooldown_hours": 72 },
+  "worker_budgets": { "intel": { "api_calls": 50 }, "planner": { "tokens": 400000 }, "producer": { "tokens": 400000, "images": 20 }, "gate": { "tokens": 200000 } },
+  "voc": { "seed_dir": "config/clients/upclicklabs/voc-seed", "vault_path": "PLACEHOLDER: /Users/Sam/Documents/ucl-brain", "public_sources": ["PLACEHOLDER: https://www.reddit.com/r/…"] },
+  "inspo": { "dtc_seed": ["AG1", "Liquid Death", "HexClad", "Ridge", "Dr. Squatch"], "category_seed": [] },
+  "disapproval_pause_threshold": 3
+}
