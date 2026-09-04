@@ -1,28 +1,39 @@
-# Kickoff prompt — Marketing Engineer Pipeline, phase 0 build session
+# Kickoff — Marketing Engineer Pipeline, phase 0 build
 
-> There is no `orchestrate` skill in Matt Pocock's set. The equivalent flow is `/mattpocock-skills:setup-matt-pocock-skills` once (choose the local markdown tracker in cloud sessions), then `/mattpocock-skills:to-tickets` to turn the task graph below into tracer-bullet tickets with blocking edges, then `/mattpocock-skills:implement` per ticket. The plugin is enabled for this repo in `.claude/settings.json`. This prompt drives that flow.
+Three messages drive the build with Matt Pocock's skills, which are enabled for this repo through `.claude/settings.json`. There is no `orchestrate` skill in that set; the flow is **`to-tickets`** (spec → tracer-bullet tickets with blocking edges) then **`implement`** (one ticket per fresh context, test-first, reviewed, committed).
 
-Paste everything below the line into a fresh Claude Code session on branch `claude/marketing-engineer-pipeline-8d7hfs` of `samupclick/claude-skills`, after the Friday checklist in `marketing-engineer/CRUCIBLE.md` §4 is done.
+Prerequisite: the Friday checklist in `CRUCIBLE.md` §4. Start a new session on `samupclick/claude-skills` from `main`.
+
+- **Message 1** creates the tickets. Send once.
+- **Message 2** implements one ticket. Send once per ticket, in dependency order, in a fresh session or after `/clear`.
+- **Message 3** is what you reply at the four stop points.
 
 ---
 
-Run `/mattpocock-skills:setup-matt-pocock-skills` first if `docs/agents/issue-tracker.md` does not exist; choose the **local markdown** tracker under `.scratch/`, and default answers for the rest. Then run `/mattpocock-skills:to-tickets` against the task graph in this message to publish one ticket per task (T1–T12) with the blocking edges shown, and stop for my approval of the breakdown. After I approve, work the tickets in dependency order with `/mattpocock-skills:implement`, one ticket per fresh context, honouring the stop points below.
+## Message 1 — set up the tracker and create the tickets
 
-## What we are building
+```
+If `docs/agents/issue-tracker.md` does not exist, run /mattpocock-skills:setup-matt-pocock-skills first.
+Choose the LOCAL MARKDOWN tracker under `.scratch/` (this session has no `gh` CLI), feature name
+`marketing-engineer-phase0`, and accept the defaults for everything else.
 
-Phase 0 of the Marketing Engineer Pipeline, specified in `marketing-engineer/PRD.md` v1.0 (functional requirements FR-1 to FR-49, data requirements DR-1 to DR-6, non-functional requirements NFR-1 to NFR-7). The architecture is `marketing-engineer/ARCHITECTURE.md` v1.1. The data model is already written and validated: `marketing-engineer/warehouse/schema.sql` (migration 0001) and `warehouse/0002_roles.sql`. The orchestrator skill that will run the finished pipeline is `marketing-engineer/SKILL.md`; every script you build must match its run-mode table (§3) and its executor procedure (§6). If documents disagree, the precedence is: schema → PRD → ARCHITECTURE → CRUCIBLE → DECISIONS. `PLAN.md` is the schedule only.
+Then run /mattpocock-skills:to-tickets on the spec at marketing-engineer/PRD.md, phase 0 only
+(PRD §6 row "0 — Weekend", FR-1 to FR-49, DR-1 to DR-6, NFR-1 to NFR-7), with the following as
+the DRAFT BREAKDOWN for your step 3. Do not re-derive the slices; present these twelve as the
+proposed tickets with their blocking edges and quiz me on granularity and edges as the skill
+requires. Each ticket body must carry, verbatim: its Deliverable, its Acceptance, the Constraints
+block below, its blocking edges, and its stop-point marker if it has one. Do not publish until I
+approve the breakdown.
 
-Goal of this session: close one honest loop for the `upclicklabs` client — ad live → metrics rows in the warehouse → one learning row — per `PLAN.md` §1 items 1–11. Sub-sample numbers are expected.
+Read first, yourself, before drafting: marketing-engineer/PRD.md, marketing-engineer/SKILL.md,
+marketing-engineer/warehouse/schema.sql, marketing-engineer/warehouse/0002_roles.sql,
+marketing-engineer/CRUCIBLE.md §3–4, marketing-engineer/PLAN.md §1–4. Precedence when documents
+disagree: schema → PRD → ARCHITECTURE → CRUCIBLE → DECISIONS. PLAN.md is the schedule only.
 
-## Before dispatching any task
+Goal of phase 0: close one honest loop for the `upclicklabs` client — ad live → metrics rows in the
+warehouse → one learning row — per PLAN.md §1 items 1–11. Sub-sample numbers are expected.
 
-1. Read `PRD.md`, `SKILL.md`, `warehouse/schema.sql`, `warehouse/0002_roles.sql`, `CRUCIBLE.md` §3–4, and `PLAN.md` §1–4 yourself. Subagents get the excerpts you hand them, not the whole history.
-2. Verify the Friday prerequisites and stop if any starred item is missing: env vars `WAREHOUSE_URL_WORKER`, `WAREHOUSE_URL_EXECUTOR`, `SUPABASE_URL`, `SUPABASE_STORAGE_BUCKET`, `SCRAPECREATORS_API_KEY`, `GEMINI_API_KEY` present (do not print values); `select count(*) from families` ≥ 15; `select count(*) from clients where slug='upclicklabs'` = 1 with `daily_cap`, `currency`, `config.targets.ctr_floor`, `config.targets.kill_impressions` set; `config/clients/upclicklabs.json` exists with `batch.recipes = 3`, `optimisation_event = "QuizStart"`; `config/clients/upclicklabs/voc-seed/` has ≥ 5 notes; `references/families.md` exists with the DTC seed list.
-3. Confirm the six resolved veto items in `PRD.md` §12 are reflected in config (V1 three recipes, V2 QuizStart, V3 one renderer, V4 chat verdicts, V5 testimonial block, V6 Grok not in this phase).
-
-## Task graph
-
-Dispatch in dependency order. Each task is one subagent with a fresh context. Each task ends with: tests passing, a `runs` row written by a real invocation against the warehouse, and one commit on this branch with a message that names the FR ids satisfied. No task may start before its dependencies are committed.
+### Draft breakdown (tracer-bullet tickets)
 
 | # | Task | Depends on | Deliverable | Acceptance (from PRD) |
 |---|------|-----------|-------------|------------------------|
@@ -39,9 +50,10 @@ Dispatch in dependency order. Each task is one subagent with a fresh context. Ea
 | T11 | Check-in + routines | T10 | `scripts/checkin.py`: five parts in order, email via the Gmail connector, golden-file test; `scripts/pause.py`; routine definitions from `SKILL.md` §8 registered; SessionStart hook (use the `session-start-hook` skill) installing Chromium, Python deps, secrets | FR-42, FR-47, FR-48; a check-in email is received; the 08:00 routine fires once in dry-run |
 | T12 | Skill finish + changelog | all | `SKILL.md` §3 table matches the scripts that exist; `references/prompts/<worker>.md` for each worker prompt used; `warehouse/schema-notes.md` listing any JSONB keys introduced; `CHANGELOG.md` | DoD `PLAN.md` §1 item 11; a fresh session invoking "where are we" works end to end |
 
-Parallelism allowed: T2 ∥ T3 ∥ T7 ∥ T8 after T1. T5 needs my picks (stop point A). T9 needs my verdicts (stop point B) and my `activate` approval (stop point C).
+Parallelism: T2, T3, T7, T8 are unblocked once T1 lands. T5 carries stop point A, T6 stop point B,
+T9 stop point C, T10 stop point D.
 
-## Constraints every subagent inherits (put these in every task prompt verbatim)
+### Constraints (copy into every ticket body verbatim)
 
 - No side effect outside `scripts/apply_actions.py`: no Meta write endpoint, no Instantly, no email sender anywhere else. Workers write proposed `actions` only.
 - Connect as the role for the job (`WAREHOUSE_URL_WORKER` for workers, `WAREHOUSE_URL_EXECUTOR` only in the executor). Never the service role. Never print or commit a secret.
@@ -54,17 +66,68 @@ Parallelism allowed: T2 ∥ T3 ∥ T7 ∥ T8 after T1. T5 needs my picks (stop p
 - One commit per task, message ending with the FR ids satisfied. Push after each commit.
 - If a task cannot meet its acceptance criteria, stop and report which criterion and why; do not narrow the criterion.
 
-## Stop points (do not proceed past these without my reply)
+### Stop points (mark the ticket; the implementer must stop and wait for my reply)
 
-- **A — after T4:** print the numbered proposal table and wait for `my picks: n, n, n`.
-- **B — after T6:** print the numbered creative table with Storage URLs and hard-check results and wait for `verdicts: approve …; reject …: reason`.
-- **C — after T9 proposes `build_campaign` and, later, `activate`:** print the proposal summary (campaign, ad sets, budgets, cap check result) and wait for `approve n`. Then run `apply actions`.
-- **D — after T10's first insights pull:** show me the `where are we` table and the kill/scale view output, and ask me for the first `learnings` row text (`created_by='sam'`, `evidence.sample_reached=false`).
+- A — T4 done: print the numbered proposal table; wait for `my picks: n, n, n`.
+- B — T6 done: print the numbered creative table with Storage URLs and hard-check results; wait for
+  `verdicts: approve …; reject …: reason`.
+- C — T9 proposes `build_campaign`, and later `activate`: print the proposal summary (campaign,
+  ad sets, budgets, cap check result); wait for `approve n`; then run `apply actions`.
+- D — T10's first insights pull: show the `where are we` table and the kill/scale view output;
+  ask me for the first `learnings` row text (`created_by='sam'`, `evidence.sample_reached=false`).
 
-## Reviewer pass
+When the tickets are published, reply with the ticket list in dependency order, each with its
+path under `.scratch/`, and tell me which ones are unblocked right now.
+```
 
-After each task's commit, run `/mattpocock-skills:code-review` against the task's merge-base with only the task's diff, the PRD rows it claims, and the constraints list in scope. The reviewer checks: acceptance criteria actually tested, no Meta write outside the executor, role used correctly, `runs` row present, untrusted-text handling, no secrets, no binaries. A failed review sends the task back once; a second failure stops the orchestration and reports to me.
+---
 
-## Reporting
+## Message 2 — implement one ticket (repeat per ticket, fresh context each time)
 
-At each stop point and at the end, give me: tasks done with commit hashes, tasks blocked and the criterion that blocked them, the `where are we` table, and what I need to do next. Keep it under 30 lines.
+Replace `<TICKET>` with the ticket's path under `.scratch/marketing-engineer-phase0/`.
+
+```
+/mattpocock-skills:implement <TICKET>
+
+Before writing code: confirm every ticket this one is blocked by is closed (its file says done and
+its commit is on the branch); if not, stop and tell me which. Print the "where are we" query from
+marketing-engineer/SKILL.md §2 against the warehouse.
+
+Work test-first with /mattpocock-skills:tdd at the seams the ticket names. Tests run against a
+local Postgres with warehouse/schema.sql and warehouse/0002_roles.sql applied; do not mock the
+warehouse. Follow the Constraints block in the ticket verbatim. Every script opens and closes a
+`runs` row; prove it with a real invocation and paste the row.
+
+Finish with /mattpocock-skills:code-review against the merge-base of this ticket's work, scoped to:
+acceptance criteria actually tested, no Meta write outside scripts/apply_actions.py, correct DB role,
+`runs` row present, untrusted text handled as data, no secrets, no binaries. Fix what it finds, then
+commit once on the current branch with a message ending in the FR ids satisfied, and push. Mark the
+ticket done in `.scratch/`.
+
+If the ticket carries a stop point, stop there, print exactly what the stop point asks for, and tell
+me the reply format you expect. Do not continue past it.
+
+If an acceptance criterion cannot be met, stop and report which one and why. Never narrow it.
+
+Report in under 20 lines: what shipped, commit hash, acceptance criteria with pass/fail, the `runs`
+row, and which tickets are now unblocked.
+```
+
+---
+
+## Message 3 — my replies at the stop points
+
+| Stop | I send |
+|------|--------|
+| A | `my picks: 2, 5, 9` (optionally `: reason` after a number) |
+| B | `verdicts: approve 1,3; reject 2: hook is generic; reject 5: looks like stock` |
+| C | `approve 1` then, when asked, `apply actions` |
+| D | the learning text, e.g. `learning: screenshot family replicated cleanly onto the audit offer; no signal yet` |
+
+Default if I go quiet for 20 minutes: A takes the ranker's top three; B ships nothing; C does nothing; D writes no row. The implementer must say which default it took.
+
+---
+
+## After phase 0
+
+`marketing-engineer/PRD.md` §6 rows 1–3 are the next specs. Run Message 1 again per phase with the relevant FR ids, and let `to-tickets` derive the slices itself; the draft breakdown above is phase 0 only.
