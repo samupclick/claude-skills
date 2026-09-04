@@ -26,3 +26,35 @@ Produced by the grill-me process, one component at a time. A build agent should 
 - Exact promotion thresholds N per action type (Sam, before Sunday U4; default 10 unchanged approvals for kill, 20 for scale and launch).
 - Which calendar tool backs the quiz funnel CTA (Sam, Friday).
 - Verified monthly prices for xAI API, scrapecreators, Typefully (Sam or first build session, Friday).
+
+---
+
+## Component 1: Creative intelligence
+
+**Decided**
+
+- **Three sub-workers, one component, one set of tables.** (a) *Format library*: which creative formats are proven; Meta Ad Library via scrapecreators; weekly. (b) *Competitor watch*: what changed in competitors' messaging; their ads, X and LinkedIn posts, site; daily; needs a `competitors` table and a diff. (c) *Trend and hook mining*: what is getting engagement in the ICP's feed now; Grok with X search; daily. **Weekend builds (a) only.** (b) and (c) land in week 2 on Grok.
+- **Seed source: best direct-to-consumer testers first.** DTC brands known for creative testing seed the library. Category peers are the fallback once a format has failed in our niche. Every `patterns` row records `source_list` (`dtc` | `category`) so the planner can distinguish "DTC-derived, untested here" from "category-proven".
+- **Niche-fail rule:** a family is retired for an ICP after 3 creatives from it fall under the CTR floor at sample size. The loop then pulls the next candidate from the category list. Retirement is a `learnings` row with scope `icp`.
+- **Two-level taxonomy.** `family` is a fixed, human-controlled list (~15 to start, plus `unclassified`) and is the attribution key; all performance rolls up at family. `variant` is free text the intel worker invents; variants compete inside a family. The Monday routine proposes promoting a variant to a family when it reaches sample size across ≥3 creatives; Sam approves. Same two-level structure for `hook_type` and `angle`. Rationale: the binding constraint is impressions per creative, not production cost; free tags split the same impressions across more buckets. Exploration breadth scales with spend automatically.
+- **Proven threshold:** an external pattern is `proven` when the ad has run ≥30 days in the Ad Library, or the same brand runs ≥3 concurrent variants of one family. Everything else is a `candidate`, visible to the planner at lower weight.
+- **Empty and failure handling:** every run writes an `intel_runs` record with per-source counts. Zero new patterns is a valid result; the planner proceeds on the existing library. A failed source is retried once, then reported as a warning in the daily Slack check-in. Two consecutive failures on the same source block the Monday batch until Sam acknowledges.
+
+**Rejected**
+
+- Category peers as the primary seed (default). Rejected in favour of DTC-first with category fallback.
+- Fully free-form tagging ("Darwinian" at the tag level). Rejected because it fragments sample size; replaced by fixed families + free variants, which keeps the exploration.
+- Fully fixed taxonomy. Rejected because it needs a human to notice every new format.
+
+**Schema changes (fold into 0001 before first apply)**
+
+- `patterns`: add `family text not null`, `variant text`, `source_list text check in ('dtc','category','own')`, `status text check in ('candidate','proven','retired')`; keep `format` as an alias of `family` or drop it.
+- New `families(name pk, kind check in ('format','hook_type','angle'), status, promoted_from_variant, created_at)`.
+- New `intel_runs(id, source, started_at, finished_at, status, counts jsonb, error text)`.
+- New `competitors(id, client_id, name, domain, meta_page_id, x_handle, linkedin_url)` — table now, populated in week 2.
+- `learnings`: retirement rows use `component_type='family'`.
+
+**Open**
+
+- The initial DTC brand list (10) and category peer list (10) — Sam, Friday evening; the intel worker can propose candidates but Sam picks the seed.
+- Initial family list (~15) — draft in `references/families.md` on Saturday S2, Sam approves before S3.
