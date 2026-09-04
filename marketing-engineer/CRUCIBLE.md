@@ -11,9 +11,9 @@
 
 ---
 
-## 1. Decisions the crucible reversed — Sam's veto required
+## 1. Decisions the crucible reversed — **resolved by Sam, 2026-09-02**
 
-These change choices Sam made during the grill. They are applied as v1.1 defaults because the evidence is arithmetic, not taste. Any of them can be reverted by saying so.
+Sam reviewed all six: V1–V5 **accepted as written**; V6 **overridden**: the machine budget cap is raised to ~$500/month, so Grok watchers return to week 2 and Instantly is enabled as soon as there are leads to nurture (no volume gate). The table below is the record.
 
 | # | Was | Now | Why (one line) |
 |---|-----|-----|----------------|
@@ -22,7 +22,7 @@ These change choices Sam made during the grill. They are applied as v1.1 default
 | V3 | Both renderers and two image models side by side inside batch one | **Renderer and image model are between-batch factors**: batch one = HTML templates + one image model; batch two = image-to-image on the same recipes. In-batch comparisons only via Meta's A/B tool, never two ads in one ad set. | Meta starves one ad within 48h; in-ad-set pairs measure Meta's choice, not the renderer. Halving per-creative impressions makes V1 worse. (E9, F6) |
 | V4 | Email review with one-click links this weekend | **Weekend: verdicts in chat**, written to `gate_scores` by the session. **Week 2: email** with links that open a confirmation page and POST, one token per item, 72h expiry, spend-affecting approvals behind a magic-link session, never in Slack. Daily check-in via the Gmail connector. | Mail scanners GET every link; single-use GET tokens get spent before Sam clicks and the scanner's click counts as Sam's verdict. (S5, F7) |
 | V5 | Testimonial card as a weekend template, generated people allowed | **Testimonial/quote families are hard-blocked** unless the quote maps to a real client with a `quote_release` and no depicted person. Weekend templates: job-photo-bubble and screenshot-ad. | A generated person plus our copy is a fabricated endorsement under Meta policy and the EU Unfair Commercial Practices Directive. (S11) |
-| V6 | Machine budget cap 250 USD/month; Grok from week 2; Instantly from day one | **Staged stack**: weekend ≈ $100 (Supabase Pro, scrapecreators, hosting); Grok in **week 3** with a hard $/day source budget; Instantly when ≥10 leads/week. **Cap decision for Sam**: raise to ~$500/month or accept slower batch cadence. | Realistic total is $350–600/month including model usage; at $30/day media that is 40–65% tooling. (E8) |
+| V6 | Machine budget cap 250 USD/month | **Sam's decision: cap raised to ~$500/month.** Grok watchers in **week 2** (as C1/C9 originally decided) with a hard $/day source budget; Instantly enabled once there are leads to nurture. Weekend stack still ≈ $100. | Realistic total is $350–600/month including model usage. (E8) |
 
 ---
 
@@ -94,6 +94,6 @@ The minimum that closes ad live → metrics in warehouse → one learning row:
 
 ## 5. Findings not adopted
 
-- E: "raise the cap to $500 or accept monthly cadence" — left to Sam (V6).
+- E: "raise the cap to $500 or accept monthly cadence" — Sam raised the cap (V6).
 - F: testimonial-card as a weekend template — superseded by S11 (V5); screenshot-ad replaces it.
 - S: per-client databases — not needed; roles + RLS + app scoping (already decided in C8).

@@ -324,7 +324,7 @@ Design in `WAREHOUSE.md` and `warehouse/schema.sql` stands; these decisions clos
 
 ## Crucible amendments (2026-09-02)
 
-Three adversarial reviews (economics, safety, feasibility) produced 40 findings, consolidated in `CRUCIBLE.md`. Twenty-four amendments are applied to `ARCHITECTURE.md` v1.1, `warehouse/schema.sql`, `warehouse/0002_roles.sql`, and `PLAN.md` v1.1. Six of them reverse choices made above and stand as v1.1 defaults **pending Sam's veto**:
+Three adversarial reviews (economics, safety, feasibility) produced 40 findings, consolidated in `CRUCIBLE.md`. Twenty-four amendments are applied to `ARCHITECTURE.md` v1.1, `warehouse/schema.sql`, `warehouse/0002_roles.sql`, and `PLAN.md` v1.1. Six of them reversed choices made above. **Sam resolved all six on 2026-09-02: V1–V5 accepted, V6 overridden (cap raised to ~$500/month; Grok watchers return to week 2; Instantly once leads exist).**
 
 | # | Component | Reversed | Now |
 |---|-----------|----------|-----|
@@ -333,6 +333,6 @@ Three adversarial reviews (economics, safety, feasibility) produced 40 findings,
 | V3 | C4 | both renderers + two image models inside batch one | renderer and image model are between-batch factors; in-batch only via Meta A/B tool |
 | V4 | C5 | email review with one-click GET links this weekend | chat verdicts this weekend; email in week 2 with POST-confirmed tokens; spend approvals behind a session; never in Slack |
 | V5 | C4 | testimonial-card template with generated people | testimonial/quote families hard-blocked without a real client's `quote_release` and no depicted person |
-| V6 | C0 | 250 USD/month cap, Grok wk2, Instantly day one | staged stack; Grok wk3 with $/day budget; Instantly at ≥10 leads/week; Sam to raise cap to ~$500 or accept slower cadence |
+| V6 | C0 | 250 USD/month cap | **cap raised to ~$500/month** (Sam); Grok wk2 with $/day source budget; Instantly once leads exist; weekend stack still ≈ $100 |
 
 The remaining amendments (A1–A24 in `CRUCIBLE.md` §2) add enforcement, statistics, compliance, and scope discipline without reversing a decision. Schema changes listed in the component blocks above are now folded into migration 0001; the "fold into 0001" notes are historical.

@@ -1,6 +1,6 @@
 # PRD — Marketing Engineer Pipeline
 
-**Version:** 1.0 · **Date:** 2026-09-02 · **Owner:** Sam (upClickLabs) · **Status:** Ready for build, pending six veto items (§12)
+**Version:** 1.0 · **Date:** 2026-09-02 · **Owner:** Sam (upClickLabs) · **Status:** Ready for build. Six veto items resolved by Sam on 2026-09-02 (§12)
 **Derived from:** `ARCHITECTURE.md` v1.1, `DECISIONS.md`, `CRUCIBLE.md`, `warehouse/schema.sql`, `warehouse/0002_roles.sql`, `PLAN.md` v1.1
 
 ---
@@ -52,8 +52,8 @@ Creative testing is manual, unattributed, and forgetful. Each campaign starts fr
 | Phase | Ships | Definition of done |
 |-------|-------|--------------------|
 | **0 — Weekend** | Warehouse (`0001` + `0002`), format library (24 patterns), VOC seed (15 phrases), planner (12 → Sam picks 3), producer (6 creatives, HTML + Playwright, one image model, 1080×1080), gate (fact checks + chat verdicts + shadow rubric), quiz page on `go.upclicklabs.com` with consent + CAPI, one `new_recipes` campaign (3 ad sets, `QuizStart`), executor with cap invariant, insights pull, check-in email via Gmail connector, one 08:00 routine, `SKILL.md` | `PLAN.md` §1 items 1–11 all true |
-| **1 — Week 2** | Email review with POST-confirmed tokens; batch two on image-to-image renderer; first ablation/scaling campaign if a winner exists; embeddings refresh; `competitors`; client-scoped RLS (`0003`); first client onboarded; auto-pause on kill rule | A second tenant runs the same loop from a `clients` row |
-| **2 — Week 3** | Reactor service in the app with `events`, coalescing, worker budgets; Grok competitor watch + trend mining; buying-trigger agent; Instantly nurture at ≥10 leads/week; hard qualification if data supports; organic via X API | An intel event triggers a batch without a scheduled wake |
+| **1 — Week 2** | Email review with POST-confirmed tokens; batch two on image-to-image renderer; first ablation/scaling campaign if a winner exists; embeddings refresh; `competitors`; **Grok competitor watch + trend mining with $/day budget**; Instantly nurture once leads exist; client-scoped RLS (`0003`); first client onboarded; auto-pause on kill rule | A second tenant runs the same loop from a `clients` row |
+| **2 — Week 3** | Reactor service in the app with `events`, coalescing, worker budgets; buying-trigger agent (Grok); hard qualification if data supports; organic via X API | An intel event triggers a batch without a scheduled wake |
 | **3 — Week 4** | AEO pipeline tables in the warehouse; client dashboard; rubric regression v1; export tooling; video scripts | Articles and ads share ICPs, VOC, and learnings |
 
 ---
@@ -151,7 +151,7 @@ Creative testing is manual, unattributed, and forgetful. Each campaign starts fr
 - **NFR-2 Prompt-injection boundary:** untrusted text (`public`, `inbound`, `client` tiers) is passed to models only inside delimited data blocks with a fixed system prompt; outputs are schema-validated JSON; emails escape all content and carry no URLs from rows below `owned`.
 - **NFR-3 Privacy:** Supabase EU region; consent before pixel/CAPI/marketing; DPAs with Supabase, Anthropic, Google (image), scrapecreators, Vercel before phase 0; Instantly and xAI before they enter; Meta Data Processing Terms accepted; verbatim customer words never in an ad without release.
 - **NFR-4 Reliability:** every worker invocation writes a `runs` row; idempotent re-runs from `raw_ingest`; actions idempotent via `proposal_key`; Meta creates preceded by name lookup; insights via async jobs with backoff on throttle headers.
-- **NFR-5 Cost:** machine budget staged (phase 0 ≈ $100/month; cap decision in §12); per-worker daily token/API budgets from phase 2; two model wakes per day in phase 0.
+- **NFR-5 Cost:** machine budget cap ~$500/month (Sam, 2026-09-02); phase 0 ≈ $100/month; every Grok watcher carries a hard $/day source budget from its first run; per-worker daily token/API budgets from phase 2; two model wakes per day in phase 0.
 - **NFR-6 Observability:** `runs`, `actions`, `account_spend_hourly`, and the daily check-in are sufficient to answer "what did the system do since yesterday and why" without reading logs.
 - **NFR-7 Meta account hygiene:** one ad account per client; system user on Advertiser role; account spending limit set by hand; ad account with spend history for phase 0; Standard Access review submitted before phase 1.
 
@@ -167,7 +167,8 @@ Creative testing is manual, unattributed, and forgetful. Each campaign starts fr
 | Gemini image API key | Phase 0 Friday | Sam | other models later via config |
 | `references/families.md`, DTC seed list, client config, vault seed | Phase 0 Friday | Sam | 30 minutes, before code |
 | Gmail connector (check-in sender) | Phase 0 | existing | transactional sender in phase 1 |
-| Instantly, xAI, X API, Typefully | Phases 2–3 | Sam | not before the gates in §6 |
+| xAI key (Grok watchers), Instantly key | Phase 1 (week 2) | Sam | DPAs before use |
+| X API, Typefully | Phase 2–3 | Sam | organic publishing |
 
 ## 11. Risks
 
@@ -183,13 +184,13 @@ Creative testing is manual, unattributed, and forgetful. Each campaign starts fr
 
 ## 12. Open questions
 
-**Awaiting Sam's veto (defaults stand until vetoed):**
-- V1 Batch size from capacity (3 recipes at €30/day) vs raising budget to ~€90/day.
-- V2 `QuizStart` optimisation for testing ad sets.
-- V3 Renderer and image model as between-batch factors.
-- V4 Chat verdicts in phase 0; email review in phase 1.
-- V5 Testimonial families blocked.
-- V6 Machine budget cap: ~$500/month or slower cadence.
+**Resolved by Sam (2026-09-02):**
+- V1 **Accepted.** Batch one = 3 recipes × 2 = 6 creatives at €30/day; Sam picks 3 of 12. Media budget rises after two clean loops.
+- V2 **Accepted.** `QuizStart` optimisation for testing ad sets; booked call is the warehouse-measured terminal metric.
+- V3 **Accepted.** Templates in batch one, image-to-image in batch two on the same recipes; in-batch comparisons only via Meta A/B tool.
+- V4 **Accepted.** Chat verdicts in phase 0; POST-confirmed email review in phase 1; check-in by email from Sunday.
+- V5 **Accepted.** Testimonial/quote families blocked until a real client quote with an applied `quote_release` and no depicted person.
+- V6 **Overridden.** Machine budget cap raised to ~$500/month. Grok watchers in phase 1 (week 2) with a hard $/day source budget; Instantly enabled once there are leads to nurture.
 
 **Other (owner, deadline):** calendar tool confirmation (Sam, Fri); vault note convention and seed (Sam, Fri); image-model shortlist beyond Gemini (Sam, phase 1); ablation margin and conversion-stage sample sizes (tune after batch 2); Monday memo timing (Sam, U4); export format (phase 1); `events` partitioning (phase 2); error-spike definition (phase 1); app hosting for the reactor (phase 2).
 

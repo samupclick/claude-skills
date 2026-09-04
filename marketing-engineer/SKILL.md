@@ -169,9 +169,9 @@ The `go.upclicklabs.com` app is a separate repo.
 ```
 Use the marketing-engineer skill. This is the phase-0 build session (PLAN.md §3, Saturday).
 Before writing code: print "where are we" against the warehouse; confirm the Friday checklist
-in CRUCIBLE.md §4 by checking env vars and `select count(*) from families`; list which of the
-six veto items in PRD.md §12 Sam has answered (ask for any that are missing, then proceed on the
-v1.1 defaults for the rest).
+in CRUCIBLE.md §4 by checking env vars and `select count(*) from families`; confirm the six
+resolved veto items in PRD.md §12 (V1–V5 accepted, V6 cap raised) are reflected in
+config/clients/upclicklabs.json (daily_cap 30, batch 3 recipes, optimisation_event QuizStart).
 
 Then build in this order, committing after each: warehouse/client.py; scripts/pull_inspo.py
 (target 24 patterns with Storage images); scripts/pull_voc.py (target 15 phrases from the
