@@ -233,3 +233,35 @@ Produced by the grill-me process, one component at a time. A build agent should 
 - Hosting for the app (Vercel vs Cloudflare Pages vs Supabase Edge) and the `go.` subdomain DNS — Sam, Friday.
 - Calendar tool behind the booking step (from component 0) — Sam, Friday.
 - Quiz questions v1 for the upClickLabs offer — draft Saturday S3, Sam approves Sunday U1.
+
+---
+
+## Component 7: Performance loop
+
+**Decided**
+
+- **Active lever selection.** Every lever in a platform's chain (Meta: hook rate → link CTR → CPM → conversion rate → cost per booked call) has a benchmark, resolved in this order: (1) our own proven history for the ICP, (2) `mart_benchmarks` cross-client, (3) the source recipe's implied signal, (4) a fixed floor from client config. The loop walks the chain top down and stops at the first lever below its benchmark at sample size. That lever becomes `campaigns.active_lever`, with the reason written to the warehouse. One active lever per campaign at a time. The terminal metric never changes without a human.
+- **Sample size:** default 2,000 impressions per creative for CTR-stage levers; for conversion-stage levers, the sample is clicks (default 100) and bookings are evaluated at campaign level, not per creative, until volume allows.
+- **Kill / scale rules** (from PLAN.md, now under the trust rule): kill when impressions ≥ sample and link CTR < floor, or CPL > 2× target after 3× target spend; scale (+20%, move to scaling campaign) when CPL ≤ target after ≥5 bookings. Every decision is an `actions` row with the evidence snapshot; rules are back-tested against `ad_metrics_daily` before thresholds change.
+- **Learnings, three tiers.** *Proposed*: written whenever a recipe or ingredient beats or misses its benchmark at sample size, with effect size and sample. *Supported*: same direction holds across two more creatives, or one ablation confirms it. *Global*: holds across three clients. Proposed learnings are visible to the planner at reduced weight. A batch that reaches sample size and produces zero proposed learnings raises a warning in the check-in.
+- **Daily check-in: one message, five parts, in order.** (1) Actions waiting for Sam's tap, one-line reason each, approve/reject links. (2) Actions the system executed on its own since yesterday. (3) Active lever per campaign and whether it moved. (4) New proposed learnings, one line each. (5) Warnings: failed source, budget cap, blocked batch. Anything else goes to the Monday memo. Delivered by email (same mechanism as reviews); Slack carries only the count and link.
+- **Monday memo:** learnings promoted or refuted, taste-vs-market report (component 5), variant-to-family promotion proposals (component 1), next batch's proposed recipes for selection (component 3).
+- **Write-back:** proven internal recipes go to `patterns` with `origin='internal'`; retired families to `learnings` with scope `icp`; every kill/scale to `actions`.
+
+**Rejected**
+
+- "Worst number today" as the lever picker. Rejected in favour of ordered benchmarks and top-down chain walk.
+- Free-text learnings. Rejected; learnings are structured rows with evidence and tier.
+- A check-in that reports everything. Rejected; five parts only.
+
+**Schema changes (fold into 0001)**
+
+- New `campaigns(id, client_id, offer_id, platform, kind, external_id, terminal_metric, active_lever, active_lever_reason, active_lever_since)`; `ad_entities.campaign_id` becomes a FK to it.
+- New `benchmarks(id, client_id, icp_id, lever, value, source check in ('own','cross_client','recipe','floor'), sample, computed_at)`.
+- `learnings.status`: `proposed | supported | global | refuted | retired`; add `effect_size numeric`, `sample int`, `direction check in ('beat','miss')`.
+- `events.type`: add `sample_size_reached`, `lever_changed`, `checkin_sent`.
+
+**Open**
+
+- Conversion-stage sample sizes (100 clicks default) — tune after batch 2.
+- Monday memo delivery time and whether it doubles as the recipe-selection email — Sam, Sunday U4.
