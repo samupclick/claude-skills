@@ -58,3 +58,49 @@ Produced by the grill-me process, one component at a time. A build agent should 
 
 - The initial DTC brand list (10) and category peer list (10) — Sam, Friday evening; the intel worker can propose candidates but Sam picks the seed.
 - Initial family list (~15) — draft in `references/families.md` on Saturday S2, Sam approves before S3.
+
+---
+
+## Cross-cutting: event-driven orchestration
+
+**Decided (raised during component 2, applies to every component)**
+
+- **The pipeline is event-driven, not scheduled.** Watchers emit events; the orchestrator is a reactor that decides what to do next. No human-paced schedule for the machine. The daily Slack check-in is Sam's window into the system, not its clock.
+- **Event sources (initial):** intel watcher findings (Grok competitor watch and trend mining, week 2; scrapecreators pulls this weekend), Obsidian vault note changes, quiz funnel submissions / lead stage changes, Meta insights arrivals, threshold crossings (an ad reaching sample size, a kill or scale rule firing), human approvals in Slack.
+- **Event storage:** an `events` table in the warehouse (`source`, `type`, `entity_ref`, `payload`, `occurred_at`, `processed_at`, `coalesced_into`). Supabase realtime or a polling reactor consumes it; implementation chosen at build time.
+- **Guardrail 1, debounce and budget:** events are coalesced per source over a window (default 15 minutes); each watcher has a daily token and API-call budget. On budget exhaustion the watcher keeps writing raw events and stops reasoning until the next window. Budgets live in client config.
+- **Guardrail 2, spend decisions keep their own clock:** intel, vault, and lead events may trigger new briefs at any time. Kill and scale decisions wait for sample size (default 2,000 impressions per creative) because Meta insights are daily-grained and sub-sample CTR is noise.
+- **Graduated autonomy still applies:** an event may trigger a *proposal* at any trust level; *execution* follows the per-action trust level from component 0.
+
+**Rejected**
+
+- Fixed cadences per worker (weekly public sources, daily vault, on-arrival quiz). Rejected as human-paced; replaced by events with the two guardrails above.
+
+---
+
+## Component 2: Customer language
+
+**Decided**
+
+- **Sources, in priority order:** (1) the Obsidian vault (call transcripts, customer notes) — our own voice of customer, thin today but highest weight; (2) public: Reddit and Quora threads about SEO agencies, AI visibility, and lead gen; G2 and Clutch reviews of competing agencies and tools, negative reviews especially; LinkedIn and X replies under AI-search posts; (3) quiz funnel answers and discovery call notes as the pipeline produces them, making it self-feeding.
+- **Vault access:** the worker reads the vault as a markdown folder; no integration. A convention decides which notes count (default: a `voc` tag or a `customers/` folder — Sam to confirm). The worker never writes into the vault.
+- **Unit of extraction:** verbatim phrases, tagged `pain | outcome | objection | identity | trigger`, each with quote, source, and frequency. The human-readable memo is a ranked view over `voc_phrases`. No separate summary artefact.
+- **Weighting:** a phrase from our own calls outweighs the same phrase from public sources (`source_weight` on the row; default vault 3, quiz 2, public 1).
+- **Privacy:** names, companies, and identifying figures are stripped at extraction. Rows hold a pointer to the source note (`source_ref`), never the note text. Vault-derived phrases are `visibility='internal'`: they may shape angles and briefs but cannot be quoted verbatim in a creative without Sam's tap (recorded as an `actions` row of type `quote_release`).
+- **Trigger:** event-driven per the cross-cutting decision. A vault change event, a quiz submission event, or a watcher finding event triggers extraction for that source only. Each row is deduplicated by `source_ref` + normalised phrase, so nothing is counted twice.
+
+**Rejected**
+
+- Pain/objection summaries as a second artefact. Rejected: doubles review load; phrases drop straight into hooks.
+- Fixed weekly/daily/on-arrival cadence. Rejected in favour of events.
+
+**Schema changes (fold into 0001)**
+
+- `voc_phrases`: add `source_ref text`, `source_weight int default 1`, `visibility text check in ('internal','public') default 'public'`, unique on `(source_ref, phrase_normalised)`.
+- New `events` table as above.
+- `actions.action`: add `quote_release`.
+
+**Open**
+
+- Vault convention for which notes count (Sam, Friday).
+- Vault sync path into the build environment (local folder vs. Obsidian Sync vs. git) — decide Saturday S2.
