@@ -1,0 +1,1 @@
+SYNTHETIC SEED — every note here is invented for testing the customer-language worker (anonymisation, tagging, weighting, dedup). Names, companies, and figures are fake on purpose. Replace with 5–10 real notes from the vault before go-live and delete this README.

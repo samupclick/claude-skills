@@ -2,7 +2,7 @@
 
 Three messages drive the build with Matt Pocock's skills, which are enabled for this repo through `.claude/settings.json`. There is no `orchestrate` skill in that set; the flow is **`to-tickets`** (spec → tracer-bullet tickets with blocking edges) then **`implement`** (one ticket per fresh context, test-first, reviewed, committed).
 
-Prerequisite: the Friday checklist in `CRUCIBLE.md` §4. Start a new session on `samupclick/claude-skills` from `main`.
+Prerequisite: **none in dev mode.** Phase 0 is built against local Postgres and fake backends per `references/dev-mode.md`; the Friday checklist in `CRUCIBLE.md` §4 is needed only for the go-live swap. Start a new session on `samupclick/claude-skills` from `main`.
 
 - **Message 1** creates the tickets. Send once.
 - **Message 2** implements one ticket. Send once per ticket, in dependency order, in a fresh session or after `/clear`.
@@ -33,6 +33,18 @@ disagree: schema → PRD → ARCHITECTURE → CRUCIBLE → DECISIONS. PLAN.md is
 Goal of phase 0: close one honest loop for the `upclicklabs` client — ad live → metrics rows in the
 warehouse → one learning row — per PLAN.md §1 items 1–11. Sub-sample numbers are expected.
 
+DEV MODE: we are building before the Friday checklist is done. Read marketing-engineer/references/dev-mode.md.
+Every external service sits behind an adapter chosen by an env var; the fake backends and fixtures are
+part of the build, not a shortcut. Add a ticket T0 "Dev harness" that blocks T1: `scripts/dev_db.sh`
+(local Postgres, apply 0001 + 0002, create the five roles with dev passwords), the adapter interfaces
+and their fake/local/fixture implementations for storage, Meta, CAPI, inspo, image, model, email,
+Turnstile, plus `.env.example` loading and `fixtures/ad_library/` with an assumed-shape sample. Every
+later ticket uses the adapters and never imports a vendor SDK directly. The placeholder files
+(config/clients/upclicklabs.json, references/families.md, the voc-seed notes) are DRAFTS marked as
+such; build against them as they are and do not invent real-looking values. "Ad live" in dev mode
+means live in the fake Meta account with synthesised insights; the go-live swap in dev-mode.md §
+"Go-live swap checklist" is a separate, later ticket T13 that stays blocked until Sam clears it.
+
 ### Draft breakdown (tracer-bullet tickets)
 
 | # | Task | Depends on | Deliverable | Acceptance (from PRD) |
@@ -50,7 +62,7 @@ warehouse → one learning row — per PLAN.md §1 items 1–11. Sub-sample numb
 | T11 | Check-in + routines | T10 | `scripts/checkin.py`: five parts in order, email via the Gmail connector, golden-file test; `scripts/pause.py`; routine definitions from `SKILL.md` §8 registered; SessionStart hook (use the `session-start-hook` skill) installing Chromium, Python deps, secrets | FR-42, FR-47, FR-48; a check-in email is received; the 08:00 routine fires once in dry-run |
 | T12 | Skill finish + changelog | all | `SKILL.md` §3 table matches the scripts that exist; `references/prompts/<worker>.md` for each worker prompt used; `warehouse/schema-notes.md` listing any JSONB keys introduced; `CHANGELOG.md` | DoD `PLAN.md` §1 item 11; a fresh session invoking "where are we" works end to end |
 
-Parallelism: T2, T3, T7, T8 are unblocked once T1 lands. T5 carries stop point A, T6 stop point B,
+Parallelism: T0 first; T1 after T0; T2, T3, T7, T8 are unblocked once T1 lands. T5 carries stop point A, T6 stop point B,
 T9 stop point C, T10 stop point D.
 
 ### Constraints (copy into every ticket body verbatim)
@@ -90,8 +102,9 @@ Replace `<TICKET>` with the ticket's path under `.scratch/marketing-engineer-pha
 /mattpocock-skills:implement <TICKET>
 
 Before writing code: confirm every ticket this one is blocked by is closed (its file says done and
-its commit is on the branch); if not, stop and tell me which. Print the "where are we" query from
-marketing-engineer/SKILL.md §2 against the warehouse.
+its commit is on the branch); if not, stop and tell me which. Load `.env` (dev mode per
+marketing-engineer/references/dev-mode.md; start the local Postgres with `scripts/dev_db.sh` if it
+is not running). Print the "where are we" query from marketing-engineer/SKILL.md §2 against the warehouse.
 
 Work test-first with /mattpocock-skills:tdd at the seams the ticket names. Tests run against a
 local Postgres with warehouse/schema.sql and warehouse/0002_roles.sql applied; do not mock the
