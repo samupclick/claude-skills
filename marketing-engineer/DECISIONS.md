@@ -265,3 +265,28 @@ Produced by the grill-me process, one component at a time. A build agent should 
 
 - Conversion-stage sample sizes (100 clicks default) — tune after batch 2.
 - Monday memo delivery time and whether it doubles as the recipe-selection email — Sam, Sunday U4.
+
+---
+
+## Component 8: Growth warehouse
+
+Design in `WAREHOUSE.md` and `warehouse/schema.sql` stands; these decisions close what it left open. All "schema changes (fold into 0001)" blocks from components 1–7 are applied before the first migration runs.
+
+**Decided**
+
+- **Clients never touch the database.** They see their funnel, creatives, and leads through the app on our platform (`go.upclicklabs.com`). Raw rows and assets are exportable on request; we generate the export. Row-level security is on from day one as a safety net, not as the product surface. Pipeline scripts use the service role.
+- **Benchmarks are ours.** Cross-client benchmarks are aggregated and anonymised and belong to upClickLabs; client contracts say so. Clients own their raw data.
+- **Schema growth rule, three tiers.** (1) Raw payloads always land in `raw_ingest`; nothing is lost. (2) A field a worker needs today goes into the entity's JSONB column (`config`, `spec`, `evidence`, `recipe`, `payload`) with the key documented in `warehouse/schema-notes.md`. (3) When the same key is read by a second worker or a mart, it graduates to a real column via a numbered migration. Never a Supabase UI edit, never a markdown file as the system of record. The Monday memo lists JSON keys read twice and due for promotion.
+- **Storage:** Supabase Postgres + pgvector; Supabase Storage for rendered creatives and generated images; `WAREHOUSE_URL` and service key in env only.
+- **Access paths:** `warehouse/client.py` for scripts; Postgres MCP for Claude's ad-hoc and planner queries; canonical queries in `warehouse/queries/`.
+- **Retention:** raw 12 months; entities, metrics, events, learnings forever. Daily Supabase backup plus weekly `pg_dump` to object storage.
+
+**Rejected**
+
+- Per-client databases. Rejected: no client DB access, so isolation is RLS + app scoping.
+- Ad-hoc JSON as permanent home for fields. Rejected via the promotion rule.
+
+**Open**
+
+- Export format for client data requests (default: CSV per table + asset zip) — week 2.
+- Whether `events` needs partitioning by month from day one (default no; revisit at 1M rows).
