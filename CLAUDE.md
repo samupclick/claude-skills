@@ -1,6 +1,6 @@
 # claude-skills
 
-Skills and design documents for upClickLabs. The active build is the Marketing Engineer Pipeline under `marketing-engineer/` (source of truth order: `warehouse/schema.sql` + `warehouse/0002_roles.sql` → `PRD.md` → `ARCHITECTURE.md` → `CRUCIBLE.md` → `DECISIONS.md`; `PLAN.md` is the schedule only). Phase 0 is built in dev mode per `marketing-engineer/references/dev-mode.md`.
+Skills and design documents for upClickLabs. The active build is the Marketing Engineer Pipeline under `marketing-engineer/` (source of truth order: `warehouse/schema.sql` + `warehouse/0002_roles.sql` → `PRD.md` → `ARCHITECTURE.md` → `CRUCIBLE.md` → `DECISIONS.md`; `PLAN.md` is the schedule only). Phase 0 is built in dev mode per `marketing-engineer/references/dev-mode.md`. `claude-ai-skills/` holds skills uploaded to claude.ai; Claude Code does not load them.
 
 ## Agent skills
 
