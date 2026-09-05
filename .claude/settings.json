@@ -1,5 +1,18 @@
 {
   "enabledPlugins": {
     "mattpocock-skills@claude-plugins-official": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude plugin list 2>/dev/null | grep -q 'mattpocock-skills@claude-plugins-official' || claude plugin install mattpocock-skills@claude-plugins-official >/dev/null 2>&1 || echo 'mattpocock-skills plugin install failed; fetch skills from https://github.com/mattpocock/skills manually'"
+          }
+        ]
+      }
+    ]
   }
 }
