@@ -19,6 +19,9 @@ the owning entity's JSONB column and are listed here, never added as ad-hoc colu
 |--------|-----|-----------|---------|
 | `clients.config` | whole file | `scripts/seed.py` | `config/clients/<slug>.json` copied as-is (`_status` marks it DRAFT) |
 | `runs.counts` | `families`, `clients`, `offers`, `icps` | `scripts/seed.py` | rows inserted by the seed |
+| `runs.counts` | `sources_vault`, `sources_public`, `sources_failed`, `source_retries`, `raw_ingest_inserted`, `raw_ingest_duplicates`, `phrases_extracted`, `phrases_inserted`, `phrases_duplicates`, `phrases_rejected_identifiers` | `scripts/pull_voc.py` | per-run counters of the language worker; `phrases_duplicates` is the `(source_ref, phrase_normalised)` constraint firing, `phrases_rejected_identifiers` the validator refusing a phrase that still carried an identifier |
+| `raw_ingest.payload` | `kind='vault_note'`, `path`, `sha256`, `bytes` | `scripts/pull_voc.py` | a vault/seed note as a pointer and content hash only, never its text (FR-11) |
+| `raw_ingest.payload` | `url`, `title`, `comments[{id, text, score}]` | `scripts/pull_voc.py` | a public thread as fetched through `adapters.voc`; no author fields exist in the shape; row has `purge_after` = fetched + 90 days |
 | `runs.counts` | `<any>` | `warehouse.client.run()` | per-worker counters accumulated with `Run.count()`; each worker documents its keys in its ticket |
 | `runs.counts` | `sources_ok`, `sources_failed`, `warnings` (lists) | `scripts/pull_inspo.py` | per-source outcome of one intel run (FR-8); `warnings` holds the retried-then-failed messages. Two consecutive `sources_failed` entries for one source block `plan batch` (`warehouse.client.blocked_sources`) |
 | `runs.counts` | `acknowledged` (list) | `scripts/pull_inspo.py --acknowledge <source>` | Sam's acknowledgement (SKILL.md §7); clears the FR-8 block for that source |

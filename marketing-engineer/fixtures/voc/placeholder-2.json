@@ -1,0 +1,11 @@
+{
+  "_shape": "SYNTHETIC thread in the normalised voc shape (see README.md); fake names and figures on purpose",
+  "url": "PLACEHOLDER: https://www.reddit.com/r/…/2",
+  "title": "Organic traffic down since AI overviews, what are B2B folks doing?",
+  "comments": [
+    {"id": "p2c1", "score": 22, "text": "Down 40% year on year for informational terms. The bottom-of-funnel stuff held up but that's a small slice."},
+    {"id": "p2c2", "score": 19, "text": "We stopped reporting traffic to the board entirely. Now it's demo requests and where they say they heard of us."},
+    {"id": "p2c3", "score": 15, "text": "Founder here, 12 person dev shop. I keep asking our marketing person 'does Google AI mention us' and she doesn't know how to check."},
+    {"id": "p2c4", "score": 30, "text": "The ones who are fine are the ones who were already the obvious answer in their niche. Everyone else is scrambling."}
+  ]
+}

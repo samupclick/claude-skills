@@ -1,0 +1,12 @@
+{
+  "_shape": "SYNTHETIC thread in the normalised voc shape (see README.md); fake names and figures on purpose",
+  "url": "PLACEHOLDER: https://www.reddit.com/r/…/3",
+  "title": "ChatGPT recommends our competitor by name. What can we actually do?",
+  "comments": [
+    {"id": "p3c1", "score": 25, "text": "Same. Asked it for 'best payroll software for UK charities' and it named Brightwell Systems three times. We're bigger than them."},
+    {"id": "p3c2", "score": 44, "text": "Look at where the model gets its facts: your own site, directory listings, review sites, and press. If your positioning isn't written down clearly anywhere, the model has nothing to repeat."},
+    {"id": "p3c3", "score": 16, "text": "We fixed the wrong description it gave of us within a month by rewriting our about page and the G2 listing. No agency."},
+    {"id": "p3c4", "score": 38, "text": "The moment that got budget approved was screen-recording the CEO asking ChatGPT and watching it recommend the competitor. Nothing else worked."},
+    {"id": "p3c5", "score": 9, "text": "Posted by Tom Harrington, we're at 200 staff and this is now a board level topic."}
+  ]
+}

@@ -51,7 +51,7 @@
   },
   "rate_limits": { "max_kills_per_day": 3, "max_share_of_live_ads_killed_per_day": 0.5, "scale_cooldown_hours": 72 },
   "worker_budgets": { "intel": { "api_calls": 50 }, "planner": { "tokens": 400000 }, "producer": { "tokens": 400000, "images": 20 }, "gate": { "tokens": 200000 } },
-  "voc": { "seed_dir": "config/clients/upclicklabs/voc-seed", "vault_path": "PLACEHOLDER: /Users/Sam/Documents/ucl-brain", "public_sources": ["PLACEHOLDER: https://www.reddit.com/r/…"] },
+  "voc": { "seed_dir": "config/clients/upclicklabs/voc-seed", "vault_path": "PLACEHOLDER: /Users/Sam/Documents/ucl-brain", "public_sources": ["PLACEHOLDER: https://www.reddit.com/r/…/1", "PLACEHOLDER: https://www.reddit.com/r/…/2", "PLACEHOLDER: https://www.reddit.com/r/…/3"] },
   "inspo": { "dtc_seed": ["AG1", "Liquid Death", "HexClad", "Ridge", "Dr. Squatch"], "category_seed": [] },
   "disapproval_pause_threshold": 3
 }

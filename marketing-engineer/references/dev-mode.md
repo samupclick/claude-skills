@@ -9,6 +9,7 @@ Every external dependency sits behind an adapter selected by an environment vari
 | Meta Marketing API | `META_BACKEND` | `fake` | `live` | In-memory account: creates campaigns/ad sets/ads with ids, name lookup, `effective_status`, `ad_review_feedback`, insights that synthesise impressions/clicks from a seed, throttle header simulation, failure injection via `META_FAKE_FAIL=<step>` |
 | Meta CAPI | `CAPI_BACKEND` | `fake` (logs events to `.dev/capi.jsonl`) | `live` | Records `event_id` for dedup tests |
 | scrapecreators | `INSPO_BACKEND` | `fixture` (reads `fixtures/ad_library/*.json`) | `scrapecreators` | Fixture shape is an **assumption** until one real call is saved (`CRUCIBLE.md` §4); the adapter normalises whatever the real shape turns out to be |
+| Public VOC threads (Reddit) | `VOC_BACKEND` | `fixture` (reads `fixtures/voc/*.json`, matched to `voc.public_sources` by URL) | `reddit` | Fixture threads are **synthetic**; the shape is ours (`url`, `title`, `comments[{id,text,score}]`, no authors) and the live backend normalises Reddit's JSON into it |
 | Image generation | `IMAGE_BACKEND` | `placeholder` (Pillow: solid colour + label, no text) | `gemini` | Deterministic bytes per prompt hash so renders are reproducible |
 | Vision decomposition, copy, gate, planner reasoning | `MODEL_BACKEND` | `claude` (real; cheap) or `fixture` for CI | `claude` | Fixture mode replays recorded JSON outputs from `fixtures/model/` |
 | Email (check-in) | `EMAIL_BACKEND` | `file` (writes `.dev/outbox/*.eml`) | `gmail` | Golden-file tests read the outbox |
@@ -29,7 +30,7 @@ python3 -m pytest                        # tests run against the local warehouse
 `.env` is git-ignored and holds the dev passwords inside the `WAREHOUSE_URL_*` strings. Dev backends keep
 their state under `DEV_ROOT` (default `.dev/`, git-ignored): `storage/`, `meta/account.json`,
 `capi.jsonl`, `outbox/*.eml`. Workers get a backend with `from adapters.meta import get_meta` (likewise
-`storage`, `capi`, `inspo`, `image`, `model`, `email`, `turnstile`); an unknown env value raises naming the
+`storage`, `capi`, `inspo`, `voc`, `image`, `model`, `email`, `turnstile`); an unknown env value raises naming the
 variable, a live value raises naming T13. `adapters.env.require(job, *names)` refuses to start a job whose
 variables are unset and never prints a value. Fake Meta knobs: `META_FAKE_SEED`, `META_FAKE_FAIL=<step>[:after]`
 (`:after` performs the step, persists it, then fails, for orphan tests), `META_FAKE_THROTTLE_AFTER=<n>`.
@@ -50,6 +51,7 @@ Images land under `.dev/storage/inspo/<brand>/<ad_id>/`. `--today YYYY-MM-DD` fi
 | `references/families.md` | **DRAFT** — 15 families + 7 hook types + 5 angles, DTC seed list | Sam's approval; edit names freely |
 | `config/clients/upclicklabs/voc-seed/*.md` | **SYNTHETIC** — invented notes with fake names, for testing anonymisation | 5–10 real vault notes copied from `/Users/Sam/Documents/ucl-brain` |
 | `fixtures/ad_library/*.json` | **ASSUMED SHAPE** | one real scrapecreators response |
+| `fixtures/voc/*.json` | **SYNTHETIC** — invented threads matching the placeholder URLs | nothing; set real thread URLs in `voc.public_sources` and `VOC_BACKEND=reddit` |
 
 ## Go-live swap checklist (do after the Friday checklist)
 
