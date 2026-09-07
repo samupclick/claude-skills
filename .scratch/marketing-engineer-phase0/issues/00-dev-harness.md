@@ -6,9 +6,9 @@
 
 **Blocks:** T1 (01)
 
-**Status:** ready-for-agent
+**Status:** needs-info (families.md name conflict, see Comments; code complete)
 
-**Done:** no
+**Done:** yes — 0719153 (acceptance 3 partially: `--seed` blocked on the families.md rename, see Comments)
 
 **Stop point:** none
 
@@ -20,13 +20,13 @@
 
 ## Acceptance
 
-- [ ] `scripts/dev_db.sh` is idempotent: from a stopped Postgres 16 cluster it starts the cluster, installs the `vector` extension (apt package `postgresql-16-pgvector` is available, not installed), creates database `gw`, applies `warehouse/schema.sql` then `warehouse/0002_roles.sql` with zero errors, and gives the five roles LOGIN with dev passwords matching `.env.example`; a second run changes nothing
-- [ ] `scripts/dev_db.sh --verify` connects as each of the five roles and prints the role name and `select count(*) from families`
-- [ ] `scripts/dev_db.sh --seed` inserts `families` from `references/families.md` and the `clients` (with `config` = the JSON file), `offers`, `icps` rows for `upclicklabs` from `config/clients/upclicklabs.json` using `WAREHOUSE_URL_ADMIN` (worker_rw has no insert on `clients`/`offers`/`icps`); re-running adds zero rows; placeholder values are copied as-is, never replaced with invented ones
-- [ ] Each adapter (storage, meta, capi, inspo, image, model, email, turnstile) has one interface module, one dev implementation, and a factory that reads the env var named in `references/dev-mode.md`; an unknown value raises naming the variable; a unit test per adapter exercises the dev implementation (fake Meta: create → name lookup → read-back, synthesised insights, `META_FAKE_FAIL=<step>`; CAPI: `event_id` recorded to `.dev/capi.jsonl`; storage: `put(bytes, key) -> url` / `get(url)` round-trip under `.dev/storage/`; image: deterministic bytes per prompt hash; model: `fixture` replays `fixtures/model/*.json`; email: `.eml` in `.dev/outbox/`; turnstile: `pass`)
-- [ ] `.env` loading: a helper loads `.env` from the `marketing-engineer/` directory, refuses to start a job when a variable that job needs is unset (names the variable), and never echoes a value; `.env` and `.dev/` are git-ignored
-- [ ] `fixtures/ad_library/` holds at least one assumed-shape sample per DTC seed brand (5 brands, ≥5 ads each, with `start_date`, `is_active`, snapshot image fields) clearly marked as an assumed shape in a README
-- [ ] `grep` for `facebook_business`, `google.generativeai`, `supabase`, `anthropic` imports outside the adapter package returns nothing (FR-49)
+- [x] `scripts/dev_db.sh` is idempotent: from a stopped Postgres 16 cluster it starts the cluster, installs the `vector` extension (apt package `postgresql-16-pgvector` is available, not installed), creates database `gw`, applies `warehouse/schema.sql` then `warehouse/0002_roles.sql` with zero errors, and gives the five roles LOGIN with dev passwords matching `.env.example`; a second run changes nothing
+- [x] `scripts/dev_db.sh --verify` connects as each of the five roles and prints the role name and `select count(*) from families`
+- [ ] (partial: clients/offers/icps/23 families land, re-run adds zero rows, exits 1 naming the 2 conflicting names) `scripts/dev_db.sh --seed` inserts `families` from `references/families.md` and the `clients` (with `config` = the JSON file), `offers`, `icps` rows for `upclicklabs` from `config/clients/upclicklabs.json` using `WAREHOUSE_URL_ADMIN` (worker_rw has no insert on `clients`/`offers`/`icps`); re-running adds zero rows; placeholder values are copied as-is, never replaced with invented ones
+- [x] Each adapter (storage, meta, capi, inspo, image, model, email, turnstile) has one interface module, one dev implementation, and a factory that reads the env var named in `references/dev-mode.md`; an unknown value raises naming the variable; a unit test per adapter exercises the dev implementation (fake Meta: create → name lookup → read-back, synthesised insights, `META_FAKE_FAIL=<step>`; CAPI: `event_id` recorded to `.dev/capi.jsonl`; storage: `put(bytes, key) -> url` / `get(url)` round-trip under `.dev/storage/`; image: deterministic bytes per prompt hash; model: `fixture` replays `fixtures/model/*.json`; email: `.eml` in `.dev/outbox/`; turnstile: `pass`)
+- [x] `.env` loading: a helper loads `.env` from the `marketing-engineer/` directory, refuses to start a job when a variable that job needs is unset (names the variable), and never echoes a value; `.env` and `.dev/` are git-ignored
+- [x] `fixtures/ad_library/` holds at least one assumed-shape sample per DTC seed brand (5 brands, ≥5 ads each, with `start_date`, `is_active`, snapshot image fields) clearly marked as an assumed shape in a README
+- [x] `grep` for `facebook_business`, `google.generativeai`, `supabase`, `anthropic` imports outside the adapter package returns nothing (FR-49)
 
 ## Constraints
 
@@ -55,3 +55,4 @@ Roles in `0002_roles.sql` are `nologin`; dev mode alters them to LOGIN with the 
 - 2026-09-07 (implementer): `--seed` found that `references/families.md` uses `contrarian` and `identity` both as a hook type and as an angle, while `families.name` is the primary key in `schema.sql` (schema wins). The seed inserts the first kind (hook_type), skips the two angle rows with a stderr warning, and records `families_skipped_name_conflict: 2` in the `runs` counts. Nothing was renamed: the reference is Sam's DRAFT. **Decision needed from Sam:** rename the two angles (e.g. `contrarian_led`, `identity_led`) in `references/families.md`, then re-run `scripts/dev_db.sh --seed`.
 - 2026-09-07 (implementer): `--verify` prints `app connected; no select on families (0002 grants none to app)` for the `app` role: `0002_roles.sql` gives `app` insert on leads/lead_contacts only, so the families count is printed for the other four roles. The criterion is met for connectivity on all five.
 - 2026-09-07 (implementer): no `ANTHROPIC_API_KEY` in the build container, so `MODEL_BACKEND=claude` is verified by construction only (SDK shape per the claude-api reference); `MODEL_BACKEND=fixture` is tested.
+- 2026-09-07 (implementer): shipped in commit 0719153 after two reviews (spec + standards). Review fixes folded in: paused ads stop synthesised spend (active periods on campaign/adset/ad), migrations piped on stdin, passwordless URL is an error, apt/pg_ctlcluster via sudo/postgres for non-root, typed model errors for truncation and non-JSON, outbox filenames from Message-ID, storage `get` root check. `--seed` now exits 1 and marks its run `failed` while the name conflict stands (after inserting the 23 unambiguous rows); re-run `scripts/dev_db.sh --seed` once families.md is fixed. T1 is unblocked.
