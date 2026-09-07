@@ -33,7 +33,14 @@ their state under `DEV_ROOT` (default `.dev/`, git-ignored): `storage/`, `meta/a
 variable, a live value raises naming T13. `adapters.env.require(job, *names)` refuses to start a job whose
 variables are unset and never prints a value. Fake Meta knobs: `META_FAKE_SEED`, `META_FAKE_FAIL=<step>[:after]`
 (`:after` performs the step, persists it, then fails, for orphan tests), `META_FAKE_THROTTLE_AFTER=<n>`.
-The model adapter takes untrusted text through `untrusted=` only and wraps it in a delimited data block.
+The model adapter takes untrusted text through `untrusted=` only and wraps it in a delimited data block; `images=`
+attaches PNG/JPEG bytes for vision tasks (the fixture backend ignores them). Fixture ad library knob:
+`INSPO_FIXTURE_FAIL=<brand-slug>[,…]` makes those sources fail on every attempt (FR-8 tests).
+
+`pull inspo` in dev mode: `python3 scripts/pull_inspo.py` (add `MODEL_BACKEND=fixture` when there is no
+`ANTHROPIC_API_KEY`; `fixtures/model/decompose_ad.json` is a synthetic decomposition aligned to the fixture ads).
+Images land under `.dev/storage/inspo/<brand>/<ad_id>/`. `--today YYYY-MM-DD` fixes the FR-6 reference date;
+`--acknowledge <source>` is Sam's `acknowledge <source>` (SKILL.md §7).
 
 ## Placeholders that need Sam's replacement before go-live
 

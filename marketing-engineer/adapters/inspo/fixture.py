@@ -1,7 +1,12 @@
-"""Fixture Ad Library: reads fixtures/ad_library/<brand-slug>.json; images are placeholder PNGs."""
+"""Fixture Ad Library: reads fixtures/ad_library/<brand-slug>.json; images are placeholder PNGs.
+
+Failure injection for FR-8 tests: `INSPO_FIXTURE_FAIL=<brand-slug>[,<brand-slug>...]` makes `fetch_ads`
+raise for those brands on every attempt (so a retry fails too); `fetch_ads_calls` counts attempts.
+"""
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -13,9 +18,15 @@ from adapters.inspo import brand_slug
 class FixtureAdLibrary:
     def __init__(self, fixture_dir: Path):
         self.fixture_dir = fixture_dir
+        self.fail_brands = {b for b in (os.environ.get("INSPO_FIXTURE_FAIL") or "").split(",") if b}
+        self.fetch_ads_calls: dict[str, int] = {}
 
     def fetch_ads(self, brand: str, limit: int = 50) -> list[dict[str, Any]]:
-        path = self.fixture_dir / f"{brand_slug(brand)}.json"
+        slug = brand_slug(brand)
+        self.fetch_ads_calls[slug] = self.fetch_ads_calls.get(slug, 0) + 1
+        if slug in self.fail_brands:
+            raise ConnectionError(f"INSPO_FIXTURE_FAIL: simulated source failure for {brand!r}")
+        path = self.fixture_dir / f"{slug}.json"
         if not path.exists():
             raise FileNotFoundError(f"no ad_library fixture for {brand!r}: expected {path}")
         payload = json.loads(path.read_text())

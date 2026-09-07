@@ -12,10 +12,12 @@ class FixtureModel:
     def __init__(self, fixture_dir: str | Path):
         self.fixture_dir = Path(fixture_dir)
         self.last_prompt: dict[str, str] = {}
+        self.last_images = 0
         self._cursor: dict[str, int] = {}
 
-    def generate_json(self, *, task, system, instructions, untrusted, schema, max_tokens=4096):
+    def generate_json(self, *, task, system, instructions, untrusted, schema, max_tokens=4096, images=None):
         self.last_prompt = {"system": system, "user": build_user(instructions, untrusted)}
+        self.last_images = len(images or [])
         path = self.fixture_dir / f"{task}.json"
         if not path.exists():
             raise FileNotFoundError(f"model fixture {path} not found; record one or set MODEL_BACKEND=claude")

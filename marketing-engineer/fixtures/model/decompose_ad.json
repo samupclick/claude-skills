@@ -1,0 +1,71 @@
+{
+  "_shape": "SYNTHETIC fixture for scripts/pull_inspo.py in CI (MODEL_BACKEND=fixture): not recorded from Claude (no ANTHROPIC_API_KEY in the build container, T0 comment). Six outputs cycle in call order and are aligned to the six ads per brand in fixtures/ad_library so the FR-6 branches are both exercised: ads 1, 3, 4 share screenshot_ad (three active = concurrent branch), ad 2 is an inactive 12-day stat_card (candidate), ads 5 and 6 are proven by age only. Values say FIXTURE; record a real one at go-live and replace. Hook types are limited to the five the seed currently inserts (contrarian/identity are skipped while the families.md name conflict stands, T0 comment).",
+  "outputs": [
+    {
+      "family": "screenshot_ad",
+      "variant": "FIXTURE imessage thread, three bubbles",
+      "hook_type": "pain",
+      "angle": "pain_led",
+      "visual_structure": "FIXTURE: fake iMessage thread on a phone frame, brand reply last",
+      "copy_structure": "FIXTURE: pain line, reply, CTA",
+      "copy_length": "short",
+      "hook_text": "FIXTURE ad body 1",
+      "confidence": 0.5
+    },
+    {
+      "family": "stat_card",
+      "variant": "FIXTURE one big number on flat colour",
+      "hook_type": "number",
+      "angle": "proof_led",
+      "visual_structure": "FIXTURE: one large numeral centred, one line of context below",
+      "copy_structure": "FIXTURE: number, context, CTA",
+      "copy_length": "short",
+      "hook_text": "FIXTURE ad body 2",
+      "confidence": 0.5
+    },
+    {
+      "family": "screenshot_ad",
+      "variant": "FIXTURE notes-app checklist screenshot",
+      "hook_type": "outcome",
+      "angle": "outcome_led",
+      "visual_structure": "FIXTURE: notes app window with a three-line list",
+      "copy_structure": "FIXTURE: outcome line, list, CTA",
+      "copy_length": "medium",
+      "hook_text": "FIXTURE ad body 3",
+      "confidence": 0.5
+    },
+    {
+      "family": "screenshot_ad",
+      "variant": "FIXTURE email inbox screenshot",
+      "hook_type": "proof",
+      "angle": "proof_led",
+      "visual_structure": "FIXTURE: email client with one highlighted subject line",
+      "copy_structure": "FIXTURE: proof line, CTA",
+      "copy_length": "short",
+      "hook_text": "FIXTURE ad body 4",
+      "confidence": 0.5
+    },
+    {
+      "family": "us_vs_them",
+      "variant": "FIXTURE two-column old way vs new way",
+      "hook_type": "question",
+      "angle": "pain_led",
+      "visual_structure": "FIXTURE: two columns, left crossed out, right ticked",
+      "copy_structure": "FIXTURE: contrast pairs, CTA",
+      "copy_length": "medium",
+      "hook_text": "FIXTURE ad body 5",
+      "confidence": 0.5
+    },
+    {
+      "family": "ugly_ad",
+      "variant": "FIXTURE plain text on flat colour",
+      "hook_type": "question",
+      "angle": "outcome_led",
+      "visual_structure": "FIXTURE: black text on a flat yellow background, no imagery",
+      "copy_structure": "FIXTURE: question, answer, CTA",
+      "copy_length": "long",
+      "hook_text": "FIXTURE ad body 6",
+      "confidence": 0.5
+    }
+  ]
+}

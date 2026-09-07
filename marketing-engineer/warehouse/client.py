@@ -33,6 +33,7 @@ __all__ = [
     "ROLES", "TABLES", "UnknownRole", "UnknownTable", "UnknownColumn", "Jsonb", "Run",
     "connect", "migration_files", "insert", "run", "client_by_slug",
     "where_are_we", "format_where_are_we", "learnings_before_planning", "leaderboard_before_planning",
+    "blocked_sources",
 ]
 
 Connection = psycopg.Connection[dict[str, Any]]
@@ -273,6 +274,37 @@ def _cell(v: Any) -> str:
     if isinstance(v, bool):
         return "yes" if v else "no"
     return str(v)
+
+
+# FR-8 / SKILL.md §7: a source whose last two intel outcomes are both failures blocks `plan batch` until Sam
+# acknowledges it. Outcomes are the `runs.counts` lists the intel worker writes (`sources_ok`, `sources_failed`)
+# plus `acknowledged` (written by `scripts/pull_inspo.py --acknowledge <source>`), newest first per source.
+BLOCKED_SOURCES_SQL = """
+with outcomes as (
+  select r.started_at, s.source, 'failed' as outcome
+    from runs r, jsonb_array_elements_text(coalesce(r.counts->'sources_failed', '[]'::jsonb)) s(source)
+   where r.worker = 'intel'
+  union all
+  select r.started_at, s.source, 'ok'
+    from runs r, jsonb_array_elements_text(coalesce(r.counts->'sources_ok', '[]'::jsonb)) s(source)
+   where r.worker = 'intel'
+  union all
+  select r.started_at, s.source, 'acknowledged'
+    from runs r, jsonb_array_elements_text(coalesce(r.counts->'acknowledged', '[]'::jsonb)) s(source)
+   where r.worker = 'intel'
+), ranked as (
+  select source, outcome, row_number() over (partition by source order by started_at desc) as rn from outcomes
+)
+select source from ranked where rn <= 2
+group by source having count(*) = 2 and bool_and(outcome = 'failed')
+order by source;
+"""
+
+
+def blocked_sources(conn: Connection) -> list[str]:
+    """Sources (brand names) with two consecutive intel failures and no acknowledgement since (FR-8).
+    The planner refuses `plan batch` naming these."""
+    return [row["source"] for row in conn.execute(BLOCKED_SOURCES_SQL).fetchall()]
 
 
 def learnings_before_planning(conn: Connection, client_id: UUID | str) -> list[dict[str, Any]]:

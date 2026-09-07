@@ -1,10 +1,11 @@
 """Claude backend via the Anthropic SDK; structured output enforced with output_config.format."""
 from __future__ import annotations
 
+import base64
 import json
 from typing import Any
 
-from adapters.model import ModelOutputInvalid, ModelRefused, ModelResult, build_user, validate
+from adapters.model import ModelOutputInvalid, ModelRefused, ModelResult, build_user, image_media_type, validate
 
 
 class ClaudeModel:
@@ -20,14 +21,20 @@ class ClaudeModel:
             self._client = anthropic.Anthropic()
         return self._client
 
-    def generate_json(self, *, task, system, instructions, untrusted, schema, max_tokens=4096):
+    def generate_json(self, *, task, system, instructions, untrusted, schema, max_tokens=4096, images=None):
         user = build_user(instructions, untrusted)
         self.last_prompt = {"system": system, "user": user}
+        content: list[dict[str, Any]] = [
+            {"type": "image", "source": {"type": "base64", "media_type": image_media_type(img),
+                                         "data": base64.b64encode(img).decode("ascii")}}
+            for img in images or []
+        ]
+        content.append({"type": "text", "text": user})
         response = self._client_or_create().messages.create(
             model=self.model_id,
             max_tokens=max_tokens,
             system=system,
-            messages=[{"role": "user", "content": user}],
+            messages=[{"role": "user", "content": content}],
             output_config={"format": {"type": "json_schema", "schema": schema}},
         )
         if response.stop_reason == "refusal":
