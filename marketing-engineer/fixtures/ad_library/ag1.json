@@ -1,0 +1,198 @@
+{
+  "_shape": "ASSUMED shape of a scrapecreators Meta Ad Library company-ads response; replace with a real response (real-001.json, go-live step 4) and fix adapters/inspo/fixture.py::normalise if it differs",
+  "brand": "AG1",
+  "searchResults": [
+    {
+      "ad_archive_id": "fx-ag1-001",
+      "page_name": "AG1",
+      "page_id": "fx-page-ag1",
+      "start_date": 1787184000,
+      "end_date": null,
+      "is_active": true,
+      "publisher_platform": [
+        "facebook",
+        "instagram"
+      ],
+      "snapshot": {
+        "body": {
+          "text": "FIXTURE ad body 1 for AG1: synthetic text in an assumed shape, not a real ad."
+        },
+        "title": "FIXTURE title 1 (AG1)",
+        "link_url": "https://example.invalid/ag1/fixture-1",
+        "cta_text": "Learn more",
+        "display_format": "IMAGE",
+        "images": [
+          {
+            "original_image_url": "fixture://ad_library/ag1/fx-ag1-001-1.png",
+            "resized_image_url": "fixture://ad_library/ag1/fx-ag1-001-1-resized.png"
+          }
+        ],
+        "videos": [],
+        "cards": []
+      }
+    },
+    {
+      "ad_archive_id": "fx-ag1-002",
+      "page_name": "AG1",
+      "page_id": "fx-page-ag1",
+      "start_date": 1785888000,
+      "end_date": 1787097600,
+      "is_active": false,
+      "publisher_platform": [
+        "facebook",
+        "instagram"
+      ],
+      "snapshot": {
+        "body": {
+          "text": "FIXTURE ad body 2 for AG1: synthetic text in an assumed shape, not a real ad."
+        },
+        "title": "FIXTURE title 2 (AG1)",
+        "link_url": "https://example.invalid/ag1/fixture-2",
+        "cta_text": "Get offer",
+        "display_format": "VIDEO",
+        "images": [
+          {
+            "original_image_url": "fixture://ad_library/ag1/fx-ag1-002-poster.png"
+          }
+        ],
+        "videos": [
+          {
+            "video_hd_url": "fixture://ad_library/ag1/fx-ag1-002.mp4",
+            "video_preview_image_url": "fixture://ad_library/ag1/fx-ag1-002-poster.png"
+          }
+        ],
+        "cards": []
+      }
+    },
+    {
+      "ad_archive_id": "fx-ag1-003",
+      "page_name": "AG1",
+      "page_id": "fx-page-ag1",
+      "start_date": 1784332800,
+      "end_date": null,
+      "is_active": true,
+      "publisher_platform": [
+        "facebook",
+        "instagram"
+      ],
+      "snapshot": {
+        "body": {
+          "text": "FIXTURE ad body 3 for AG1: synthetic text in an assumed shape, not a real ad."
+        },
+        "title": "FIXTURE title 3 (AG1)",
+        "link_url": "https://example.invalid/ag1/fixture-3",
+        "cta_text": "Shop now",
+        "display_format": "CAROUSEL",
+        "images": [
+          {
+            "original_image_url": "fixture://ad_library/ag1/fx-ag1-003-1.png",
+            "resized_image_url": "fixture://ad_library/ag1/fx-ag1-003-1-resized.png"
+          }
+        ],
+        "videos": [],
+        "cards": [
+          {
+            "title": "FIXTURE card 1",
+            "original_image_url": "fixture://ad_library/ag1/fx-ag1-003-card1.png"
+          },
+          {
+            "title": "FIXTURE card 2",
+            "original_image_url": "fixture://ad_library/ag1/fx-ag1-003-card2.png"
+          },
+          {
+            "title": "FIXTURE card 3",
+            "original_image_url": "fixture://ad_library/ag1/fx-ag1-003-card3.png"
+          }
+        ]
+      }
+    },
+    {
+      "ad_archive_id": "fx-ag1-004",
+      "page_name": "AG1",
+      "page_id": "fx-page-ag1",
+      "start_date": 1780444800,
+      "end_date": null,
+      "is_active": true,
+      "publisher_platform": [
+        "facebook",
+        "instagram"
+      ],
+      "snapshot": {
+        "body": {
+          "text": "FIXTURE ad body 4 for AG1: synthetic text in an assumed shape, not a real ad."
+        },
+        "title": "FIXTURE title 4 (AG1)",
+        "link_url": "https://example.invalid/ag1/fixture-4",
+        "cta_text": "Learn more",
+        "display_format": "IMAGE",
+        "images": [
+          {
+            "original_image_url": "fixture://ad_library/ag1/fx-ag1-004-1.png",
+            "resized_image_url": "fixture://ad_library/ag1/fx-ag1-004-1-resized.png"
+          }
+        ],
+        "videos": [],
+        "cards": []
+      }
+    },
+    {
+      "ad_archive_id": "fx-ag1-005",
+      "page_name": "AG1",
+      "page_id": "fx-page-ag1",
+      "start_date": 1770940800,
+      "end_date": 1772150400,
+      "is_active": false,
+      "publisher_platform": [
+        "facebook",
+        "instagram"
+      ],
+      "snapshot": {
+        "body": {
+          "text": "FIXTURE ad body 5 for AG1: synthetic text in an assumed shape, not a real ad."
+        },
+        "title": "FIXTURE title 5 (AG1)",
+        "link_url": "https://example.invalid/ag1/fixture-5",
+        "cta_text": "Get offer",
+        "display_format": "IMAGE",
+        "images": [
+          {
+            "original_image_url": "fixture://ad_library/ag1/fx-ag1-005-1.png",
+            "resized_image_url": "fixture://ad_library/ag1/fx-ag1-005-1-resized.png"
+          }
+        ],
+        "videos": [],
+        "cards": []
+      }
+    },
+    {
+      "ad_archive_id": "fx-ag1-006",
+      "page_name": "AG1",
+      "page_id": "fx-page-ag1",
+      "start_date": 1787961600,
+      "end_date": null,
+      "is_active": true,
+      "publisher_platform": [
+        "facebook",
+        "instagram"
+      ],
+      "snapshot": {
+        "body": {
+          "text": "FIXTURE ad body 6 for AG1: synthetic text in an assumed shape, not a real ad."
+        },
+        "title": "FIXTURE title 6 (AG1)",
+        "link_url": "https://example.invalid/ag1/fixture-6",
+        "cta_text": "Shop now",
+        "display_format": "IMAGE",
+        "images": [
+          {
+            "original_image_url": "fixture://ad_library/ag1/fx-ag1-006-1.png",
+            "resized_image_url": "fixture://ad_library/ag1/fx-ag1-006-1-resized.png"
+          }
+        ],
+        "videos": [],
+        "cards": []
+      }
+    }
+  ],
+  "cursor": null
+}

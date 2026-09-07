@@ -1,0 +1,6 @@
+# local secrets and dev-mode state (see marketing-engineer/references/dev-mode.md)
+.env
+.dev/
+__pycache__/
+*.pyc
+.pytest_cache/

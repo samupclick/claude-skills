@@ -16,6 +16,25 @@ Every external dependency sits behind an adapter selected by an environment vari
 | Quiz page host | `FUNNEL_HOST` | `http://localhost:8788` | `https://go.upclicklabs.com` | Local static server + local Edge Function emulation |
 | Turnstile | `TURNSTILE_BACKEND` | `pass` | `live` | Always passes; rate limits still enforced |
 
+## Running locally (T0 dev harness)
+
+```
+pip install -r requirements.txt          # the SessionStart hook does this in remote sessions
+scripts/dev_db.sh                        # start Postgres 16, pgvector, db gw, migrations, roles LOGIN; writes .env from .env.example
+scripts/dev_db.sh --verify               # connect as the five roles
+scripts/dev_db.sh --seed                 # families + upclicklabs client/offer/icp from the DRAFT files, as-is
+python3 -m pytest                        # tests run against the local warehouse, never a mock
+```
+
+`.env` is git-ignored and holds the dev passwords inside the `WAREHOUSE_URL_*` strings. Dev backends keep
+their state under `DEV_ROOT` (default `.dev/`, git-ignored): `storage/`, `meta/account.json`,
+`capi.jsonl`, `outbox/*.eml`. Workers get a backend with `from adapters.meta import get_meta` (likewise
+`storage`, `capi`, `inspo`, `image`, `model`, `email`, `turnstile`); an unknown env value raises naming the
+variable, a live value raises naming T13. `adapters.env.require(job, *names)` refuses to start a job whose
+variables are unset and never prints a value. Fake Meta knobs: `META_FAKE_SEED`, `META_FAKE_FAIL=<step>[:after]`
+(`:after` performs the step, persists it, then fails, for orphan tests), `META_FAKE_THROTTLE_AFTER=<n>`.
+The model adapter takes untrusted text through `untrusted=` only and wraps it in a delimited data block.
+
 ## Placeholders that need Sam's replacement before go-live
 
 | File | Status | Replace with |

@@ -1,0 +1,198 @@
+{
+  "_shape": "ASSUMED shape of a scrapecreators Meta Ad Library company-ads response; replace with a real response (real-001.json, go-live step 4) and fix adapters/inspo/fixture.py::normalise if it differs",
+  "brand": "Liquid Death",
+  "searchResults": [
+    {
+      "ad_archive_id": "fx-liquid-death-001",
+      "page_name": "Liquid Death",
+      "page_id": "fx-page-liquid-death",
+      "start_date": 1787184000,
+      "end_date": null,
+      "is_active": true,
+      "publisher_platform": [
+        "facebook",
+        "instagram"
+      ],
+      "snapshot": {
+        "body": {
+          "text": "FIXTURE ad body 1 for Liquid Death: synthetic text in an assumed shape, not a real ad."
+        },
+        "title": "FIXTURE title 1 (Liquid Death)",
+        "link_url": "https://example.invalid/liquid-death/fixture-1",
+        "cta_text": "Learn more",
+        "display_format": "IMAGE",
+        "images": [
+          {
+            "original_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-001-1.png",
+            "resized_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-001-1-resized.png"
+          }
+        ],
+        "videos": [],
+        "cards": []
+      }
+    },
+    {
+      "ad_archive_id": "fx-liquid-death-002",
+      "page_name": "Liquid Death",
+      "page_id": "fx-page-liquid-death",
+      "start_date": 1785888000,
+      "end_date": 1787097600,
+      "is_active": false,
+      "publisher_platform": [
+        "facebook",
+        "instagram"
+      ],
+      "snapshot": {
+        "body": {
+          "text": "FIXTURE ad body 2 for Liquid Death: synthetic text in an assumed shape, not a real ad."
+        },
+        "title": "FIXTURE title 2 (Liquid Death)",
+        "link_url": "https://example.invalid/liquid-death/fixture-2",
+        "cta_text": "Get offer",
+        "display_format": "VIDEO",
+        "images": [
+          {
+            "original_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-002-poster.png"
+          }
+        ],
+        "videos": [
+          {
+            "video_hd_url": "fixture://ad_library/liquid-death/fx-liquid-death-002.mp4",
+            "video_preview_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-002-poster.png"
+          }
+        ],
+        "cards": []
+      }
+    },
+    {
+      "ad_archive_id": "fx-liquid-death-003",
+      "page_name": "Liquid Death",
+      "page_id": "fx-page-liquid-death",
+      "start_date": 1784332800,
+      "end_date": null,
+      "is_active": true,
+      "publisher_platform": [
+        "facebook",
+        "instagram"
+      ],
+      "snapshot": {
+        "body": {
+          "text": "FIXTURE ad body 3 for Liquid Death: synthetic text in an assumed shape, not a real ad."
+        },
+        "title": "FIXTURE title 3 (Liquid Death)",
+        "link_url": "https://example.invalid/liquid-death/fixture-3",
+        "cta_text": "Shop now",
+        "display_format": "CAROUSEL",
+        "images": [
+          {
+            "original_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-003-1.png",
+            "resized_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-003-1-resized.png"
+          }
+        ],
+        "videos": [],
+        "cards": [
+          {
+            "title": "FIXTURE card 1",
+            "original_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-003-card1.png"
+          },
+          {
+            "title": "FIXTURE card 2",
+            "original_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-003-card2.png"
+          },
+          {
+            "title": "FIXTURE card 3",
+            "original_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-003-card3.png"
+          }
+        ]
+      }
+    },
+    {
+      "ad_archive_id": "fx-liquid-death-004",
+      "page_name": "Liquid Death",
+      "page_id": "fx-page-liquid-death",
+      "start_date": 1780444800,
+      "end_date": null,
+      "is_active": true,
+      "publisher_platform": [
+        "facebook",
+        "instagram"
+      ],
+      "snapshot": {
+        "body": {
+          "text": "FIXTURE ad body 4 for Liquid Death: synthetic text in an assumed shape, not a real ad."
+        },
+        "title": "FIXTURE title 4 (Liquid Death)",
+        "link_url": "https://example.invalid/liquid-death/fixture-4",
+        "cta_text": "Learn more",
+        "display_format": "IMAGE",
+        "images": [
+          {
+            "original_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-004-1.png",
+            "resized_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-004-1-resized.png"
+          }
+        ],
+        "videos": [],
+        "cards": []
+      }
+    },
+    {
+      "ad_archive_id": "fx-liquid-death-005",
+      "page_name": "Liquid Death",
+      "page_id": "fx-page-liquid-death",
+      "start_date": 1770940800,
+      "end_date": 1772150400,
+      "is_active": false,
+      "publisher_platform": [
+        "facebook",
+        "instagram"
+      ],
+      "snapshot": {
+        "body": {
+          "text": "FIXTURE ad body 5 for Liquid Death: synthetic text in an assumed shape, not a real ad."
+        },
+        "title": "FIXTURE title 5 (Liquid Death)",
+        "link_url": "https://example.invalid/liquid-death/fixture-5",
+        "cta_text": "Get offer",
+        "display_format": "IMAGE",
+        "images": [
+          {
+            "original_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-005-1.png",
+            "resized_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-005-1-resized.png"
+          }
+        ],
+        "videos": [],
+        "cards": []
+      }
+    },
+    {
+      "ad_archive_id": "fx-liquid-death-006",
+      "page_name": "Liquid Death",
+      "page_id": "fx-page-liquid-death",
+      "start_date": 1787961600,
+      "end_date": null,
+      "is_active": true,
+      "publisher_platform": [
+        "facebook",
+        "instagram"
+      ],
+      "snapshot": {
+        "body": {
+          "text": "FIXTURE ad body 6 for Liquid Death: synthetic text in an assumed shape, not a real ad."
+        },
+        "title": "FIXTURE title 6 (Liquid Death)",
+        "link_url": "https://example.invalid/liquid-death/fixture-6",
+        "cta_text": "Shop now",
+        "display_format": "IMAGE",
+        "images": [
+          {
+            "original_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-006-1.png",
+            "resized_image_url": "fixture://ad_library/liquid-death/fx-liquid-death-006-1-resized.png"
+          }
+        ],
+        "videos": [],
+        "cards": []
+      }
+    }
+  ],
+  "cursor": null
+}
