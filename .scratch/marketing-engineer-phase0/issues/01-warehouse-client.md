@@ -6,9 +6,9 @@
 
 **Blocks:** T2 (02), T3 (03), T4 (04), T7 (07), T8 (08)
 
-**Status:** ready-for-agent
+**Status:** ready-for-human (review the shipped commit; code complete, all acceptance criteria pass)
 
-**Done:** no
+**Done:** yes — 39d988e
 
 **Stop point:** none
 
@@ -20,10 +20,10 @@
 
 ## Acceptance
 
-- [ ] Unit tests with a local Postgres fixture applying `0001` + `0002`; every helper round-trips; a worker role cannot update `actions` (FR-44)
-- [ ] The `runs` context manager writes `status='ok'` with `counts` on normal exit and `status='failed'` with `error` when the body raises, in both cases with `finished_at` set
-- [ ] The "where are we" query prints the §2 table for `upclicklabs` on a freshly seeded database
-- [ ] `0003_phase0_grants.sql` applies cleanly after `0002`; as worker_rw, updating `creatives.status` and `campaigns.active_lever` succeeds while updating `actions` still raises; the migration is listed in `warehouse/schema-notes.md`
+- [x] Unit tests with a local Postgres fixture applying `0001` + `0002`; every helper round-trips; a worker role cannot update `actions` (FR-44)
+- [x] The `runs` context manager writes `status='ok'` with `counts` on normal exit and `status='failed'` with `error` when the body raises, in both cases with `finished_at` set
+- [x] The "where are we" query prints the §2 table for `upclicklabs` on a freshly seeded database
+- [x] `0003_phase0_grants.sql` applies cleanly after `0002`; as worker_rw, updating `creatives.status` and `campaigns.active_lever` succeeds while updating `actions` still raises; the migration is listed in `warehouse/schema-notes.md`
 
 ## Constraints
 
@@ -48,3 +48,9 @@
 The Postgres test fixture defined here (create a throwaway database, apply `0001` + `0002`, seed, drop) is reused by every later ticket. Sam approved (2026-09-04) closing the `0002` grant gaps with `warehouse/0003_phase0_grants.sql`; keep it to column grants, no new tables or columns. `dev_db.sh` (T0) applies every numbered migration in `warehouse/`, so `0003` is picked up without editing the script.
 
 ## Comments
+
+- 2026-09-07 (implementer): shipped in commit 39d988e. `warehouse/client.py` (connect per role, `insert_<table>` for all 26 tables validated against the live catalog, `run()` context manager, §2 and §4.2 queries verbatim, `python3 warehouse/client.py status`), `warehouse/0003_phase0_grants.sql` (column grants only), `warehouse/schema-notes.md`, `tests/test_client.py` (20 tests). Full suite: 59 passed against the real local cluster.
+- 2026-09-07 (implementer): the test fixture is `test_db` in `tests/conftest.py`: a throwaway database per session with every numbered migration applied in order and the DRAFT seed loaded, dropped at the end; `db_env` (function-scoped) points `WAREHOUSE_URL_*` at it. Later tickets use `db_env` for anything that connects through `warehouse.client` or runs a script in a subprocess; the dev database `gw` is never written by tests. T0's `test_dev_db.py` keeps using `gw` on purpose (it tests `dev_db.sh` itself).
+- 2026-09-07 (implementer): `run()` commits the `runs` row on open, so a hard crash leaves it `running` (SKILL.md §7). On normal exit it commits the body's work together with `status='ok'`; on an exception it rolls the body back, writes `status='failed'` + `error`, and re-raises. If the connection itself is gone it adds a note to the exception and the row stays `running`.
+- 2026-09-07 (implementer): `where are we` proof on the dev database after `--seed`: `slug upclicklabs, paused no, daily_cap 45.00, currency EUR, proven_patterns 0, voc_phrases 0, latest_batch -, capacity -, creatives_by_status -, actions_waiting 0, actions_stuck 0, ads_active 0, kill_scale_candidates 0, learnings_proposed 0, last_failure <the seed's FamilyNameConflict run>`. The `last_failure` timestamp will keep pointing at the seed until Sam renames the two families (T0 comment) and re-runs `scripts/dev_db.sh --seed`.
+- 2026-09-07 (implementer): `status` in `client.py` writes no `runs` row, matching SKILL.md §3 (`status` → "Writes: nothing"); every worker script from T2 on wraps its work in `run()`. T2, T3, T7, T8 are unblocked.
