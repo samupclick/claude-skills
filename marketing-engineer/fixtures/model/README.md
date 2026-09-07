@@ -10,3 +10,8 @@ look real.
 build container has no `ANTHROPIC_API_KEY` and the ad-library fixtures are placeholder images with synthetic
 text, so a recorded decomposition would be meaningless anyway. Its six outputs cycle in call order and line up
 with the six fixture ads per brand (see its `_shape`). Replace it with a recorded output at go-live step 4.
+
+`voc_extract.json` (T3, `scripts/pull_voc.py`) is the same kind of exception: hand-written from the SYNTHETIC
+voc-seed notes and `fixtures/voc/` threads, six outputs replayed in source order (three notes sorted by name,
+then `voc.public_sources` in config order; see its `_order`). Re-record it with `MODEL_BACKEND=claude` once the
+seed notes are real (go-live step 3).
