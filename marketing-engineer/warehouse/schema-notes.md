@@ -10,6 +10,8 @@ the owning entity's JSONB column and are listed here, never added as ad-hoc colu
 | `schema.sql` (0001) | Tables, views, marts, RLS scaffold |
 | `0002_roles.sql` | Roles `worker_rw`, `executor`, `sam_admin`, `app`, `mcp_ro`; grants; `actions_guard` trigger; `check_daily_cap()`; baseline RLS policies |
 | `0003_phase0_grants.sql` | Column grants only, for phase 0 workers: `worker_rw` may update `creatives (status, asset_urls, sizes, version)`, `briefs (spec)`, `campaigns (active_lever, active_lever_reason, active_lever_since)` |
+| `0004_quiz_rpc.sql` | Quiz funnel RPC (T7): `quiz_start`, `quiz_complete`, `lead_booked`, `quiz_config` as SECURITY DEFINER, execute granted to `app`; the direct `insert on leads, lead_contacts` 0002 gave `app` is revoked, so `app` writes leads through the RPCs only. No new tables or columns |
+| `0005_mcp_ro_leads_columns.sql` | DR-4 fix found by T7: 0002's column revoke on `leads (quiz_answers, consent, fbclid_hash)` for `mcp_ro` was a no-op under its table-level grant; replaced by a column-list grant that omits the three |
 
 ## JSONB keys in use
 
@@ -27,3 +29,8 @@ the owning entity's JSONB column and are listed here, never added as ad-hoc colu
 | `patterns.recipe` | `decomposition` {`variant`, `angle`, `hook_text`, `confidence`, `backend`} | `scripts/pull_inspo.py` | the model output behind the row; `backend` is `claude` or `fixture` |
 | `patterns.recipe` | `proven_by` [`days_running` \| `concurrent_variants`] | `scripts/pull_inspo.py` | which FR-6 branches held when the row was written (empty for candidates) |
 | `patterns.recipe` | `source` {`backend`, `ad_id`, `brand`, `page_name`, `raw_ingest_id`, `dedup_key`, `display_format`, `is_active`, `end_date`, `images` [{`cdn_url`, `storage_url`}], `text` {`title`, `body`, `cta`}} | `scripts/pull_inspo.py` | provenance; `ad_id` is the re-run dedup key for patterns; every `storage_url` is our copy of the CDN image (FR-5); `text` is untrusted (SKILL.md §4 rule 7) |
+| `leads.consent` | `tracking`, `marketing`, `verbatim_use` (bool), `notice_version`, `at` | `quiz_start()` via `funnel/app.py` | The consent the prospect gave on the notice version shown; CAPI fires only with `tracking` |
+| `leads.utm` | `source`, `medium`, `campaign`, `content`, `term` | `quiz_start()` | `utm_*` from the ad URL; `content` is the `creative_id` (FR-32) and resolves `creative_id` / `ad_entity_id` |
+| `leads.quiz_answers` | `<question_id>` → chosen option | `quiz_complete()` | Only option strings from `offers.quiz_config.questions[].options` (whitelisted by the funnel) |
+| `offers.quiz_config` | `version`, `questions[] {id, text, options[]}`, `qualification {qid: {option: points}}`, `qualification_mode` (`hard` to enable, else soft), `qualification_threshold`, `consent_notice_version` (defaults to `version`) | `scripts/seed.py` from the client config; `funnel/` reads | FR-35: soft by default |
+| `runs.counts` | `quiz_start`, `quiz_complete`, `schedule`, `forged_rejected`, `prospects` | `scripts/test_events.py` | one synthetic run of the funnel |

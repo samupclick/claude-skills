@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Quiz</title>
+  <link rel="stylesheet" href="/quiz.css">
+</head>
+<body>
+  <main class="quiz" id="quiz" data-state="loading">
+    <div class="progress" aria-hidden="true"><div class="progress-bar" id="progress"></div></div>
+
+    <section class="screen" id="screen-loading">
+      <p class="muted">Loading…</p>
+    </section>
+
+    <!-- 1. Consent: nothing is measured, stored, or sent before this screen is passed (FR-33). -->
+    <section class="screen" id="screen-consent" hidden>
+      <h1 id="offer-name">Quiz</h1>
+      <p class="lead" id="promise"></p>
+      <p>Three quick questions, then you can book a free call. First, a word on your data:</p>
+      <ul class="consent">
+        <li><label><input type="checkbox" id="consent-tracking"> Allow measurement: lets us see which ad brought you here (Meta pixel and server events). Optional.</label></li>
+        <li><label><input type="checkbox" id="consent-marketing"> Email me useful follow-ups about AI visibility. Optional.</label></li>
+        <li><label><input type="checkbox" id="consent-verbatim"> You may quote my answers anonymously in your material. Optional.</label></li>
+      </ul>
+      <p class="muted small">Your answers and contact details are stored so we can prepare the call. Notice version <span id="notice-version"></span>. Nothing is sent until you press Start.</p>
+      <div id="turnstile-box" class="turnstile"></div>
+      <button class="primary" id="btn-start" type="button">Start</button>
+      <p class="error" id="error-consent" role="alert" hidden></p>
+    </section>
+
+    <!-- 2. One question per screen, rendered from offers.quiz_config. -->
+    <section class="screen" id="screen-question" hidden>
+      <p class="muted small" id="question-count"></p>
+      <h2 id="question-text"></h2>
+      <div class="options" id="question-options" role="group"></div>
+    </section>
+
+    <!-- 3. Contact, then submit. -->
+    <section class="screen" id="screen-contact" hidden>
+      <h2>Where should we send your result?</h2>
+      <form id="contact-form" novalidate>
+        <label>Name <input type="text" id="contact-name" name="name" maxlength="120" autocomplete="name"></label>
+        <label>Work email <input type="email" id="contact-email" name="email" maxlength="254" autocomplete="email" required></label>
+        <label>Phone (optional) <input type="tel" id="contact-phone" name="phone" maxlength="40" autocomplete="tel"></label>
+        <button class="primary" id="btn-submit" type="submit">See my result</button>
+        <p class="error" id="error-contact" role="alert" hidden></p>
+      </form>
+    </section>
+
+    <!-- 4. Result: calendar link when qualified (soft mode: always), otherwise a thank-you. -->
+    <section class="screen" id="screen-done" hidden>
+      <h2 id="done-title">Thanks!</h2>
+      <p id="done-text"></p>
+      <a class="primary button" id="btn-book" href="#" hidden>Book your free call</a>
+    </section>
+  </main>
+  <script src="/quiz.js" defer></script>
+</body>
+</html>
