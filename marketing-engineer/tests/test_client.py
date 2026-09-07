@@ -75,7 +75,7 @@ def test_executor_url_is_used_only_by_the_executor():
     hits = subprocess.run(
         ["grep", "-rlE", r"WAREHOUSE_URL_EXECUTOR|connect\(\s*['\"]executor", "--include=*.py", "--include=*.sh", "."],
         cwd=ME_DIR, capture_output=True, text=True).stdout.split()
-    allowed = {"./warehouse/client.py", "./scripts/dev_db.sh", "./scripts/apply_actions.py"}
+    allowed = {"./warehouse/client.py", "./scripts/dev_db.sh", "./scripts/apply_actions.py", "./scripts/decide.py"}  # decide.py: T8, SKILL.md §5.3
     assert {h for h in hits if not h.startswith("./tests/")} <= allowed, hits
 
 

@@ -12,6 +12,7 @@ the owning entity's JSONB column and are listed here, never added as ad-hoc colu
 | `0003_phase0_grants.sql` | Column grants only, for phase 0 workers: `worker_rw` may update `creatives (status, asset_urls, sizes, version)`, `briefs (spec)`, `campaigns (active_lever, active_lever_reason, active_lever_since)` |
 | `0004_quiz_rpc.sql` | Quiz funnel RPC (T7): `quiz_start`, `quiz_complete`, `lead_booked`, `quiz_config` as SECURITY DEFINER, execute granted to `app`; the direct `insert on leads, lead_contacts` 0002 gave `app` is revoked, so `app` writes leads through the RPCs only. No new tables or columns |
 | `0005_mcp_ro_leads_columns.sql` | DR-4 fix found by T7: 0002's column revoke on `leads (quiz_answers, consent, fbclid_hash)` for `mcp_ro` was a no-op under its table-level grant; replaced by a column-list grant that omits the three |
+| `0006_executor_runs.sql` | Column grants only: `executor` may update `runs (status, finished_at, counts, tokens_used, api_calls, error)` so `scripts/apply_actions.py` closes its own runs row (0002 granted that to `worker_rw` only) |
 
 ## JSONB keys in use
 
@@ -37,3 +38,20 @@ the owning entity's JSONB column and are listed here, never added as ad-hoc colu
 | `leads.quiz_answers` | `<question_id>` → chosen option | `quiz_complete()` | Only option strings from `offers.quiz_config.questions[].options` (whitelisted by the funnel) |
 | `offers.quiz_config` | `version`, `questions[] {id, text, options[]}`, `qualification {qid: {option: points}}`, `qualification_mode` (`hard` to enable, else soft), `qualification_threshold`, `consent_notice_version` (defaults to `version`) | `scripts/seed.py` from the client config; `funnel/` reads | FR-35: soft by default |
 | `runs.counts` | `quiz_start`, `quiz_complete`, `schedule`, `forged_rejected`, `prospects` | `scripts/test_events.py` | one synthetic run of the funnel |
+| `actions.proposal` | `adset_daily_budget` | loop (T10) proposes, executor (T8) applies | `scale`: the new daily budget of the target ad's ad set; the executor refuses steps over 20% (FR-31) and re-checks `check_daily_cap()` with it applied |
+| `actions.proposal` | `paused`, `reason` | executor brakes (T8), `scripts/pause.py` (T11) | `set_pause_flag`: the value `clients.paused` takes when Sam applies it with `--role sam_admin` |
+| `actions.proposal` | `level`, `backtest_accuracy` | Sam (chat) | `promote_trust`: `propose` or `execute`, written to `clients.config.trust.<target_id>.level` when applied as `sam_admin`; promoting `kill` to `execute` needs `backtest_accuracy >= clients.config.trust.kill.backtest_min_accuracy` (FR-46) |
+| `actions.evidence` | `action_type`, `action_ids`, `errors` | executor (T8) | `set_pause_flag` proposed by the three-consecutive-failures brake: the failing type and the three rows |
+| `actions.evidence` | `spend_today`, `daily_cap`, `observed_at` | executor (T8) | `set_pause_flag` proposed by the hourly-spend brake (latest `account_spend_hourly` row today above `clients.daily_cap`) |
+| `clients.config` | `trust.<action_type>.level`, `.threshold` | `scripts/seed.py`, `promote_trust` applied as `sam_admin` | read by the `trust_streaks` view; the executor treats a type as autonomous only when `level='execute'`, `streak >= threshold`, and no `failed` action of that type exists since the last applied `promote_trust` (demotion is computed, never stored) |
+| `clients.config` | `rate_limits.max_kills_per_day`, `.max_share_of_live_ads_killed_per_day`, `.scale_cooldown_hours` | `scripts/seed.py` | limits on autonomous rows (FR-46); a missing limit refuses the autonomous row, never a permissive default |
+| `runs.counts` | `applied`, `applied_auto`, `failed`, `skipped_paused`, `skipped_trust`, `skipped_rate_limit`, `skipped_role`, `skipped_brake`, `reconciled_applied`, `reconciled_failed`, `applying_recent`, `brake_proposed` | `scripts/apply_actions.py` | executor outcomes per run; `skipped_*` rows were left exactly as found (reason on stdout) |
+| `runs.counts` | `approved`, `rejected` | `scripts/decide.py` | Sam's chat decisions recorded in one invocation |
+
+## Action target conventions (T8)
+
+`actions.target_id` is text in the schema; the executor reads it as: `ad_entity` → `ad_entities.id`, `campaign` →
+`campaigns.id`, `client` → `clients.id`, `trust` → the action type being promoted. Meta object ids are looked up
+from the target row (`ad_entities.ad_id`, `ad_entities.adset_id`, `campaigns.external_id`), never carried in
+the proposal. `kill` sets the Meta ad to `ARCHIVED` (final); `pause` to `PAUSED`; both mirror `ad_entities.status`
+from Meta's read-back.
