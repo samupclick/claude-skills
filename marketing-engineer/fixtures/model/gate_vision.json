@@ -1,0 +1,6 @@
+{
+  "_shape": "SYNTHETIC fixture for scripts/gate.py task gate_vision (MODEL_BACKEND=fixture): no likeness, no person, no logos. The likeness failure is exercised by a temporary fixture in tests/test_gate.py. Record a real one with MODEL_BACKEND=claude at go-live.",
+  "outputs": [
+    {"real_person_likeness": false, "depicts_person": false, "logos_or_wordmarks": false, "notes": "FIXTURE: placeholder image, nobody depicted"}
+  ]
+}

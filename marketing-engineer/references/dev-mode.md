@@ -56,6 +56,14 @@ Playwright needs a Chromium: its own download, or the container's `/opt/pw-brows
 absent), or `CHROMIUM_PATH=<binary>`. `--rerender` archives a brief's creatives and writes the next version; `--reupload` is
 go-live step 2.
 
+`gate` in dev mode: `python3 scripts/gate.py` (`MODEL_BACKEND=fixture`; `fixtures/model/gate_checks.json`, `gate_vision.json`,
+`gate_rubric.json` are clean / shadow answers) after `produce`; it writes one agent `gate_scores` row per draft creative
+(hard checks + shadow rubric), prints the §5.2 table and stops for `verdicts: approve 1,3; reject 2: reason`
+(`--verdicts "…"`; `--verdicts default` ships nothing). `components`, `landing`, `verbatim` and the rule-based part of
+`brand` are computed from the warehouse and the rendered HTML, so they fail for real in dev mode; the model-judged
+checks (policy, likeness, coherence, fabricated testimonial) only fail with a recorded or hand-written fixture.
+`--rescore` scores gated creatives again (same attempt).
+
 ## Placeholders that need Sam's replacement before go-live
 
 | File | Status | Replace with |

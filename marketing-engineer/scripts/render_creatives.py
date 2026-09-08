@@ -63,6 +63,7 @@ RENDERER = "html_template"                                                     #
 SIZE = (1080, 1080)                                                            # FR-25: the only phase 0 size
 SIZE_LABEL = "1080x1080"
 MAX_IMAGE_ATTEMPTS = 3                                                         # FR-24 regenerate, FR-29 shape
+MAX_ATTEMPTS = 3                                                               # FR-29: creatives.version is the attempt; 4 is impossible
 NO_TEXT_INSTRUCTION = ("The image must contain no text of any kind: no words, letters, numerals, logos, wordmarks, "
                        "captions, labels, signs, screens with writing, or watermarks. All words are added separately.")
 REQUIRED_COMPONENTS = ("family", "variant", "hook", "angle", "template", "renderer", "image_model", "cta", "landing_page", "offer")
@@ -534,6 +535,9 @@ def produce(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: d
             continue
         if existing:
             version = int(existing[0]["version"]) + 1
+            if version > MAX_ATTEMPTS:
+                raise ProducerRefused(f"brief #{n} is at attempt {existing[0]['version']} of {MAX_ATTEMPTS}; attempt {version} is "
+                                      f"impossible (FR-29): the creative is dropped from the batch, pick another brief")
             conn.execute("update creatives set status = 'archived' where brief_id = %s and status <> 'archived'", (b["id"],))
             r.count("creatives_archived", len(existing))
         voc = conn.execute(VOC_SQL, (list(b.get("voc_phrase_ids") or []),)).fetchall() if b.get("voc_phrase_ids") else []
@@ -571,11 +575,13 @@ def produce(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: d
                 "bubble_text": overlay.get("bubble_text"), "caption": overlay.get("caption"),
                 "app": overlay.get("app"), "title": overlay.get("title"), "lines_html": lines_html(overlay.get("lines") or []),
             }
-            rendered = renderer.render(render_template(template, slots, template_dir))
+            page_html = render_template(template, slots, template_dir)
+            rendered = renderer.render(page_html)
             r.count("renders")
             creative_id = uuid4()
             key = f"creatives/{slug}/{sel['experiment_name']}/{creative_id}"
             storage.put(png_image, f"{key}/image.png")
+            storage.put(page_html.encode("utf-8"), f"{key}/{SIZE_LABEL}.html")     # every rendered word, for the gate (T6)
             asset_url = storage.put(rendered, f"{key}/{SIZE_LABEL}.png")
             values = dict(
                 id=creative_id, client_id=client_id, brief_id=b["id"], experiment_id=b.get("experiment_id"), status="draft",

@@ -1,0 +1,6 @@
+{
+  "_shape": "SYNTHETIC fixture for scripts/gate.py task gate_checks in CI (MODEL_BACKEND=fixture): the clean answer for every creative. The failing cases (policy, brand, coherence, fabricated testimonial) are exercised by temporary fixtures in tests/test_gate.py. Record a real one with MODEL_BACKEND=claude at go-live.",
+  "outputs": [
+    {"policy_flags": [], "brand_flags": [], "fabricated_testimonial": false, "coherent": true, "contradiction": "", "notes": "FIXTURE: clean"}
+  ]
+}

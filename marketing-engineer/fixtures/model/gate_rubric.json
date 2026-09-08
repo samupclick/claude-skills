@@ -1,0 +1,7 @@
+{
+  "_shape": "SYNTHETIC fixture for scripts/gate.py task gate_rubric (MODEL_BACKEND=fixture): two shadow scorings cycling in call order so the batch carries both agent verdicts; scores are invented and say nothing about the creatives. Record a real one with MODEL_BACKEND=claude at go-live.",
+  "outputs": [
+    {"hook_strength": 4, "clarity_3s": 4, "icp_specificity": 3, "voc_language": 4, "single_cta": 5, "mobile_legibility": 4, "layout_fidelity": 3, "verdict": "approve", "reason": "FIXTURE: hook lands, one ask, fake UI reads on a phone"},
+    {"hook_strength": 3, "clarity_3s": 3, "icp_specificity": 2, "voc_language": 3, "single_cta": 5, "mobile_legibility": 4, "layout_fidelity": 3, "verdict": "reject", "reason": "FIXTURE: speaks to everyone, not to the founder of a B2B services firm"}
+  ]
+}

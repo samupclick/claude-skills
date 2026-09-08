@@ -54,6 +54,13 @@ the owning entity's JSONB column and are listed here, never added as ad-hoc colu
 | `briefs.spec` | `chosen` (bool), `selection_id`, `selected_by`, `pick_reason` | `scripts/plan_batch.py --select` (0003 `briefs.spec` grant) | set on every brief of the proposal when the `selections` row is written; `chosen` is `null` while the proposal waits for picks |
 | `runs.counts` | `experiment`, `briefs_chosen`, `briefs_skipped_existing`, `templates` (list), `creatives_written`, `creatives_archived`, `creatives_dropped_text`, `hooks_written`, `images_generated`, `image_attempts_total`, `vision_checks`, `vision_flags`, `renders` | `scripts/render_creatives.py` | one `produce` run (FR-21 to FR-25): `creatives_dropped_text` counts executions whose image still showed text after three generations (FR-24); `briefs_skipped_existing` are briefs that already had their creatives (`--rerender` archives them) |
 | `runs.counts` | `creatives_reuploaded`, `assets_reuploaded` | `scripts/render_creatives.py --reupload` | go-live step 2: every asset pushed through the current `STORAGE_BACKEND`, `creatives.asset_urls` repointed (0003 grant) |
+| `gate_scores.hard_checks` | `policy`, `brand`, `likeness`, `testimonial`, `coherence`, `components`, `landing`, `verbatim` → `pass` \| `fail` | `scripts/gate.py` | FR-26: the eight fact checks on one creative (definitions in `references/creative-rubric.md`); `hard_blocks` lists the failed names, `policy_flags` the model's Meta-policy labels, `passed` = all pass |
+| `gate_scores.scores` | `hook_strength`, `clarity_3s`, `icp_specificity`, `voc_language`, `single_cta`, `mobile_legibility`, `layout_fidelity` (1–5), `reason`, `backend`, `notes`, `vision_notes` | `scripts/gate.py` (`scored_by='agent'`, `mode='shadow'`, `decision_channel='auto'`) | FR-27: the shadow rubric; `avg_score` is the mean, `verdict` the rubric rule (no dimension < 3 and mean ≥ 3.5). Never `mode='blocking'` for the agent in phase 0 |
+| `gate_scores.feedback` | `feedback_type`, `source`, `route` (`producer` \| `planner`), `creative_id`, `brief_id`, `attempt {current, max, next_possible}`, `failures[] {criterion, severity, issues, fix_guidance}`, `preserve`, `constraints` | `scripts/gate.py` (agent row, on a failed hard check) | FR-29: the feedback object (content-supervisor §5.1 shape); `route='planner'` when `coherence` failed. `attempt` = `creatives.version`; the producer's `--rerender` writes the next version and refuses a fourth; the gate archives a version > 3 unscored |
+| `gate_scores.feedback` | `reason` | `scripts/gate.py --verdicts` (`scored_by='sam'`, `decision_channel='chat'`, `mode='blocking'`, `verdict`) | Sam's one-line reason after `reject n: reason`; `approve` moves `creatives.status` to `approved` (only when the agent row's `passed` is true: facts block), `reject` to `archived` |
+| `actions.proposal` | `creative_id`, `brief_id`, `voc_phrase_id` | Sam (`quote_release`, applied as `sam_admin`) | what the release covers; the gate (and the producer for quote families) treats a creative as released when an applied `quote_release` names it, its brief, or the phrase in `target_id` or one of these keys |
+| `runs.counts` | `experiment`, `creatives_scored`, `passed`, `failed`, `hard_check_failures` {check: n}, `dropped_max_attempts`, `html_missing`, `skipped_gated`, `images_missing_<render\|image\|source>` | `scripts/gate.py` | one `gate` run; `html_missing` counts creatives gated on their database words only (no `1080x1080.html` beside the asset) |
+| `runs.counts` | `approved`, `rejected`, `default_taken` | `scripts/gate.py --verdicts` | Sam's chat verdicts recorded; `default_taken = 1` means nothing shipped (SKILL.md §5.2) |
 | `actions.proposal` | `icp_id` | `retire_family` proposer (T10+) | optional: scopes the retirement to one ICP; `plan_batch.py` treats an applied `retire_family` without it as retired for every ICP of the client (FR-7 guard) |
 
 ## Action target conventions (T8)
@@ -70,8 +77,15 @@ Rendered creatives live under `creatives/<client slug>/<experiment name>/<creati
 adapter (`.dev/storage/` locally, the `creatives` bucket on Supabase); `creatives.asset_urls` holds the rendered
 asset(s), `creatives.sizes` the matching sizes (`1080x1080` only in phase 0). The text-free generated image sits
 beside the render as `image.png` under the same key (for the fidelity check and the image-to-image renderer of batch
-two); it is not listed in `asset_urls`. `creatives.image_prompt` always ends with the producer's no-text instruction
+two), and the filled template as `1080x1080.html` (every rendered word, read by the gate's `verbatim`, `policy` and `brand`
+checks through the storage adapter); neither is listed in `asset_urls`. `creatives.image_prompt` always ends with the producer's no-text instruction
 (FR-24). `creative_components` per creative (T5): the ten FR-21 rows (`family`, `variant`, `hook`, `angle`, `template`,
 `renderer`, `image_model`, `cta`, `landing_page`, `offer`), one `voc_phrase` per phrase the brief used, plus
 `hook_type`, `proof_type`, `copy_length` for the leaderboard. `landing_page` is the page (`offers.landing_url`, else
 `<funnel_host>/quiz`); the launcher appends `utm_content=<creative_id>` (FR-32). `cta` is `offer_layer.cta_mechanic`.
+
+## Creative status flow (T5, T6)
+
+`draft` (producer) → `gated` (gate scored it; the agent row says `passed`) → `approved` (Sam's `approve` verdict, only
+on a passed creative) → `live` (executor, T9). Sam's `reject` and the gate's attempt-4 drop set `archived`; the
+producer's `--rerender` archives the previous version and writes the next. `killed` / `paused` are the executor's.
