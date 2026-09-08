@@ -43,6 +43,11 @@ attaches PNG/JPEG bytes for vision tasks (the fixture backend ignores them). Fix
 Images land under `.dev/storage/inspo/<brand>/<ad_id>/`. `--today YYYY-MM-DD` fixes the FR-6 reference date;
 `--acknowledge <source>` is Sam's `acknowledge <source>` (SKILL.md §7).
 
+`plan batch` in dev mode: `python3 scripts/plan_batch.py` (again `MODEL_BACKEND=fixture` without a key;
+`fixtures/model/translate_brief.json` holds twelve synthetic translations) after `pull inspo` and `pull voc`; it
+prints the §5.1 table and stops. `--select "2, 5, 9"` records Sam's picks, `--select default` the ranker's top three.
+`--daily-budget` and `--cpm` override the capacity inputs for the FR-15 check; `--today` fixes the 7-day CPM window.
+
 ## Placeholders that need Sam's replacement before go-live
 
 | File | Status | Replace with |
