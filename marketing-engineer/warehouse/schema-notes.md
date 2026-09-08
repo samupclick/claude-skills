@@ -52,6 +52,8 @@ the owning entity's JSONB column and are listed here, never added as ad-hoc colu
 | `runs.counts` | `proposed`, `chosen`, `rejected`, `experiment`, `selected_by` | `scripts/plan_batch.py --select` | Sam's picks recorded (FR-17); `selected_by` is `sam` or `ranker_default` (Sam quiet 20 minutes, SKILL.md §5.1) |
 | `briefs.spec` | `proposal_number`, `rank`, `format_layer` {5 keys, verbatim copy of the source `patterns.recipe.format_layer`}, `offer_layer` (from `offers.offer_layer`), `hook_line`, `product_nouns` [], `imagery_subject`, `voc_phrase_indexes` [], `coherence_note`, `translation_backend`, `source` {`brand`, `ad_id`, `source_url`, `source_image_url`, `source_strength`, `status`, `variant`, `hook_type`} | `scripts/plan_batch.py` | the translated replica brief (FR-18); `proposal_number` is the number Sam picks in the §5.1 table |
 | `briefs.spec` | `chosen` (bool), `selection_id`, `selected_by`, `pick_reason` | `scripts/plan_batch.py --select` (0003 `briefs.spec` grant) | set on every brief of the proposal when the `selections` row is written; `chosen` is `null` while the proposal waits for picks |
+| `runs.counts` | `experiment`, `briefs_chosen`, `briefs_skipped_existing`, `templates` (list), `creatives_written`, `creatives_archived`, `creatives_dropped_text`, `hooks_written`, `images_generated`, `image_attempts_total`, `vision_checks`, `vision_flags`, `renders` | `scripts/render_creatives.py` | one `produce` run (FR-21 to FR-25): `creatives_dropped_text` counts executions whose image still showed text after three generations (FR-24); `briefs_skipped_existing` are briefs that already had their creatives (`--rerender` archives them) |
+| `runs.counts` | `creatives_reuploaded`, `assets_reuploaded` | `scripts/render_creatives.py --reupload` | go-live step 2: every asset pushed through the current `STORAGE_BACKEND`, `creatives.asset_urls` repointed (0003 grant) |
 | `actions.proposal` | `icp_id` | `retire_family` proposer (T10+) | optional: scopes the retirement to one ICP; `plan_batch.py` treats an applied `retire_family` without it as retired for every ICP of the client (FR-7 guard) |
 
 ## Action target conventions (T8)
@@ -61,3 +63,15 @@ the owning entity's JSONB column and are listed here, never added as ad-hoc colu
 from the target row (`ad_entities.ad_id`, `ad_entities.adset_id`, `campaigns.external_id`), never carried in
 the proposal. `kill` sets the Meta ad to `ARCHIVED` (final); `pause` to `PAUSED`; both mirror `ad_entities.status`
 from Meta's read-back.
+
+## Storage keys (T5)
+
+Rendered creatives live under `creatives/<client slug>/<experiment name>/<creative id>/<size>.png` in the storage
+adapter (`.dev/storage/` locally, the `creatives` bucket on Supabase); `creatives.asset_urls` holds the rendered
+asset(s), `creatives.sizes` the matching sizes (`1080x1080` only in phase 0). The text-free generated image sits
+beside the render as `image.png` under the same key (for the fidelity check and the image-to-image renderer of batch
+two); it is not listed in `asset_urls`. `creatives.image_prompt` always ends with the producer's no-text instruction
+(FR-24). `creative_components` per creative (T5): the ten FR-21 rows (`family`, `variant`, `hook`, `angle`, `template`,
+`renderer`, `image_model`, `cta`, `landing_page`, `offer`), one `voc_phrase` per phrase the brief used, plus
+`hook_type`, `proof_type`, `copy_length` for the leaderboard. `landing_page` is the page (`offers.landing_url`, else
+`<funnel_host>/quiz`); the launcher appends `utm_content=<creative_id>` (FR-32). `cta` is `offer_layer.cta_mechanic`.

@@ -10,7 +10,7 @@ Every external dependency sits behind an adapter selected by an environment vari
 | Meta CAPI | `CAPI_BACKEND` | `fake` (logs events to `.dev/capi.jsonl`) | `live` | Records `event_id` for dedup tests |
 | scrapecreators | `INSPO_BACKEND` | `fixture` (reads `fixtures/ad_library/*.json`) | `scrapecreators` | Fixture shape is an **assumption** until one real call is saved (`CRUCIBLE.md` §4); the adapter normalises whatever the real shape turns out to be |
 | Public VOC threads (Reddit) | `VOC_BACKEND` | `fixture` (reads `fixtures/voc/*.json`, matched to `voc.public_sources` by URL) | `reddit` | Fixture threads are **synthetic**; the shape is ours (`url`, `title`, `comments[{id,text,score}]`, no authors) and the live backend normalises Reddit's JSON into it |
-| Image generation | `IMAGE_BACKEND` | `placeholder` (Pillow: solid colour + label, no text) | `gemini` | Deterministic bytes per prompt hash so renders are reproducible |
+| Image generation | `IMAGE_BACKEND` | `placeholder` (Pillow: solid colour + a small hash label) | `gemini` | Deterministic bytes per prompt hash so renders are reproducible; the label is the adapter's dev marker, so the FR-24 vision check runs on the `image_text_check` fixture ("no text") in dev mode |
 | Vision decomposition, copy, gate, planner reasoning | `MODEL_BACKEND` | `claude` (real; cheap) or `fixture` for CI | `claude` | Fixture mode replays recorded JSON outputs from `fixtures/model/` |
 | Email (check-in) | `EMAIL_BACKEND` | `file` (writes `.dev/outbox/*.eml`) | `gmail` | Golden-file tests read the outbox |
 | Calendar webhook | `CAL_WEBHOOK_SECRET` | `dev-secret` | real secret | Signature check identical; tests sign with the dev secret |
@@ -47,6 +47,14 @@ Images land under `.dev/storage/inspo/<brand>/<ad_id>/`. `--today YYYY-MM-DD` fi
 `fixtures/model/translate_brief.json` holds twelve synthetic translations) after `pull inspo` and `pull voc`; it
 prints the §5.1 table and stops. `--select "2, 5, 9"` records Sam's picks, `--select default` the ranker's top three.
 `--daily-budget` and `--cpm` override the capacity inputs for the FR-15 check; `--today` fixes the 7-day CPM window.
+
+`produce` in dev mode: `python3 scripts/render_creatives.py` (`MODEL_BACKEND=fixture` without a key; `fixtures/model/write_copy.json`
+holds three synthetic copy outputs, `image_text_check.json` the vision check) after `my picks`; it renders two creatives per
+chosen brief through `assets/creative-templates/<family>.html` (`job-photo-bubble`, `screenshot-ad`; a pick in another family
+is refused naming the family) with Playwright and writes them under `.dev/storage/creatives/<client>/<batch>/<creative id>/`.
+Playwright needs a Chromium: its own download, or the container's `/opt/pw-browsers/chromium` (used when the download is
+absent), or `CHROMIUM_PATH=<binary>`. `--rerender` archives a brief's creatives and writes the next version; `--reupload` is
+go-live step 2.
 
 ## Placeholders that need Sam's replacement before go-live
 

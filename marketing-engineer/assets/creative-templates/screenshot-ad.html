@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- screenshot_ad (references/families.md): fake native UI (notes app, iMessage thread, email inbox) over a generated
+     backdrop. Rendered by scripts/render_creatives.py at 1080x1080. In-image text is composed here, never by the
+     image model (DECISIONS component 4). Slots: {{image_data_uri}} {{app}} (notes | imessage | email) {{title}}
+     {{{lines_html}}} (built by the script from escaped lines) {{hook}} {{cta_text}} {{client_name}} {{brand_font}}
+     {{brand_primary}} {{brand_accent}} {{brand_bg}}. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1080px; overflow: hidden; background: {{brand_bg}}; }
+  body { font-family: "{{brand_font}}", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: {{brand_primary}}; }
+  .backdrop { position: absolute; inset: 0; background: url("{{image_data_uri}}") center / cover no-repeat; filter: blur(6px) brightness(.55); transform: scale(1.04); }
+  .hook { position: absolute; top: 64px; left: 72px; right: 72px; color: #fff; font-size: 46px; line-height: 1.2; font-weight: 700;
+          letter-spacing: -0.01em; text-shadow: 0 2px 14px rgba(0,0,0,.7); overflow-wrap: anywhere; }
+  .window { position: absolute; left: 110px; right: 110px; top: 250px; bottom: 210px; background: #fff; border-radius: 28px;
+            box-shadow: 0 30px 80px rgba(0,0,0,.45); overflow: hidden; display: flex; flex-direction: column; }
+  .bar { display: flex; align-items: center; gap: 14px; padding: 22px 30px; border-bottom: 1px solid #e5e7eb; font-size: 26px; font-weight: 600; color: #374151; }
+  .dot { width: 18px; height: 18px; border-radius: 50%; background: #fca5a5; }
+  .dot + .dot { background: #fcd34d; } .dot + .dot + .dot { background: #86efac; }
+  .bar .title { margin-left: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .body { padding: 26px 36px; display: flex; flex-direction: column; gap: 18px; font-size: 30px; line-height: 1.32; color: #111827; overflow: hidden; }
+  .body .line { overflow-wrap: anywhere; }
+  /* notes: a checklist */
+  .notes .line { padding-left: 54px; position: relative; }
+  .notes .line::before { content: ""; position: absolute; left: 0; top: 4px; width: 32px; height: 32px; border: 3px solid {{brand_accent}}; border-radius: 8px; }
+  .notes .line::after { content: ""; position: absolute; left: 11px; top: 6px; width: 9px; height: 20px; border: solid {{brand_accent}}; border-width: 0 4px 4px 0; transform: rotate(45deg); }
+  /* imessage: alternating bubbles, the last one ours */
+  .imessage .body { background: #fff; }
+  .imessage .line { max-width: 78%; padding: 16px 24px; border-radius: 26px; background: #e9e9eb; align-self: flex-start; }
+  .imessage .line:nth-child(even) { background: #1f8cff; color: #fff; align-self: flex-end; }
+  /* email: subject lines, the first one highlighted */
+  .email .line { padding: 14px 18px; border-bottom: 1px solid #f3f4f6; display: flex; gap: 18px; align-items: baseline; }
+  .email .line::before { content: "\25CF"; color: #d1d5db; font-size: 20px; }
+  .email .line:first-child { background: #eff6ff; border-left: 6px solid {{brand_accent}}; font-weight: 600; }
+  .email .line:first-child::before { color: {{brand_accent}}; }
+  .footer { position: absolute; left: 72px; right: 72px; bottom: 64px; display: flex; align-items: center; justify-content: space-between; }
+  .cta { background: {{brand_accent}}; color: #fff; font-size: 34px; font-weight: 700; padding: 22px 40px; border-radius: 999px; white-space: nowrap; }
+  .brand { color: #fff; font-size: 26px; font-weight: 600; letter-spacing: .02em; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+</style>
+</head>
+<body>
+  <div class="backdrop"></div>
+  <div class="hook">{{hook}}</div>
+  <div class="window {{app}}">
+    <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">{{title}}</span></div>
+    <div class="body">{{{lines_html}}}</div>
+  </div>
+  <div class="footer"><div class="brand">{{client_name}}</div><div class="cta">{{cta_text}}</div></div>
+</body>
+</html>

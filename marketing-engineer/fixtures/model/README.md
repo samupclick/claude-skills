@@ -15,3 +15,9 @@ with the six fixture ads per brand (see its `_shape`). Replace it with a recorde
 voc-seed notes and `fixtures/voc/` threads, six outputs replayed in source order (three notes sorted by name,
 then `voc.public_sources` in config order; see its `_order`). Re-record it with `MODEL_BACKEND=claude` once the
 seed notes are real (go-live step 3).
+
+`write_copy.json` and `image_text_check.json` (T5, `scripts/render_creatives.py`) are the same kind of exception:
+hand-written, copy says FIXTURE, three copy outputs cycle in call order (one per chosen brief) and every overlay
+carries the slots of both templates so any pick validates; the vision check always answers "no text" (placeholder
+images do carry a small hash label, so this fixture is only right for dev mode). Re-record both with
+`MODEL_BACKEND=claude` and `IMAGE_BACKEND=gemini` at go-live step 5.
