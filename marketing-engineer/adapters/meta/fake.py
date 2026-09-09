@@ -7,7 +7,9 @@
   loop (T10) gets rows, a kill stops spend, and re-runs get identical numbers
 - every call sets last_headers['x-business-use-case-usage']; META_FAKE_THROTTLE_AFTER=<n> raises MetaThrottled
 - META_FAKE_FAIL=<step> fails before the step; <step>:after performs it, persists, then fails (a crash after create)
-- ads are approved instantly: review_status APPROVED, ad_review_feedback {}
+- ads are approved instantly: review_status APPROVED, ad_review_feedback {}; `update("ad", id,
+  review_status="DISAPPROVED", ad_review_feedback={...})` is the dev knob that plays Meta's review turning an
+  ad down after creation (FR-37 fixtures); the executor only ever reads those two fields back
 """
 from __future__ import annotations
 
@@ -105,8 +107,11 @@ class FakeMeta:
                              review_status="APPROVED", ad_review_feedback={})
 
     def update(self, kind, object_id, **fields):
-        """Fields: status, name, daily_budget; `on=<date>` dates a status change (default today)."""
+        """Fields: status, name, daily_budget; `on=<date>` dates a status change (default today). On an ad,
+        `review_status` / `ad_review_feedback` simulate Meta's review outcome (a test fixture, never sent live)."""
         allowed = {"status", "name", "daily_budget", "on"}
+        if kind == "ad":
+            allowed |= {"review_status", "ad_review_feedback"}
         unknown = set(fields) - allowed
         if unknown:
             raise MetaApiError(f"fake Meta cannot update {sorted(unknown)} on {kind}")

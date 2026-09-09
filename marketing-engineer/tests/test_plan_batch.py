@@ -224,7 +224,7 @@ def test_plan_batch_proposes_12_logs_its_reads_and_sam_picks_3(planner_env, caps
                             "where experiment_id = %s order by (spec->>'proposal_number')::int", exps[0]["id"])
     assert len(briefs) == 12, "FR-17: 4x the recipe count"
     assert [int(b["spec"]["proposal_number"]) for b in briefs] == list(range(1, 13))
-    offer = q(planner_env, "select * from offers limit 1")[0]
+    offer = q(planner_env, "select * from offers where client_id = (select id from clients where slug = 'upclicklabs') order by created_at limit 1")[0]
     for b in briefs:
         assert b["kind"] == "replica" and b["source_pattern_id"] is not None and b["hook_pattern"] == b["source_pattern_id"]
         assert set(b["changed_ingredients"]) <= set(pb.ALLOWED_INGREDIENTS) and "offer" in b["changed_ingredients"]

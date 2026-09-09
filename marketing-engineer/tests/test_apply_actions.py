@@ -117,13 +117,6 @@ class Harness:
         return rc, out.out + out.err
 
 
-@pytest.fixture(scope="session")
-def meta_root(tmp_path_factory):
-    """One fake Meta account for the whole T8 session: its ids keep incrementing, so the warehouse's
-    (platform, external_id) / (platform, ad_id) uniqueness holds across tests that share the database."""
-    return tmp_path_factory.mktemp("t8-dev")
-
-
 @pytest.fixture
 def h(db_env, meta_root, monkeypatch, apply_mod, capsys):
     monkeypatch.setenv("DEV_ROOT", str(meta_root))

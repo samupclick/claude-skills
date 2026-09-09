@@ -12,9 +12,17 @@ from what Meta returned, and only then the action is `applied`. Any exception ma
 failures of one type propose `set_pause_flag`. `--reconcile` settles `applying` rows older than
 `--stale-minutes` by reading Meta, never by re-sending.
 
-Roles: `executor` (WAREHOUSE_URL_EXECUTOR) applies pause / kill / activate / scale (build_campaign lands
-in T9). `set_pause_flag`, `promote_trust`, `quote_release` are Sam-only by trigger; Sam runs this script
+Roles: `executor` (WAREHOUSE_URL_EXECUTOR) applies pause / kill / activate / scale / build_campaign.
+`set_pause_flag`, `promote_trust`, `quote_release` are Sam-only by trigger; Sam runs this script
 with `--role sam_admin` for those and it never touches Meta in that mode. The service role is never used.
+
+`build_campaign` (T9, FR-30): the proposal from scripts/meta_launch.py (shape in warehouse/launch.py) is
+re-validated, the cap is checked with every ad set budget counted as if active, then campaign → ad sets →
+creatives → ads are created PAUSED with a name lookup before every create (`ensure_object`) and the external
+id written to `campaigns` / `ad_entities` and committed immediately after each create, so a crash mid-build
+leaves no orphan on re-run (the re-run finds and reuses what exists). `activate` on a campaign with
+`proposal.cascade = true` turns the campaign, the ad sets of the listed ads, and the ads ACTIVE in one
+action; `review_status` is synced from Meta first and a DISAPPROVED ad refuses the whole action (FR-37).
 
 Concurrency (CRUCIBLE A14): a session advisory lock serialises whole runs; each action additionally takes
 `pg_advisory_xact_lock(hashtext('executor'))` and `select … for update skip locked`, so two executors
@@ -38,6 +46,7 @@ from psycopg.types.json import Jsonb  # noqa: E402
 
 from adapters.meta import MetaAds, MetaApiError, get_meta  # noqa: E402
 from warehouse.client import client_by_slug, connect, format_where_are_we, insert, run, where_are_we  # noqa: E402
+from warehouse.launch import ACTIVE_BUDGET_SQL, ProposalInvalid, is_cascade, validate_build_campaign, validate_cascade  # noqa: E402
 
 WORKER = "executor"
 LOCK_KEY = "executor"
@@ -256,7 +265,7 @@ class Executor:
             self._log(a, "applied" + (" (auto)" if auto else ""))
         except Exception as exc:  # noqa: BLE001 — any failure is recorded on the row, never swallowed
             conn.rollback()
-            error = f"{type(exc).__name__}: {exc}"
+            error = exc.last_error if isinstance(exc, Fail) else f"{type(exc).__name__}: {exc}"
             try:   # the warehouse should still mirror whatever Meta did before the error
                 obj = self.read_back(a, target)
                 self.mirror(a, target, obj)
@@ -352,6 +361,14 @@ class Executor:
 
     def validate(self, a: dict[str, Any], target: dict[str, Any]) -> None:
         t, p = a["action_type"], a["proposal"] or {}
+        if is_cascade(a):
+            if not target.get("external_id"):
+                raise Fail("campaign has no external_id yet")
+            rows = self.cascade_rows(a, target)
+            bad = [r["ad_id"] for r in rows if r.get("review_status") == "DISAPPROVED"]
+            if bad:
+                raise Fail("disapproved: " + ", ".join(bad))                                          # FR-37
+            return
         if t in ("pause", "kill", "activate"):
             if a["target_type"] not in ("ad_entity", "campaign"):
                 raise Fail(f"{t} targets an ad_entity or a campaign, not {a['target_type']}")
@@ -381,7 +398,32 @@ class Executor:
                 if accuracy < floor:
                     raise Fail(f"backtest_accuracy {accuracy} is below {floor}")
         elif t == "build_campaign":
-            raise Fail("build_campaign lands in T9")
+            if a["target_type"] != "campaign":
+                raise Fail("build_campaign targets the campaigns row the launcher wrote")
+            camp = p.get("campaign") or {}
+            if target.get("kind") != camp.get("kind"):
+                raise Fail(f"campaigns row is kind {target.get('kind')!r}, proposal says {camp.get('kind')!r}")
+            if target.get("terminal_metric") != camp.get("terminal_metric") or target.get("optimisation_event") != camp.get("optimisation_event"):
+                raise Fail("campaigns row and proposal disagree on terminal_metric / optimisation_event (FR-1)")
+            ids = [ad.get("creative_id") for s in (p.get("ad_sets") or []) for ad in (s.get("ads") or []) if isinstance(s, dict)]
+            try:
+                uuids = [UUID(str(i)) for i in ids]
+            except (ValueError, TypeError):
+                raise Fail("a proposal creative_id is not a uuid") from None
+            known = {str(r["id"]) for r in self.conn.execute("select id from creatives where client_id=%s and id = any(%s)", (self.client_id, uuids)).fetchall()}
+            missing = [str(i) for i in ids if str(i) not in known]
+            if missing:
+                raise Fail(f"creative(s) not found for this client: {', '.join(missing)}")
+            components: dict[str, set[str]] = {}
+            for r in self.conn.execute("select creative_id, component_type from creative_components where creative_id = any(%s)", (uuids,)).fetchall():
+                components.setdefault(str(r["creative_id"]), set()).add(r["component_type"])
+            active = self.conn.execute(ACTIVE_BUDGET_SQL, (self.client_id, self.client_id)).fetchone()["active"]
+            cap = self.conn.execute("select daily_cap from clients where id=%s", (self.client_id,)).fetchone()["daily_cap"]
+            adsets_max = int((self.cfg.get("campaign") or {}).get("adsets_max") or 3)
+            try:
+                validate_build_campaign(p, daily_cap=cap, active_budget=active, adsets_max=adsets_max, components_by_creative=components)
+            except ProposalInvalid as exc:
+                raise Fail(f"proposal: {exc}") from None
 
     @staticmethod
     def scale_budget(a: dict[str, Any]) -> Decimal:
@@ -396,13 +438,40 @@ class Executor:
     def apply_budgets(self, a: dict[str, Any], target: dict[str, Any]) -> None:
         """The proposal's budget effect on the warehouse, used inside a savepoint for `check_daily_cap()`."""
         t = a["action_type"]
-        if t == "activate" and a["target_type"] == "ad_entity":
+        if is_cascade(a):
+            ids = [r["id"] for r in self.cascade_rows(a, target)]
+            self.conn.execute("update ad_entities set status='ACTIVE' where id = any(%s)", (ids,))
+            self.conn.execute("update campaigns set status='ACTIVE' where id=%s", (target["id"],))
+        elif t == "activate" and a["target_type"] == "ad_entity":
             self.conn.execute("update ad_entities set status='ACTIVE' where id=%s", (target["id"],))
         elif t == "activate":
             self.conn.execute("update campaigns set status='ACTIVE' where id=%s", (target["id"],))
         elif t == "scale":
             self.conn.execute("update ad_entities set adset_daily_budget=%s where client_id=%s and adset_id=%s",
                               (self.scale_budget(a), self.client_id, target["adset_id"]))
+        elif t == "build_campaign":
+            # Created paused, but SKILL.md §6 step 3 counts a build's ad set budgets as if active: one placeholder
+            # row per ad set (rolled back with the savepoint) makes check_daily_cap() see them.
+            for i, s in enumerate((a["proposal"] or {}).get("ad_sets") or []):
+                insert(self.conn, "ad_entities", client_id=self.client_id, campaign_id=target["id"], platform="meta",
+                       adset_id=f"pending:{a['id']}:{i}", adset_daily_budget=Decimal(str(s["daily_budget"])),
+                       ad_id=f"pending:{a['id']}:{i}", status="ACTIVE")
+
+    def cascade_rows(self, a: dict[str, Any], target: dict[str, Any]) -> list[dict[str, Any]]:
+        """The `ad_entities` rows a cascade `activate` names; every one must be an ad of the target campaign."""
+        try:
+            ids = [UUID(i) for i in validate_cascade(a["proposal"] or {})]
+        except ProposalInvalid as exc:
+            raise Fail(str(exc)) from None
+        except ValueError:
+            raise Fail("proposal.ad_entity_ids must be uuids") from None
+        rows = self.conn.execute("select * from ad_entities where client_id=%s and campaign_id=%s and id = any(%s) order by adset_id, created_at, id",
+                                 (self.client_id, target["id"], ids)).fetchall()
+        if len(rows) != len(ids):
+            raise Fail(f"{len(ids) - len(rows)} of proposal.ad_entity_ids are not ads of campaign {target['id']}")
+        if any(not r.get("ad_id") or not r.get("adset_id") for r in rows):
+            raise Fail("an ad row has no ad_id / adset_id yet; build_campaign must be applied first")
+        return rows
 
     # ---------- the side effect, its read-back, and the mirror ----------
 
@@ -415,6 +484,10 @@ class Executor:
 
     def perform(self, a: dict[str, Any], target: dict[str, Any]) -> dict[str, Any]:
         t = a["action_type"]
+        if is_cascade(a):
+            return self.perform_cascade(a, target)
+        if t == "build_campaign":
+            return self.perform_build(a, target)
         if t in DESIRED_STATUS:
             kind, oid = self.meta_ref(a, target)
             self.meta.update(kind, oid, status=DESIRED_STATUS[t])
@@ -439,6 +512,18 @@ class Executor:
 
     def read_back(self, a: dict[str, Any], target: dict[str, Any]) -> dict[str, Any]:
         t = a["action_type"]
+        if is_cascade(a):
+            rows = self.cascade_rows(a, target)
+            return {"campaign": self.meta.get("campaign", target["external_id"]),
+                    "adsets": {s: self.meta.get("adset", s) for s in sorted({r["adset_id"] for r in rows})},
+                    "ads": {str(r["id"]): self.meta.get("ad", r["ad_id"]) for r in rows}}
+        if t == "build_campaign":
+            p = a["proposal"] or {}
+            row = self.conn.execute("select external_id from campaigns where id=%s", (target["id"],)).fetchone()
+            camp = self.meta.get("campaign", row["external_id"]) if row and row["external_id"] else self.meta.find_by_name("campaign", p["campaign"]["name"])
+            return {"campaign": camp,
+                    "adsets": {s["name"]: self.meta.find_by_name("adset", s["name"]) for s in p.get("ad_sets") or []},
+                    "ads": {ad["name"]: self.meta.find_by_name("ad", ad["name"]) for s in p.get("ad_sets") or [] for ad in s.get("ads") or []}}
         if t in ("set_pause_flag", "promote_trust"):
             return self.conn.execute("select paused, config from clients where id=%s", (self.client_id,)).fetchone()
         if t == "quote_release":
@@ -448,6 +533,16 @@ class Executor:
 
     def matches(self, a: dict[str, Any], target: dict[str, Any], obj: dict[str, Any]) -> tuple[bool, str]:
         t = a["action_type"]
+        if is_cascade(a):
+            off = [f"campaign {obj['campaign'].get('id')} is {obj['campaign'].get('status')}"] if obj["campaign"].get("status") != "ACTIVE" else []
+            off += [f"adset {k} is {v.get('status')}" for k, v in obj["adsets"].items() if v.get("status") != "ACTIVE"]
+            off += [f"ad {v.get('id')} is {v.get('status')}" for v in obj["ads"].values() if v.get("status") != "ACTIVE"]
+            return not off, ("; ".join(off) if off else f"campaign, {len(obj['adsets'])} ad set(s), {len(obj['ads'])} ad(s) ACTIVE")
+        if t == "build_campaign":
+            missing = (["campaign"] if obj.get("campaign") is None else []) + [f"adset {k}" for k, v in obj["adsets"].items() if v is None] \
+                + [f"ad {k}" for k, v in obj["ads"].items() if v is None]
+            return not missing, ("missing in Meta: " + ", ".join(missing) if missing
+                                 else f"campaign {obj['campaign'].get('id')}, {len(obj['adsets'])} ad set(s), {len(obj['ads'])} ad(s) exist")
         if t in DESIRED_STATUS:
             kind, oid = self.meta_ref(a, target)
             return obj.get("status") == DESIRED_STATUS[t], f"{kind} {oid} is {obj.get('status')}, expected {DESIRED_STATUS[t]}"
@@ -465,25 +560,123 @@ class Executor:
     def mirror(self, a: dict[str, Any], target: dict[str, Any], obj: dict[str, Any]) -> None:
         """Write what Meta returned (never what we asked for) to the warehouse. Executor column grants only."""
         t = a["action_type"]
-        if t == "scale":
+        if is_cascade(a):
+            self.mirror_campaign(target["id"], obj["campaign"])
+            for ad_entity_id, ad in obj["ads"].items():
+                self.mirror_ad(ad_entity_id, ad)
+        elif t == "build_campaign":
+            if obj.get("campaign") is not None:
+                self.mirror_campaign(target["id"], obj["campaign"], external_id=obj["campaign"]["id"])
+            for s in (a["proposal"] or {}).get("ad_sets") or []:
+                adset = obj["adsets"].get(s["name"])
+                for ad in s.get("ads") or []:
+                    found = obj["ads"].get(ad["name"])
+                    if adset is not None and found is not None:
+                        self.record_ad(target, s, ad, adset, found)
+        elif t == "scale":
             budget = obj.get("daily_budget")
             if budget is not None:
                 self.conn.execute("update ad_entities set adset_daily_budget=%s where client_id=%s and adset_id=%s",
                                   (Decimal(str(budget)), self.client_id, target["adset_id"]))
         elif t in DESIRED_STATUS and a["target_type"] == "ad_entity":
-            status = obj.get("status") if obj.get("status") in AD_STATUSES else None
-            review = obj.get("review_status") if obj.get("review_status") in REVIEW_STATUSES else None
-            self.conn.execute(
-                "update ad_entities set status=coalesce(%s, status), review_status=coalesce(%s, review_status),"
-                " review_feedback=coalesce(%s, review_feedback),"
-                " launched_at=case when %s='ACTIVE' then coalesce(launched_at, now()) else launched_at end where id=%s",
-                (status, review, Jsonb(obj["ad_review_feedback"]) if isinstance(obj.get("ad_review_feedback"), dict) else None,
-                 status, target["id"]))
+            self.mirror_ad(target["id"], obj)
         elif t in DESIRED_STATUS:
-            status = obj.get("status") if obj.get("status") in CAMPAIGN_STATUSES else None
-            budget = obj.get("daily_budget")
-            self.conn.execute("update campaigns set status=coalesce(%s, status), daily_budget=coalesce(%s, daily_budget) where id=%s",
-                              (status, None if budget is None else Decimal(str(budget)), target["id"]))
+            self.mirror_campaign(target["id"], obj)
+
+    def mirror_ad(self, ad_entity_id: Any, obj: dict[str, Any]) -> None:
+        status = obj.get("status") if obj.get("status") in AD_STATUSES else None
+        review = obj.get("review_status") if obj.get("review_status") in REVIEW_STATUSES else None
+        self.conn.execute(
+            "update ad_entities set status=coalesce(%s, status), review_status=coalesce(%s, review_status),"
+            " review_feedback=coalesce(%s, review_feedback),"
+            " launched_at=case when %s='ACTIVE' then coalesce(launched_at, now()) else launched_at end where id=%s",
+            (status, review, Jsonb(obj["ad_review_feedback"]) if isinstance(obj.get("ad_review_feedback"), dict) else None,
+             status, ad_entity_id))
+        # Creative status flow (schema-notes.md): approved → live when its ad delivers; paused / killed after that.
+        # A creative never launched stays `approved` however its paused ad is created or archived.
+        creative_status = {"ACTIVE": "live", "PAUSED": "paused", "ARCHIVED": "killed", "DELETED": "killed"}.get(status or "")
+        if creative_status:
+            self.conn.execute(
+                "update creatives c set status=%s from ad_entities a where a.id=%s and a.creative_id=c.id"
+                " and (%s='live' or c.status in ('live','paused')) and c.status<>%s", (creative_status, ad_entity_id, creative_status, creative_status))
+
+    def mirror_campaign(self, campaign_id: Any, obj: dict[str, Any], *, external_id: str | None = None) -> None:
+        status = obj.get("status") if obj.get("status") in CAMPAIGN_STATUSES else None
+        budget = obj.get("daily_budget")
+        self.conn.execute("update campaigns set status=coalesce(%s, status), daily_budget=coalesce(%s, daily_budget),"
+                          " external_id=coalesce(%s, external_id) where id=%s",
+                          (status, None if budget is None else Decimal(str(budget)), external_id, campaign_id))
+
+    def record_ad(self, target: dict[str, Any], s: dict[str, Any], ad: dict[str, Any], adset: dict[str, Any], obj: dict[str, Any]) -> None:
+        """The `ad_entities` row for an ad Meta returned (SKILL.md §6 step 6): inserted the first time, mirrored
+        after that. Everything external comes from Meta's answer, never from the proposal."""
+        row = self.conn.execute("select id from ad_entities where platform='meta' and ad_id=%s", (obj["id"],)).fetchone()
+        if row is not None:
+            self.mirror_ad(row["id"], obj)
+            self.conn.execute("update ad_entities set adset_daily_budget=coalesce(%s, adset_daily_budget) where id=%s",
+                              (None if adset.get("daily_budget") is None else Decimal(str(adset["daily_budget"])), row["id"]))
+            return
+        insert(self.conn, "ad_entities", client_id=self.client_id, campaign_id=target["id"], creative_id=UUID(str(ad["creative_id"])),
+               recipe_pattern_id=None if not s.get("recipe_pattern_id") else UUID(str(s["recipe_pattern_id"])), platform="meta",
+               adset_id=adset["id"], adset_daily_budget=None if adset.get("daily_budget") is None else Decimal(str(adset["daily_budget"])),
+               ad_id=obj["id"], optimisation_event=s.get("optimisation_event"),
+               status=obj.get("status") if obj.get("status") in AD_STATUSES else "PAUSED",
+               review_status=obj.get("review_status") if obj.get("review_status") in REVIEW_STATUSES else "PENDING",
+               review_feedback=obj["ad_review_feedback"] if isinstance(obj.get("ad_review_feedback"), dict) else {})
+
+    # ---------- build_campaign and cascade activate (T9) ----------
+
+    def perform_build(self, a: dict[str, Any], target: dict[str, Any]) -> dict[str, Any]:
+        """Campaign → ad sets → creatives → ads, all PAUSED, each preceded by a name lookup and followed by the
+        external id landing in the warehouse and a commit (FR-30). `META_FAKE_FAIL=<step>[:after]` drives the
+        crash tests; a re-run reuses what the crashed run created."""
+        p, meta = a["proposal"], self.meta
+        camp = p["campaign"]
+        cobj, created = ensure_object(meta, "campaign", camp["name"],
+                                      lambda: meta.create_campaign(camp["name"], objective=camp["objective"], status="PAUSED"))
+        self.run.count("meta_created" if created else "meta_reused")
+        self.mirror_campaign(target["id"], cobj, external_id=cobj["id"])
+        self.conn.commit()
+        for s in p["ad_sets"]:
+            sobj, created = ensure_object(meta, "adset", s["name"],
+                                          lambda: meta.create_adset(s["name"], campaign_id=cobj["id"], daily_budget=float(Decimal(str(s["daily_budget"]))),
+                                                                    optimization_event=s["optimisation_event"], targeting=s["targeting"], status="PAUSED"))
+            self.run.count("meta_created" if created else "meta_reused")
+            for ad in s["ads"]:
+                crobj, created = ensure_object(meta, "creative", ad["creative_name"],
+                                               lambda: meta.create_creative(ad["creative_name"], image_url=ad["image_url"], body=ad["body"],
+                                                                            title=ad["title"], link_url=ad["link_url"]))
+                self.run.count("meta_created" if created else "meta_reused")
+                aobj, created = ensure_object(meta, "ad", ad["name"],
+                                              lambda: meta.create_ad(ad["name"], adset_id=sobj["id"], creative_id=crobj["id"], status="PAUSED"))
+                self.run.count("meta_created" if created else "meta_reused")
+                self.record_ad(target, s, ad, sobj, aobj)
+                self.conn.commit()
+        obj = self.read_back(a, target)
+        ok, detail = self.matches(a, target, obj)
+        if not ok:
+            raise MetaApiError(f"read-back mismatch: {detail}")
+        return obj
+
+    def perform_cascade(self, a: dict[str, Any], target: dict[str, Any]) -> dict[str, Any]:
+        rows = self.cascade_rows(a, target)
+        for r in rows:                                     # FR-37: Meta's review, as of now, before anything flips
+            obj = self.meta.get("ad", r["ad_id"])
+            self.mirror_ad(r["id"], obj)
+            if obj.get("review_status") == "DISAPPROVED":
+                self.conn.commit()
+                raise Fail(f"disapproved: {r['ad_id']}")
+        self.conn.commit()
+        self.meta.update("campaign", target["external_id"], status="ACTIVE")
+        for adset_id in sorted({r["adset_id"] for r in rows}):
+            self.meta.update("adset", adset_id, status="ACTIVE")
+        for r in rows:
+            self.meta.update("ad", r["ad_id"], status="ACTIVE")
+        obj = self.read_back(a, target)
+        ok, detail = self.matches(a, target, obj)
+        if not ok:
+            raise MetaApiError(f"read-back mismatch: {detail}")
+        return obj
 
     # ---------- brakes (FR-47) ----------
 

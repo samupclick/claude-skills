@@ -64,6 +64,15 @@ go-live step 2.
 checks (policy, likeness, coherence, fabricated testimonial) only fail with a recorded or hand-written fixture.
 `--rescore` scores gated creatives again (same attempt).
 
+`launch` in dev mode: `python3 scripts/meta_launch.py` after `verdicts: approve …` (T6). It proposes one
+`build_campaign` per experiment with approved, unlaunched creatives and prints the stop-point C summary (campaign,
+ad sets, budgets, ads, cap check); `python3 scripts/decide.py "approve n"` then `python3 scripts/apply_actions.py`
+creates the objects paused in the fake account (`.dev/meta/account.json`, "Ads Manager" in dev mode). A second
+`launch` then proposes the cascade `activate` for the built campaign; approve and apply again and the ads deliver
+(the fake synthesises insights from the next day on). `META_FAKE_FAIL=create_ad:after` is the crash-mid-build
+fixture; `FakeMeta.update("ad", id, review_status="DISAPPROVED", ad_review_feedback={...})` plays Meta's review
+turning an ad down (FR-37): the next `activate` syncs it to `ad_entities.review_status` and refuses.
+
 ## Placeholders that need Sam's replacement before go-live
 
 | File | Status | Replace with |

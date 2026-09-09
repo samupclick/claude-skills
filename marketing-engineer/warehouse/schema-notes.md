@@ -13,6 +13,7 @@ the owning entity's JSONB column and are listed here, never added as ad-hoc colu
 | `0004_quiz_rpc.sql` | Quiz funnel RPC (T7): `quiz_start`, `quiz_complete`, `lead_booked`, `quiz_config` as SECURITY DEFINER, execute granted to `app`; the direct `insert on leads, lead_contacts` 0002 gave `app` is revoked, so `app` writes leads through the RPCs only. No new tables or columns |
 | `0005_mcp_ro_leads_columns.sql` | DR-4 fix found by T7: 0002's column revoke on `leads (quiz_answers, consent, fbclid_hash)` for `mcp_ro` was a no-op under its table-level grant; replaced by a column-list grant that omits the three |
 | `0006_executor_runs.sql` | Column grants only: `executor` may update `runs (status, finished_at, counts, tokens_used, api_calls, error)` so `scripts/apply_actions.py` closes its own runs row (0002 granted that to `worker_rw` only) |
+| `0007_launch.sql` | Launcher (T9), three changes. (1) `check_daily_cap()` counts each ACTIVE ad set once (`max(adset_daily_budget)` grouped by `platform, adset_id`; rows without `adset_id` form one group) instead of summing every ACTIVE ad row, which double-counted the batch-one shape (3 ad sets x 2 ads) against its own 0002 comment. (2) `grant insert on ad_entities to executor`: the executor records each ad from Meta's answer immediately after the create (SKILL.md §6 step 6); `ad_id` is not null and unique, so no row can exist before Meta has answered. (3) `grant update (status) on creatives to executor`: the mirror moves a creative `approved` → `live` when its ad goes ACTIVE, and `live` → `paused` / `killed` after that. No new tables or columns |
 
 ## JSONB keys in use
 
@@ -61,6 +62,12 @@ the owning entity's JSONB column and are listed here, never added as ad-hoc colu
 | `actions.proposal` | `creative_id`, `brief_id`, `voc_phrase_id` | Sam (`quote_release`, applied as `sam_admin`) | what the release covers; the gate (and the producer for quote families) treats a creative as released when an applied `quote_release` names it, its brief, or the phrase in `target_id` or one of these keys |
 | `runs.counts` | `experiment`, `creatives_scored`, `passed`, `failed`, `hard_check_failures` {check: n}, `dropped_max_attempts`, `html_missing`, `skipped_gated`, `images_missing_<render\|image\|source>` | `scripts/gate.py` | one `gate` run; `html_missing` counts creatives gated on their database words only (no `1080x1080.html` beside the asset) |
 | `runs.counts` | `approved`, `rejected`, `default_taken` | `scripts/gate.py --verdicts` | Sam's chat verdicts recorded; `default_taken = 1` means nothing shipped (SKILL.md §5.2) |
+| `actions.proposal` | `campaign` {`name`, `kind`, `objective`, `currency`, `terminal_metric`, `optimisation_event`, `experiment_id`, `offer_id`, `funnel_host`}, `ad_sets` [{`name`, `brief_id`, `recipe_pattern_id`, `family`, `renderer`, `daily_budget`, `optimisation_event`, `targeting` {`geo`, `age_min`, `age_max`}, `ads` [{`name`, `creative_name`, `creative_id`, `renderer`, `link_url`, `image_url`, `title`, `body`, `gate_score_id`}]}], `cap_check` {`daily_cap`, `active_budget`, `proposed_budget`, `ok`} | `scripts/meta_launch.py` proposes, `scripts/apply_actions.py` applies | `build_campaign`: the whole campaign the executor creates paused (shape and validator in `warehouse/launch.py`); Meta object names are deterministic so a re-run finds what a crashed run created; `link_url` carries `utm_content=<creative_id>` (FR-32); the executor re-validates the proposal and refuses a tampered one |
+| `actions.evidence` | `experiment`, `experiment_id`, `creative_ids`, `gate_score_ids` {creative_id: gate_scores id}, `ad_sets`, `ads`, `cap_check` | `scripts/meta_launch.py` | `build_campaign`: which `sam` approve verdicts the launch rests on and the cap arithmetic at proposal time |
+| `actions.proposal` | `cascade` (true), `ad_entity_ids` [] | `scripts/meta_launch.py` proposes, `scripts/apply_actions.py` applies | `activate` on a `campaign` target: the campaign, the ad sets of the listed ads and the ads go ACTIVE in one action; the executor syncs `review_status` from Meta first and refuses the whole action on a DISAPPROVED ad (FR-37); the cap is re-checked with every ad set budget applied. Without `cascade` an `activate` on a campaign flips the campaign object only (T8) |
+| `actions.evidence` | `campaign_external_id`, `ad_sets`, `ads`, `review_status` {status: n}, `cap_check` | `scripts/meta_launch.py` | cascade `activate`: what the launcher saw when it proposed |
+| `runs.counts` | `creatives_approved`, `creatives_pending`, `proposed`, `ad_sets`, `ads`, `reprinted`, `proposals_refused`, `activate_proposed`, `activate_refused_disapproved`, `activate_refused_cap`, `build_skipped_nothing_new` | `scripts/meta_launch.py` | one `launch` run; `creatives_pending` are approved creatives already named in an open or applied `build_campaign` |
+| `runs.counts` | `meta_created`, `meta_reused` | `scripts/apply_actions.py` (`build_campaign`) | Meta objects created vs found by name (a re-run after a crash reuses; the first run reuses nothing) |
 | `actions.proposal` | `icp_id` | `retire_family` proposer (T10+) | optional: scopes the retirement to one ICP; `plan_batch.py` treats an applied `retire_family` without it as retired for every ICP of the client (FR-7 guard) |
 
 ## Action target conventions (T8)
@@ -69,7 +76,10 @@ the owning entity's JSONB column and are listed here, never added as ad-hoc colu
 `campaigns.id`, `client` → `clients.id`, `trust` → the action type being promoted. Meta object ids are looked up
 from the target row (`ad_entities.ad_id`, `ad_entities.adset_id`, `campaigns.external_id`), never carried in
 the proposal. `kill` sets the Meta ad to `ARCHIVED` (final); `pause` to `PAUSED`; both mirror `ad_entities.status`
-from Meta's read-back.
+from Meta's read-back. `build_campaign` (T9) targets the `campaigns` row the launcher inserted with `external_id`
+null; the executor fills `external_id` from Meta's answer and inserts the `ad_entities` rows (0007), one per ad,
+with `adset_id` / `adset_daily_budget` from the ad set Meta returned. Ad sets have no table: the set's budget is the
+same number on every ad row of the set.
 
 ## Storage keys (T5)
 
@@ -87,5 +97,5 @@ checks through the storage adapter); neither is listed in `asset_urls`. `creativ
 ## Creative status flow (T5, T6)
 
 `draft` (producer) → `gated` (gate scored it; the agent row says `passed`) → `approved` (Sam's `approve` verdict, only
-on a passed creative) → `live` (executor, T9). Sam's `reject` and the gate's attempt-4 drop set `archived`; the
+on a passed creative) → `live` (executor, T9: the cascade `activate` mirror, when the ad Meta returns is ACTIVE; a paused build leaves it `approved`). Sam's `reject` and the gate's attempt-4 drop set `archived`; the
 producer's `--rerender` archives the previous version and writes the next. `killed` / `paused` are the executor's.

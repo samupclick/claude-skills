@@ -69,3 +69,11 @@ def db_env(test_db, monkeypatch):
     for k, v in test_db.items():
         monkeypatch.setenv(k, v)
     return test_db
+
+
+@pytest.fixture(scope="session")
+def meta_root(tmp_path_factory):
+    """One fake Meta account (DEV_ROOT) for the whole session, shared by every test module that writes Meta ids into
+    the test database: its ids keep incrementing, so the warehouse's (platform, external_id) / (platform, ad_id)
+    uniqueness holds across T8 and T9 tests that share `test_db`. Modules set DEV_ROOT to it per test."""
+    return tmp_path_factory.mktemp("meta-dev")
