@@ -73,6 +73,13 @@ creates the objects paused in the fake account (`.dev/meta/account.json`, "Ads M
 fixture; `FakeMeta.update("ad", id, review_status="DISAPPROVED", ad_review_feedback={...})` plays Meta's review
 turning an ad down (FR-37): the next `activate` syncs it to `ad_entities.review_status` and refuses.
 
+`pull insights` in dev mode: `python3 scripts/meta_insights.py [--today YYYY-MM-DD] [--days 7]` after `activate` was
+applied. The fake account synthesises one insights row per (ad, day) from `META_FAKE_SEED` for days the ad, its ad set
+and its campaign were all ACTIVE, so the first pull after activation carries today only and numbers stay well below
+sample size (the view says `hold`, no agent learning is written). `--today` sets `fetched_on` and the window end: a
+second pull under another seed on a later `--today` is the FR-38 restatement (two rows, one latest). Stop point D:
+`python3 scripts/meta_insights.py --learning "<Sam's hypothesis>"` writes the hand-written proposed learning.
+
 ## Placeholders that need Sam's replacement before go-live
 
 | File | Status | Replace with |
