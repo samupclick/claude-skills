@@ -4,7 +4,7 @@ Every external dependency sits behind an adapter selected by an environment vari
 
 | Service | Env var | Dev value | Live value | What the fake does |
 |---------|---------|-----------|------------|--------------------|
-| Warehouse | `WAREHOUSE_URL_WORKER` / `_EXECUTOR` / `_ADMIN` | local Postgres (`postgresql://…@localhost:5432/gw` per role) | Supabase EU pooler strings | Nothing to fake; same schema (`0001` + `0002`) applied locally by `scripts/dev_db.sh` |
+| Warehouse | `WAREHOUSE_URL_WORKER` / `_EXECUTOR` / `_SAM_ADMIN` / `_APP` / `_MCP_RO` (`_ADMIN` is the dev-only superuser) | local Postgres (`postgresql://…@localhost:5432/gw` per role) | Supabase EU pooler strings | Nothing to fake; same schema (`0001` + `0002`) applied locally by `scripts/dev_db.sh` |
 | Object storage | `STORAGE_BACKEND` | `local` (writes under `.dev/storage/`, returns `file://` URLs) | `supabase` | Same interface: `put(bytes, key) -> url`, `get(url)` |
 | Meta Marketing API | `META_BACKEND` | `fake` | `live` | In-memory account: creates campaigns/ad sets/ads with ids, name lookup, `effective_status`, `ad_review_feedback`, insights that synthesise impressions/clicks from a seed, throttle header simulation, failure injection via `META_FAKE_FAIL=<step>` |
 | Meta CAPI | `CAPI_BACKEND` | `fake` (logs events to `.dev/capi.jsonl`) | `live` | Records `event_id` for dedup tests |
@@ -87,8 +87,8 @@ instead; `--since 24h|ISO` and `--now ISO` fix the window. The golden body is `f
 `pause the pipeline`: `python3 scripts/pause.py pause --reason "…"` proposes `set_pause_flag`; approve with
 `scripts/decide.py --as sam_admin "approve N"` and apply with `scripts/apply_actions.py --role sam_admin`
 (`WAREHOUSE_URL_SAM_ADMIN` is in `.env` in dev mode); `resume` and `status` likewise. Routines: `python3 scripts/routines.py
-dry-run me-morning` runs the 08:00 prompt's steps as scripts against the dev warehouse; steps whose script a later ticket
-owns (`monday_memo.py`, T12) are reported as not built and the dry-run continues. The SessionStart hook (`.claude/hooks/session-start.sh`) does
+dry-run me-morning` runs the 08:00 prompt's steps as scripts against the dev warehouse; the `me-monday` memo step
+(`monday_memo.py`, not built in phase 0, SKILL.md §3) is reported as not built and the dry-run continues. The SessionStart hook (`.claude/hooks/session-start.sh`) does
 `pip install`, checks Chromium, creates `.env`, reports secret names, and runs `scripts/dev_db.sh` in remote sessions.
 
 ## Placeholders that need Sam's replacement before go-live

@@ -83,6 +83,17 @@ the owning entity's JSONB column and are listed here, never added as ad-hoc colu
 | `runs.counts` | `proposed`, `duplicate` | `scripts/pause.py` | one pause / resume request |
 | `actions.proposal` | `icp_id` | `retire_family` proposer (T10+) | optional: scopes the retirement to one ICP; `plan_batch.py` treats an applied `retire_family` without it as retired for every ICP of the client (FR-7 guard) |
 
+| `offers.offer_layer` | `offer_mechanic`, `proof_type`, `cta_mechanic` | `scripts/seed.py` from `config/clients/<slug>.json` (`offer.offer_layer`) | fixed per offer (DECISIONS C3 amendment); copied verbatim into `briefs.spec.offer_layer` by the planner and read by the producer for the `cta` component |
+| `actions.approved_payload` | the `proposal` object as it stood at approval | `scripts/decide.py` (Sam's `approve`, `decision_channel='chat'`), `scripts/apply_actions.py` (a row applied at `execute` trust, `decision_channel='auto'`) | what was approved; `trust_streaks` counts an approval as `unchanged` (a streak step) only when `approved_payload = proposal`, so an edited proposal never earns trust |
+| `ad_entities.review_feedback` | Meta's `ad_review_feedback` object as returned (fake account in dev mode) | `scripts/apply_actions.py` (`mirror_ad`: cascade `activate` sync, reconcile, kill / pause read-back) | FR-37: why an ad is `DISAPPROVED` / `WITH_ISSUES`; the launcher refuses `activate` on a disapproved ad and the check-in shows the count |
+
+JSONB columns no phase-0 worker writes (they keep their `'{}'` default and gain keys only with the ticket that
+first uses them): `patterns.evidence` (creative ids + metrics per pattern, phase 1 leaderboards),
+`experiments.result` (ablation / scaling outcomes, phase 1), `erasure_requests.fanout` (the erasure fan-out record,
+phase 1 with the review page). `runs.counts` keys are documented per script above; `scripts/routines.py` opens no
+`runs` row (it only runs other scripts and reads `runs`), and `scripts/seed.py` writes `families`, `clients`,
+`offers`, `icps` only (a family-name conflict closes the row `failed` with the names in `error`, T0).
+
 ## Action target conventions (T8)
 
 `actions.target_id` is text in the schema; the executor reads it as: `ad_entity` → `ad_entities.id`, `campaign` →

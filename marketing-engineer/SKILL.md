@@ -20,7 +20,7 @@ Source of truth, in this order when they disagree: `warehouse/schema.sql` + `war
 
 1. Load `config/clients/<slug>.json` (default `upclicklabs`). Refuse to run if `targets.ctr_floor`, `targets.kill_impressions`, `daily_cap`, or `currency` are missing.
 2. Open a `runs` row: `insert into runs (worker, client_id) values ($worker, $client) returning id`. Close it on exit with `status`, `counts`, `error`. **No invocation ends without a closed `runs` row.**
-3. Answer "where are we" (§2) before doing anything else, and print it.
+3. Answer "where are we" (§2) before doing anything else, and print it: `python3 warehouse/client.py status <slug>` runs the query as `worker_rw`.
 4. Check `clients.paused` and `PIPELINE_PAUSED` env. If either is true: only `status`, `check-in`, `resume` may run.
 5. Connect with the role for the job (§1). Never use the service role from a worker.
 
@@ -30,16 +30,23 @@ Source of truth, in this order when they disagree: `warehouse/schema.sql` + `war
 |----------|---------|---------|
 | `WAREHOUSE_URL_WORKER` | workers, this skill | Postgres pooler string as `worker_rw` |
 | `WAREHOUSE_URL_EXECUTOR` | `scripts/apply_actions.py` only | as `executor` |
-| `WAREHOUSE_URL_ADMIN` | Sam's shell only | as `sam_admin` |
+| `WAREHOUSE_URL_SAM_ADMIN` | Sam's shell only | as `sam_admin`: `scripts/decide.py --as sam_admin` and `scripts/apply_actions.py --role sam_admin` for `set_pause_flag`, `promote_trust`, `quote_release` |
+| `WAREHOUSE_URL_ADMIN` | dev mode only | the local superuser for `scripts/dev_db.sh` and `scripts/seed.py`; no worker reads it |
+| `WAREHOUSE_URL_APP` | quiz funnel only (`funnel/`) | as `app`, through the `0004` RPCs |
+| `WAREHOUSE_URL_MCP_RO` | the Postgres MCP | as `mcp_ro`, read-only |
+| `ANTHROPIC_API_KEY`, `MODEL_ID` | intel, language, planner, producer, gate | the model adapter (`MODEL_BACKEND=claude`; `fixture` needs no key) |
 | `SUPABASE_URL`, `SUPABASE_STORAGE_BUCKET` | workers | asset uploads (`creatives` bucket) |
 | `SCRAPECREATORS_API_KEY` | intel worker | Ad Library pulls |
 | `GEMINI_API_KEY` | producer | image generation (model name from config) |
 | `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID`, `META_PIXEL_ID`, `META_PAGE_ID` | **executor only** | campaign build, activate, kill, scale |
 | `META_CAPI_TOKEN`, `META_TEST_EVENT_CODE` | quiz Edge Function only | server-side events |
 | `CAL_WEBHOOK_SECRET` | quiz Edge Function only | verified bookings |
+| `CHECKIN_TO` | check-in | recipient of the five-part email |
+| `FUNNEL_HOST` | producer, launcher | the quiz page host the ad URLs point at |
 | `PIPELINE_PAUSED` | everywhere | global brake |
+| `STORAGE_BACKEND`, `META_BACKEND`, `CAPI_BACKEND`, `INSPO_BACKEND`, `VOC_BACKEND`, `IMAGE_BACKEND`, `MODEL_BACKEND`, `EMAIL_BACKEND`, `TURNSTILE_BACKEND` | everywhere | adapter selectors; dev and live values per `references/dev-mode.md` |
 
-If a variable for the current job is missing, stop and say which one. Never print a secret. Never write one to the warehouse or to git.
+If a variable for the current job is missing, stop and say which one (`adapters.env.require` does this by name). Never print a secret. Never write one to the warehouse or to git. `.env.example` lists every variable with its dev value; `.env` is git-ignored.
 
 ## 2. Where are we (run first, print always)
 
@@ -65,23 +72,25 @@ Print it as a short table. If `actions_stuck > 0`, say so and stop: only the exe
 
 | You say | Worker | Script | Writes | Human step |
 |---------|--------|--------|--------|------------|
-| `status` / "where are we" | — | §2 query | nothing | — |
+| `status` / "where are we" | — | `warehouse/client.py status [slug]` (the §2 query) | nothing | — |
 | `pull inspo` | intel | `scripts/pull_inspo.py` | `raw_ingest`, `patterns` (images → Storage), `runs` | — |
+| `acknowledge <source>` | intel | `scripts/pull_inspo.py --acknowledge <source>` | `runs` (clears the FR-8 block, §7) | Sam |
 | `pull voc` | language | `scripts/pull_voc.py` | `raw_ingest`, `voc_phrases`, `runs` | — |
 | `plan batch` | planner | `scripts/plan_batch.py` | `experiments` (with `capacity`), 4× `briefs` | **Sam picks** (§5.1) |
 | `my picks: …` | planner | `scripts/plan_batch.py --select` | `selections`, marks chosen briefs | — |
-| `produce` | producer | `scripts/render_creatives.py` | `creatives`, `creative_components`, assets | — |
+| `produce` | producer | `scripts/render_creatives.py` (`--rerender` after a failed hard check, max version 3) | `creatives`, `creative_components`, `hooks`, assets | — |
 | `gate` | gate | `scripts/gate.py` | `gate_scores` (agent, shadow) + `hard_checks` | **Sam's verdicts** (§5.2) |
 | `verdicts: …` | gate | `scripts/gate.py --verdicts` | `gate_scores` (`scored_by='sam'`, `decision_channel='chat'`) | — |
-| `launch` | launcher | `scripts/meta_launch.py` | **proposed** `build_campaign` action only | Sam approves (§5.3) |
-| `apply actions` | executor | `scripts/apply_actions.py` | transitions `actions`; creates Meta objects; `ad_entities`, `campaigns` | — |
-| `pull insights` | loop | `scripts/meta_insights.py` | `ad_metrics_daily`, `account_spend_hourly`, `campaigns.active_lever`, proposed kill/scale, `learnings` | — |
+| `launch` | launcher | `scripts/meta_launch.py` | **proposed** `build_campaign` action only; run again after the build is applied and it proposes the cascade `activate` for the built campaign | Sam approves (§5.3) |
+| `approve 1,2; reject 3: reason` | — | `scripts/decide.py "…"` (`--as sam_admin` for `set_pause_flag`, `promote_trust`, `quote_release`) | `actions` → `approved` / `rejected`, `decision_channel='chat'` | Sam |
+| `apply actions` | executor | `scripts/apply_actions.py` (`--reconcile` for stuck `applying` rows; `--role sam_admin` for the three admin-only types, never touches Meta) | transitions `actions`; creates Meta objects; `ad_entities`, `campaigns`, `creatives.status` | — |
+| `pull insights` | loop | `scripts/meta_insights.py` (`--learning "…"` writes Sam's hand-written proposed learning) | `ad_metrics_daily`, `account_spend_hourly`, `campaigns.active_lever`, proposed kill/scale, `learnings` | — |
 | `check-in` | loop | `scripts/checkin.py` | `runs`; proposed `set_pause_flag` from the error-rate and lead-velocity brakes (FR-47); sends the five-part email via the email adapter (Gmail connector at go-live) | Sam reads, approves in chat |
-| `monday memo` | loop | `scripts/monday_memo.py` | memo file + proposed `promote_variant` / `retire_family` | Sam reads |
+| `monday memo` | loop | **not built in phase 0** (`scripts/monday_memo.py` does not exist; the memo is outside the phase-0 definition of done, `PLAN.md` §1). Say so and stop; `scripts/routines.py dry-run me-monday` reports the step as not built | nothing | — |
 | `pause the pipeline` / `resume` | — | `scripts/pause.py pause\|resume\|status` | proposed `set_pause_flag` (Sam approves with `decide.py --as sam_admin`, applies with `apply_actions.py --role sam_admin`) | Sam |
-| `onboard client <slug>` | — | `scripts/onboard.py` | `clients`, `offers`, `icps` from a cloned config | Sam confirms |
+| `onboard client <slug>` | — | **not built in phase 0** (`scripts/onboard.py` does not exist; the first client onboards in phase 1 with client-scoped RLS). Say so and stop. Phase 0 seeds the one client with `scripts/dev_db.sh --seed` (`scripts/seed.py`, dev mode) | nothing | — |
 
-Run the script; do not re-implement it in chat. If a script does not exist yet, say so and stop; do not improvise a side effect.
+Run the script; do not re-implement it in chat. If a script does not exist yet, say so and stop; do not improvise a side effect. Every script takes `--client <slug>` (default `upclicklabs`) and, in dev mode, `MODEL_BACKEND=fixture` when there is no `ANTHROPIC_API_KEY`; the per-script flags are in `references/dev-mode.md`. The fixed prompts each worker sends are in `references/prompts/<worker>.md` (`intel`, `language`, `planner`, `producer`, `gate`); the scripts read them from there and nothing else builds a system prompt.
 
 ## 4. Rules that are never relaxed
 
@@ -114,7 +123,7 @@ Present the proposals as a numbered table: number, family/variant, hook line, an
 Present each creative: number, the Storage URL, the source ad URL (our copy), hard-check results, shadow rubric scores. Ask for `verdicts: approve 1,3,4; reject 2: hook is generic; reject 5: looks like stock`. Write each as a `gate_scores` row with `scored_by='sam'`, `decision_channel='chat'`, `verdict`, and the reason in `feedback`. Default after 20 minutes: nothing ships; say so.
 
 ### 5.3 Approvals (actions waiting)
-List proposed actions with: number, `action_type`, target, one-line `rule`, the evidence snapshot, and what changes if applied. Ask for `approve 1,2; reject 3: reason`. Then tell Sam to run `apply actions`. You never mark an action approved yourself; the approval is written by `scripts/decide.py` with `decision_channel='chat'`. `promote_trust`, `quote_release`, and `set_pause_flag` require Sam to run it with `WAREHOUSE_URL_ADMIN`.
+List proposed actions with: number, `action_type`, target, one-line `rule`, the evidence snapshot, and what changes if applied. Ask for `approve 1,2; reject 3: reason`. Then tell Sam to run `apply actions`. You never mark an action approved yourself; the approval is written by `scripts/decide.py` with `decision_channel='chat'`. `promote_trust`, `quote_release`, and `set_pause_flag` require Sam to run it as `sam_admin` (`scripts/decide.py --as sam_admin "approve n"`, then `scripts/apply_actions.py --role sam_admin`, both on `WAREHOUSE_URL_SAM_ADMIN`); the executor role cannot approve or apply them.
 
 ## 6. Executor procedure (`scripts/apply_actions.py`, role `executor`)
 
@@ -148,23 +157,31 @@ Two fixed wakes, fresh session each, SessionStart hook installs Chromium, Python
 
 No session-bound webhooks. The quiz and calendar Edge Functions write to the warehouse; the next wake picks it up.
 
-`config/routines.json` is the machine-readable twin of this table (a test fails when they drift); `scripts/routines.py list|check|dry-run <name>` prints, checks, and executes a routine's steps locally. The hook is `.claude/hooks/session-start.sh`. Registration as Claude Code Routines (one `create_trigger` per row, fresh session per fire, `cron_utc` as given) is the go-live swap (T13 step 7); the 08:00 routine is `me-morning`, 20:00 is `me-evening`.
+`config/routines.json` is the machine-readable twin of this table (a test fails when they drift); `scripts/routines.py list|check|dry-run <name>` prints, checks, and executes a routine's steps locally. `me-monday`'s memo step is not built in phase 0 (§3): the dry-run reports it and the routine ends after `status`. The hook is `.claude/hooks/session-start.sh`. Registration as Claude Code Routines (one `create_trigger` per row, fresh session per fire, `cron_utc` as given) is the go-live swap (T13 step 7); the 08:00 routine is `me-morning`, 20:00 is `me-evening`.
 
 ## 9. Repo layout this skill expects
 
 ```
 marketing-engineer/
-├── SKILL.md · PRD.md · ARCHITECTURE.md · PLAN.md · CRUCIBLE.md · DECISIONS.md · WAREHOUSE.md
-├── config/clients/<slug>.json · config/clients/<slug>/voc-seed/
-├── references/families.md · references/prompts/<worker>.md · references/meta-launch-playbook.md
+├── SKILL.md · PRD.md · ARCHITECTURE.md · PLAN.md · CRUCIBLE.md · DECISIONS.md · WAREHOUSE.md · CHANGELOG.md
+├── .env.example · pyproject.toml · requirements.txt
+├── config/clients/<slug>.json · config/clients/<slug>/voc-seed/ · config/routines.json
+├── references/families.md · references/dev-mode.md · references/orchestrate-kickoff.md
 │   references/direct-response-copy.md · references/creative-rubric.md
+│   references/prompts/intel.md · language.md · planner.md · producer.md · gate.md
 ├── assets/creative-templates/job-photo-bubble.html · screenshot-ad.html
-├── warehouse/schema.sql · 0002_roles.sql · client.py · queries/*.sql · schema-notes.md
-└── scripts/pull_inspo.py · pull_voc.py · plan_batch.py · render_creatives.py · gate.py
-    meta_launch.py · apply_actions.py · decide.py · meta_insights.py · checkin.py
-    monday_memo.py · pause.py · onboard.py · test_events.py
+├── adapters/<service>/ (storage, meta, capi, inspo, voc, image, model, email, turnstile; one backend per env var)
+├── warehouse/schema.sql (0001) · 0002_roles.sql · 0003_phase0_grants.sql · 0004_quiz_rpc.sql
+│   0005_mcp_ro_leads_columns.sql · 0006_executor_runs.sql · 0007_launch.sql · client.py · launch.py · schema-notes.md
+├── scripts/dev_db.sh · seed.py · pull_inspo.py · pull_voc.py · plan_batch.py · render_creatives.py · gate.py
+│   meta_launch.py · decide.py · apply_actions.py · meta_insights.py · checkin.py · pause.py · routines.py · test_events.py
+├── funnel/ (quiz page, /quiz and /cal-webhook function code, local server on 8788; deployed to go-upclicklabs at go-live)
+├── fixtures/ad_library · voc · model · checkin
+└── tests/ (pytest against a local Postgres with every migration applied; never a mock)
 ```
-The `go.upclicklabs.com` app is a separate repo.
+The SessionStart hook is `.claude/hooks/session-start.sh` at the repository root. `scripts/monday_memo.py` and
+`scripts/onboard.py` are not in phase 0 (§3). The `go.upclicklabs.com` app is a separate repo at go-live; in dev mode
+`funnel/` serves it locally.
 
 ## 10. Kickoff prompt (paste to start the Saturday build session)
 
@@ -187,3 +204,26 @@ closes a runs row; every creative has full creative_components or the gate refus
 text goes into prompts only as delimited data with JSON-schema outputs; nothing binary in git.
 When you stop for me, give me the numbered table and the exact reply format you expect.
 ```
+
+## 11. Friday checklist (Sam, before go-live) and the go-live swap
+
+Phase 0 was built in dev mode (`references/dev-mode.md`): every external service sits behind an adapter, so nothing
+below blocks the build, but all of it blocks going live. ★ = blocker; ◆ = silently multi-day. The full wording is
+`CRUCIBLE.md` §4, mirrored in `PLAN.md` §2.
+
+1. ★ **Meta**: business app, system user on the **Advertiser** role with `ads_management` + `business_management`, page / pixel / ad account assigned, non-expiring token stored for the executor only, ad account with payment method and prior spend, **account spending limit set by hand**.
+2. ★ **Meta events**: domain verified, `QuizStart` / `QuizComplete` / `Schedule` created, CAPI token, `test_event_code`, Data Processing Terms accepted.
+3. ◆ **Meta**: Ads Management Standard Access review submitted with the `go.` page as demo URL.
+4. ★ **`go.upclicklabs.com`**: Vercel project, CNAME, SSL, hello page; Cal.com account and booking link (the DRAFT config's `offer.calendar_url` is a placeholder).
+5. ★ **Supabase EU**: pgvector, `creatives` bucket, pooler connection string per role, `0001` to `0007` applied in order, Postgres MCP connected as `mcp_ro`.
+6. ★ **scrapecreators**: key and one real Ad Library call saved to `fixtures/ad_library/real-001.json` (the fixture shape is assumed until then).
+7. ★ **Gemini image key** and one test generation.
+8. ★ **`references/families.md`** approved by Sam (DRAFT; `contrarian` and `identity` are both a hook type and an angle, and `families.name` is a primary key, so the seed skips the two angle rows until they are renamed).
+9. ★ **`config/clients/upclicklabs.json`**: offer, ICP, quiz questions, floors per lever, `daily_cap`, currency, trust thresholds, brakes (DRAFT values throughout).
+10. ★ **Vault seed**: 5 to 10 real notes copied into `config/clients/upclicklabs/voc-seed/`, anonymised as you copy (the checked-in notes are synthetic).
+11. DPAs (Supabase, Anthropic, Google, scrapecreators, Vercel); `CHECKIN_TO` set to Sam's address.
+
+Then the go-live swap in `references/dev-mode.md` § "Go-live swap checklist" (T13 in the tracker): one env value per
+service, `render_creatives.py --reupload`, the three routines registered from `config/routines.json`, and only then
+`launch` → stop point C → `apply actions`. No step of the swap changes code; if one does, it is a bug in an adapter
+boundary.
