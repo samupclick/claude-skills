@@ -53,5 +53,6 @@
   "worker_budgets": { "intel": { "api_calls": 50 }, "planner": { "tokens": 400000 }, "producer": { "tokens": 400000, "images": 20 }, "gate": { "tokens": 200000 } },
   "voc": { "seed_dir": "config/clients/upclicklabs/voc-seed", "vault_path": "PLACEHOLDER: /Users/Sam/Documents/ucl-brain", "public_sources": ["PLACEHOLDER: https://www.reddit.com/r/…/1", "PLACEHOLDER: https://www.reddit.com/r/…/2", "PLACEHOLDER: https://www.reddit.com/r/…/3"] },
   "inspo": { "dtc_seed": ["AG1", "Liquid Death", "HexClad", "Ridge", "Dr. Squatch"], "category_seed": [] },
-  "disapproval_pause_threshold": 3
+  "disapproval_pause_threshold": 3,
+  "brakes": { "error_rate_threshold": 0.3, "error_rate_window_hours": 1, "error_rate_min_runs": 3, "lead_velocity_multiplier": 3, "lead_velocity_window_days": 7, "lead_velocity_min_baseline": 1 }
 }

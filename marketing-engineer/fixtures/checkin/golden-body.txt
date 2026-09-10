@@ -1,0 +1,33 @@
+Check-in — t11-golden — 2026-09-10 06:00 UTC (window since 2026-09-09 06:00 UTC)
+
+1. Actions waiting (4)
+   - #1 kill ad_entity/71100003 — rule: ctr_floor — reason: {"impressions": 2500, "link_ctr": 0.004, "source": "[url removed] — if applied: ad → ARCHIVED in Meta (final)
+   - #5 set_pause_flag client/71100000 — rule: three_consecutive_failures — reason: pause failed 3 times in a row — if applied: clients.paused → True (approve as sam_admin)
+   - #7 set_pause_flag client/71100000 — rule: worker_error_rate — reason: worker producer failed 2 of 3 runs in the last 1h — if applied: clients.paused → True (approve as sam_admin)
+   - #8 set_pause_flag client/71100000 — rule: lead_velocity — reason: 12 leads in 24h against a 7-day median of 1 (limit 3) — if applied: clients.paused → True (approve as sam_admin)
+   - approved and waiting for `apply actions`: 1
+   - held by the executor on its last run: rate_limit 1
+   - reply in chat: `approve 1,2; reject 3: reason`, then `apply actions`
+
+2. Actions taken (2)
+   - activate ad_entity/71100004 — approved by sam (chat) — rule: sam_launch — applied 2026-09-09 12:00 UTC
+   - kill ad_entity/71100004 — autonomous — rule: ctr_floor — applied 2026-09-09 18:30 UTC
+
+3. Active lever per campaign (2)
+   - new_recipes [ACTIVE] cmp-1001 — lever: cost_per_link_click — reason: config floor cost_per_link_click 2.5 (no own history, see [url removed] — since 2026-09-09 20:00 UTC — moved: yes
+   - ablation [PAUSED] not built — lever not set (no `pull insights` yet)
+
+4. New learnings (1)
+   - proposed (client) — job-photo-bubble beats screenshot-ad on link CTR (notes: [url removed] — direction beat, effect 0.00450, sample 120, posterior 0.610 — by sam [sample_reached=false]
+
+5. Warnings (10)
+   - runs row left `running` by a crashed producer run since 2026-09-09 22:00 UTC [7110000b]
+   - intel run failed at 2026-09-09 23:00 UTC: RuntimeError: scrapecreators 503 at [url removed]
+   - intel run failed at 2026-09-09 23:30 UTC: RuntimeError: scrapecreators 503 again
+   - producer run failed at 2026-09-10 05:10 UTC: ValueError: render timed out
+   - producer run failed at 2026-09-10 05:12 UTC: ValueError: render timed out
+   - pause ad_entity/71100003 failed (1 attempt(s)): Meta 400: see [url removed]
+   - source AG1 failed twice: `plan batch` is blocked until `acknowledge AG1`
+   - account spend today 52.00 EUR exceeds daily_cap 45.00 (observed 2026-09-10 05:00 UTC)
+   - brake tripped (worker_error_rate): worker producer failed 2 of 3 runs in the last 1h; set_pause_flag proposed, approve it as sam_admin
+   - brake tripped (lead_velocity): 12 leads in 24h against a 7-day median of 1 (limit 3); set_pause_flag proposed, approve it as sam_admin

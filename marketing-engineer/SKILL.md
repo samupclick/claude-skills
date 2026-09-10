@@ -76,9 +76,9 @@ Print it as a short table. If `actions_stuck > 0`, say so and stop: only the exe
 | `launch` | launcher | `scripts/meta_launch.py` | **proposed** `build_campaign` action only | Sam approves (§5.3) |
 | `apply actions` | executor | `scripts/apply_actions.py` | transitions `actions`; creates Meta objects; `ad_entities`, `campaigns` | — |
 | `pull insights` | loop | `scripts/meta_insights.py` | `ad_metrics_daily`, `account_spend_hourly`, `campaigns.active_lever`, proposed kill/scale, `learnings` | — |
-| `check-in` | loop | `scripts/checkin.py` | `runs`; sends the five-part email via the Gmail connector | Sam reads, approves in chat |
+| `check-in` | loop | `scripts/checkin.py` | `runs`; proposed `set_pause_flag` from the error-rate and lead-velocity brakes (FR-47); sends the five-part email via the email adapter (Gmail connector at go-live) | Sam reads, approves in chat |
 | `monday memo` | loop | `scripts/monday_memo.py` | memo file + proposed `promote_variant` / `retire_family` | Sam reads |
-| `pause the pipeline` / `resume` | — | `scripts/pause.py` | proposed `set_pause_flag` (Sam approves as `sam_admin`) | Sam |
+| `pause the pipeline` / `resume` | — | `scripts/pause.py pause\|resume\|status` | proposed `set_pause_flag` (Sam approves with `decide.py --as sam_admin`, applies with `apply_actions.py --role sam_admin`) | Sam |
 | `onboard client <slug>` | — | `scripts/onboard.py` | `clients`, `offers`, `icps` from a cloned config | Sam confirms |
 
 Run the script; do not re-implement it in chat. If a script does not exist yet, say so and stop; do not improvise a side effect.
@@ -147,6 +147,8 @@ Two fixed wakes, fresh session each, SessionStart hook installs Chromium, Python
 | `me-monday` | `0 7 * * 1` | `Use the marketing-engineer skill. Run: status, monday memo for client upclicklabs. Then stop.` |
 
 No session-bound webhooks. The quiz and calendar Edge Functions write to the warehouse; the next wake picks it up.
+
+`config/routines.json` is the machine-readable twin of this table (a test fails when they drift); `scripts/routines.py list|check|dry-run <name>` prints, checks, and executes a routine's steps locally. The hook is `.claude/hooks/session-start.sh`. Registration as Claude Code Routines (one `create_trigger` per row, fresh session per fire, `cron_utc` as given) is the go-live swap (T13 step 7); the 08:00 routine is `me-morning`, 20:00 is `me-evening`.
 
 ## 9. Repo layout this skill expects
 

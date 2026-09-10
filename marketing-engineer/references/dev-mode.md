@@ -80,6 +80,17 @@ sample size (the view says `hold`, no agent learning is written). `--today` sets
 second pull under another seed on a later `--today` is the FR-38 restatement (two rows, one latest). Stop point D:
 `python3 scripts/meta_insights.py --learning "<Sam's hypothesis>"` writes the hand-written proposed learning.
 
+`check-in` in dev mode: `python3 scripts/checkin.py` (recipient `CHECKIN_TO` from `.env`, default `sam@example.invalid`;
+`--to` overrides) writes the five-part email to `.dev/outbox/*.eml` through `EMAIL_BACKEND=file`; `--dry-run` prints it
+instead; `--since 24h|ISO` and `--now ISO` fix the window. The golden body is `fixtures/checkin/golden-body.txt`
+(`CHECKIN_GOLDEN_WRITE=1 python3 -m pytest tests/test_checkin.py -k golden` regenerates it after a deliberate change).
+`pause the pipeline`: `python3 scripts/pause.py pause --reason "…"` proposes `set_pause_flag`; approve with
+`scripts/decide.py --as sam_admin "approve N"` and apply with `scripts/apply_actions.py --role sam_admin`
+(`WAREHOUSE_URL_SAM_ADMIN` is in `.env` in dev mode); `resume` and `status` likewise. Routines: `python3 scripts/routines.py
+dry-run me-morning` runs the 08:00 prompt's steps as scripts against the dev warehouse; steps whose script a later ticket
+owns (`monday_memo.py`, T12) are reported as not built and the dry-run continues. The SessionStart hook (`.claude/hooks/session-start.sh`) does
+`pip install`, checks Chromium, creates `.env`, reports secret names, and runs `scripts/dev_db.sh` in remote sessions.
+
 ## Placeholders that need Sam's replacement before go-live
 
 | File | Status | Replace with |
@@ -98,7 +109,7 @@ second pull under another seed on a later `--today` is the FR-38 restatement (tw
 4. Save one real scrapecreators call to `fixtures/ad_library/real-001.json`; fix the normaliser if the shape differs; `INSPO_BACKEND=scrapecreators`; re-run `pull_inspo.py`.
 5. `IMAGE_BACKEND=gemini` with the key; re-render.
 6. Meta: token in the executor's env only; `META_BACKEND=live`; `CAPI_BACKEND=live`; `FUNNEL_HOST=https://go.upclicklabs.com`; deploy the quiz app; `test_events.py` green.
-7. `EMAIL_BACKEND=gmail`; send one check-in.
+7. `EMAIL_BACKEND=gmail` with `CHECKIN_TO` set to Sam's address; send one check-in (`scripts/checkin.py`); register the three routines from `config/routines.json` (`scripts/routines.py list`) as Claude Code Routines, fresh session per fire.
 8. Only then: `launch` → stop point C → `apply actions`.
 
 Nothing in steps 1–7 changes code. If it does, that is a bug in the adapter boundary and goes back to the ticket that owns it.

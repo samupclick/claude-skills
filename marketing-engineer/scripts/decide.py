@@ -78,11 +78,13 @@ def resolve(conn, client_id, ref: str) -> dict[str, Any]:
 
 def what_changes(a: dict[str, Any]) -> str:
     t, p = a["action_type"], a["proposal"] or {}
+    ad_sets = p.get("ad_sets")
+    ad_sets = len(ad_sets) if isinstance(ad_sets, (list, dict)) else (ad_sets if ad_sets is not None else 0)   # a count or a list
     return {
         "pause": "ad → PAUSED in Meta", "kill": "ad → ARCHIVED in Meta (final)", "activate": "ad/campaign → ACTIVE in Meta (spends)",
         "scale": f"ad set budget → {p.get('adset_daily_budget')}", "set_pause_flag": f"clients.paused → {p.get('paused')}",
         "promote_trust": f"trust.{a['target_id']}.level → {p.get('level')}", "quote_release": "release recorded; gate may use the quote",
-        "build_campaign": f"campaign + {len(p.get('ad_sets', []) or [])} ad set(s) created paused in Meta",
+        "build_campaign": f"campaign + {ad_sets} ad set(s) created paused in Meta",
     }.get(t, "no executor path in phase 0")
 
 

@@ -5,15 +5,12 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup",
+        "matcher": "startup|resume",
         "hooks": [
           {
             "type": "command",
-            "command": "claude plugin list 2>/dev/null | grep -q 'mattpocock-skills@claude-plugins-official' || claude plugin install mattpocock-skills@claude-plugins-official >/dev/null 2>&1 || echo 'mattpocock-skills plugin install failed; fetch skills from https://github.com/mattpocock/skills manually'"
-          },
-          {
-            "type": "command",
-            "command": "pip install -q -r marketing-engineer/requirements.txt >/dev/null 2>&1 || echo 'pip install -r marketing-engineer/requirements.txt failed; run it by hand before scripts/dev_db.sh'"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh",
+            "timeout": 600
           }
         ]
       }

@@ -283,15 +283,15 @@ BLOCKED_SOURCES_SQL = """
 with outcomes as (
   select r.started_at, s.source, 'failed' as outcome
     from runs r, jsonb_array_elements_text(coalesce(r.counts->'sources_failed', '[]'::jsonb)) s(source)
-   where r.worker = 'intel'
+   where r.worker = 'intel' and (%(client_id)s::uuid is null or r.client_id = %(client_id)s::uuid)
   union all
   select r.started_at, s.source, 'ok'
     from runs r, jsonb_array_elements_text(coalesce(r.counts->'sources_ok', '[]'::jsonb)) s(source)
-   where r.worker = 'intel'
+   where r.worker = 'intel' and (%(client_id)s::uuid is null or r.client_id = %(client_id)s::uuid)
   union all
   select r.started_at, s.source, 'acknowledged'
     from runs r, jsonb_array_elements_text(coalesce(r.counts->'acknowledged', '[]'::jsonb)) s(source)
-   where r.worker = 'intel'
+   where r.worker = 'intel' and (%(client_id)s::uuid is null or r.client_id = %(client_id)s::uuid)
 ), ranked as (
   select source, outcome, row_number() over (partition by source order by started_at desc) as rn from outcomes
 )
@@ -301,10 +301,11 @@ order by source;
 """
 
 
-def blocked_sources(conn: Connection) -> list[str]:
+def blocked_sources(conn: Connection, client_id: UUID | str | None = None) -> list[str]:
     """Sources (brand names) with two consecutive intel failures and no acknowledgement since (FR-8).
-    The planner refuses `plan batch` naming these."""
-    return [row["source"] for row in conn.execute(BLOCKED_SOURCES_SQL).fetchall()]
+    The planner refuses `plan batch` naming these. `client_id` limits the outcomes to one client's intel
+    runs (the check-in, T11); the planner keeps the default, every intel run."""
+    return [row["source"] for row in conn.execute(BLOCKED_SOURCES_SQL, {"client_id": None if client_id is None else str(client_id)}).fetchall()]
 
 
 def learnings_before_planning(conn: Connection, client_id: UUID | str) -> list[dict[str, Any]]:
