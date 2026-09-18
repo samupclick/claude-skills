@@ -1,0 +1,286 @@
+<title>Circadian Q4 Offer Economics</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --ground:#F5F6FA; --paper:#FFFFFF; --ink:#1C2030; --ink-2:#4C5266; --muted:#7D8398;
+  --rule:#D9DCE6; --rule-2:#EDEFF4;
+  --accent:#2F3C8F; --accent-ink:#FFFFFF; --accent-soft:#E8EAF7;
+  --warn:#A8591A; --warn-soft:#FBF0E4; --good:#2C6B4C; --good-soft:#E4F2EA;
+  --input-bg:#FFFFFF; --input-border:#B9BDCC;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#13151C; --paper:#1A1D26; --ink:#E7E9F0; --ink-2:#B8BCCB; --muted:#8B90A3;
+    --rule:#30344A; --rule-2:#252838;
+    --accent:#98A3FF; --accent-ink:#0F1330; --accent-soft:#242A4C;
+    --warn:#E5A253; --warn-soft:#2E2418; --good:#7FC79C; --good-soft:#18291F;
+    --input-bg:#12141B; --input-border:#464B63;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#13151C; --paper:#1A1D26; --ink:#E7E9F0; --ink-2:#B8BCCB; --muted:#8B90A3;
+  --rule:#30344A; --rule-2:#252838;
+  --accent:#98A3FF; --accent-ink:#0F1330; --accent-soft:#242A4C;
+  --warn:#E5A253; --warn-soft:#2E2418; --good:#7FC79C; --good-soft:#18291F;
+  --input-bg:#12141B; --input-border:#464B63;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:"Source Serif 4",Georgia,"Times New Roman",serif;font-size:17px;line-height:1.55;font-optical-sizing:auto}
+h1,h2,h3{font-family:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:2.3rem;font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.45rem;font-weight:700;margin-top:3rem;padding-top:1.1rem;border-top:2px solid var(--ink)}
+h3{font-size:1.08rem;font-weight:700}
+p{margin:.85rem 0}
+.mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em}
+.eyebrow{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.wrap{max-width:1080px;margin:0 auto;padding:2.5rem 1rem 5rem}
+main{min-width:0}
+.lede{font-size:1.08rem;color:var(--ink-2);max-width:64ch;margin-top:.7rem}
+.notice{border-left:3px solid var(--accent);background:var(--accent-soft);padding:.8rem 1rem;margin:1.4rem 0;max-width:72ch}
+.notice p{margin:.3rem 0}
+.anchors{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.9rem 1.5rem;background:var(--paper);border:1px solid var(--rule);padding:1.1rem 1.3rem;margin-top:1.6rem}
+.anchors div{display:flex;flex-direction:column;gap:.15rem}
+.anchors .v{font-family:"JetBrains Mono",monospace;font-size:.95rem}
+.anchors .s{font-size:.86rem;color:var(--ink-2)}
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin-top:1.3rem;align-items:stretch}
+.tier{background:var(--paper);border:1px solid var(--rule);padding:1.1rem 1.2rem;display:flex;flex-direction:column;gap:.6rem}
+.tier.rec{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft) inset}
+.tier .eyebrow{display:flex;justify-content:space-between;align-items:center}
+.tier .badge{background:var(--accent);color:var(--accent-ink);padding:.15rem .5rem;border-radius:3px;font-size:.62rem;letter-spacing:.1em}
+.tier .price{font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:1.65rem;font-weight:700;line-height:1.1}
+.tier .price small{display:block;font-size:.8rem;font-weight:500;color:var(--ink-2);font-family:"Source Serif 4",Georgia,serif;margin-top:.2rem}
+.tier ul{margin:.2rem 0 0;padding-left:1.1rem;font-size:.93rem}
+.tier li{margin:.3rem 0}
+.tier .terms{margin-top:auto;padding-top:.6rem;border-top:1px solid var(--rule-2);font-size:.86rem;color:var(--ink-2)}
+.inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.8rem 1.2rem;background:var(--paper);border:1px solid var(--rule);padding:1rem 1.2rem;margin-top:1.2rem}
+.inputs label{display:flex;flex-direction:column;gap:.25rem;font-size:.86rem;color:var(--ink-2)}
+.inputs input{font-family:"JetBrains Mono",monospace;font-size:.95rem;padding:.4rem .5rem;border:1px solid var(--input-border);border-radius:3px;background:var(--input-bg);color:var(--ink);width:100%}
+.inputs input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.inputs .group{grid-column:1/-1;font-family:"JetBrains Mono",monospace;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:.3rem}
+.tablewrap{overflow-x:auto;margin:1.2rem 0;border:1px solid var(--rule);background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:.93rem;line-height:1.4}
+th,td{text-align:left;vertical-align:top;padding:.55rem .7rem;border-bottom:1px solid var(--rule-2)}
+th{font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);background:var(--ground);border-bottom:1px solid var(--rule)}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;font-family:"JetBrains Mono",monospace;font-size:.86rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.lbl{color:var(--ink-2)}
+tr.total td{font-weight:600;border-top:1px solid var(--rule)}
+.flag{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;padding:.15rem .45rem;border-radius:3px}
+.flag.good{background:var(--good-soft);color:var(--good)}
+.flag.warn{background:var(--warn-soft);color:var(--warn)}
+.callout{padding:.8rem 1rem;margin:1rem 0;display:grid;grid-template-columns:auto 1fr;gap:.2rem 1rem;align-items:start;max-width:72ch}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .5rem;border-radius:3px;margin-top:.2rem;white-space:nowrap;color:#fff}
+.callout.warn{background:var(--warn-soft)}.callout.warn .tag{background:var(--warn)}
+.callout.good{background:var(--good-soft)}.callout.good .tag{background:var(--good)}
+.callout p{margin:0}
+.prose{max-width:72ch}
+ol,ul{padding-left:1.4rem}
+li{margin:.35rem 0}
+li::marker{color:var(--muted);font-family:"JetBrains Mono",monospace;font-size:.85em}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);color:var(--muted);font-size:.85rem}
+</style>
+
+<div class="wrap"><main>
+<header>
+  <span class="eyebrow">UpClick Labs · Internal · Client file: Dough Labs LLC (Circadian)</span>
+  <h1 style="margin-top:.5rem">Circadian Q4 Offer Economics</h1>
+  <p class="lede">Three tiers to answer Jacob's 17 September email, and what each one is worth to UpClick. Prices are what Jacob sees. Hours, rates and the performance model are the assumptions underneath, and every input below is editable so the numbers can be stress-tested before anything is sent.</p>
+  <div class="anchors">
+    <div><span class="eyebrow">What he asked for</span><span class="v">Meta consulting, structure only</span><span class="s">"Read the account architecture and tell me where it is wrong before I put real money through it."</span></div>
+    <div><span class="eyebrow">What he rejected</span><span class="v">10% of Meta revenue</span><span class="s">Margin after hand-sewing and freight cannot carry a revenue share on top of spend.</span></div>
+    <div><span class="eyebrow">Kris's contracted rate</span><span class="v">$50 / hour</span><span class="s">The anchor he lives with. Retainer about $1,350 a month.</span></div>
+    <div><span class="eyebrow">Add-ons he bought unprompted</span><span class="v">$747</span><span class="s">Bedding research plus six articles from the month-three list. Price-aware, not cheap.</span></div>
+    <div><span class="eyebrow">Time pressure</span><span class="v">Q4 in 12 days</span><span class="s">Bedding launch, comparison pages, duvet study, all landing at once. He is running Meta himself.</span></div>
+  </div>
+</header>
+
+<div class="notice"><p><strong>How to read this.</strong> Section 1 is the offer as Jacob sees it. Sections 2 to 4 are the internal view: Sam's hours, effective rate, the performance tier modelled honestly, and what the account is worth to UpClick per quarter. Defaults are estimates, not measurements. Change them.</p></div>
+
+<h2 id="tiers">1. The three tiers, as Jacob sees them</h2>
+<p class="prose">He picks one. Never yes or no. The middle tier is the one we want him to choose, so it carries the most value and the clearest outcome. The third tier exists to answer his objection exactly, profit not revenue and capped, and to make the middle look reasonable.</p>
+<div class="tiers">
+  <section class="tier">
+    <div class="eyebrow">Entry</div>
+    <h3>Q4 Meta Architecture Review</h3>
+    <div class="price" id="p-entry">$950<small>one-off, delivered in five working days</small></div>
+    <ul>
+      <li>Read-only look at the portfolio via partner access from UpClick's business portfolio. Analyst role only.</li>
+      <li>Written report: account and campaign structure, pixel and Conversions API through Shopify, event match quality, attribution settings, audiences and exclusions, budgets and caps, admins and two-factor.</li>
+      <li>His current angles checked against the swipe file.</li>
+      <li>Prioritised fix list with what, why and how.</li>
+      <li>One written round of follow-up questions.</li>
+    </ul>
+    <div class="terms">Credited in full against the Sprint if he moves within 14 days of the report.</div>
+  </section>
+  <section class="tier rec">
+    <div class="eyebrow">Core <span class="badge">Recommended</span></div>
+    <h3>Circadian Q4 Growth Sprint, 90 days</h3>
+    <div class="price" id="p-core">$2,250 a month<small>three months, or $6,000 paid upfront</small></div>
+    <ul>
+      <li>Everything in the Review, in week one.</li>
+      <li>Retargeting build for blog and comparison-page readers, the audience he said he cares about most.</li>
+      <li>Creative testing system from his swipe file, with a written test plan every week.</li>
+      <li>Scaling rules, 20 to 30 percent a week, with a written check before every budget step.</li>
+      <li>Shopify data-sharing at Maximum, pixel plus Conversions API.</li>
+      <li>Monthly growth review tying Meta to Kris's organic work and the bedding launch.</li>
+      <li>He executes. Sam designs and checks. Nothing published by UpClick.</li>
+    </ul>
+    <div class="terms">Guarantee: if after 90 days Meta-attributed revenue has not covered ad spend plus the fee, month four is free. Conditions: each plan implemented within five working days, spend kept at the agreed floor, read-only access from day one.</div>
+  </section>
+  <section class="tier">
+    <div class="eyebrow">Full</div>
+    <h3>Growth Sprint plus performance</h3>
+    <div class="price" id="p-full">$1,500 a month<small>plus a share of Meta gross profit above a baseline, capped</small></div>
+    <ul>
+      <li>Everything in the Sprint.</li>
+      <li>Lower fixed fee. UpClick takes a percentage of Meta-attributed gross profit (revenue times gross margin) above a baseline agreed in month one.</li>
+      <li>Capped per month, so his worst case is known before he signs.</li>
+      <li>Only offered if margin is shared and Shopify's Meta channel is at Maximum data-sharing, so the number is measurable.</li>
+    </ul>
+    <div class="terms">Same guarantee and conditions as the Sprint.</div>
+  </section>
+</div>
+
+<h2 id="assumptions">2. Assumptions</h2>
+<p class="prose">Sam's time is the only real cost. The target rate is the value of an hour that could go to another client, not a cash cost. Hours are estimates for a client who follows written plans without calls, which is how the offer is written.</p>
+<div class="inputs" id="inputs">
+  <div class="group">Sam's time</div>
+  <label>Target value of Sam's hour ($)<input type="number" id="rate" value="120" min="1" step="5"></label>
+  <label>Review hours (Entry, or Sprint week one)<input type="number" id="hRev" value="10" min="0" step="1"></label>
+  <label>Sprint month 1 hours, beyond the review<input type="number" id="hM1" value="8" min="0" step="1"></label>
+  <label>Sprint months 2 and 3, hours each<input type="number" id="hM" value="10" min="0" step="1"></label>
+  <div class="group">Prices</div>
+  <label>Entry price ($)<input type="number" id="pEntry" value="950" min="0" step="50"></label>
+  <label>Core monthly ($)<input type="number" id="pCore" value="2250" min="0" step="50"></label>
+  <label>Core upfront for three months ($)<input type="number" id="pCoreUp" value="6000" min="0" step="50"></label>
+  <label>Full fixed monthly ($)<input type="number" id="pFull" value="1500" min="0" step="50"></label>
+  <label>Full share of gross profit above baseline (%)<input type="number" id="share" value="10" min="0" max="50" step="1"></label>
+  <label>Full monthly cap on the share ($)<input type="number" id="cap" value="2000" min="0" step="100"></label>
+  <div class="group">Jacob's Meta numbers, for the Full tier</div>
+  <label>Gross margin on product (%)<input type="number" id="margin" value="45" min="1" max="95" step="1"></label>
+  <label>Meta ad spend, month 1 ($)<input type="number" id="spend1" value="4000" min="0" step="250"></label>
+  <label>Meta ad spend, month 2 ($)<input type="number" id="spend2" value="6000" min="0" step="250"></label>
+  <label>Meta ad spend, month 3 ($)<input type="number" id="spend3" value="9000" min="0" step="250"></label>
+  <label>Meta-attributed revenue per $1 of spend (ROAS)<input type="number" id="roas" value="2.5" min="0" step="0.1"></label>
+  <label>Baseline monthly Meta gross profit, agreed month one ($)<input type="number" id="baseline" value="2500" min="0" step="250"></label>
+  <div class="group">Context</div>
+  <label>Kris's monthly retainer ($)<input type="number" id="kris" value="1350" min="0" step="50"></label>
+  <label>Chance the guarantee is triggered (%)<input type="number" id="gProb" value="25" min="0" max="100" step="5"></label>
+</div>
+
+<h2 id="econ">3. What each tier is worth to UpClick</h2>
+<p class="prose">Ninety-day view. "Effective rate" is revenue divided by Sam's hours. "Versus target" is that rate against the value of Sam's hour set above. The guarantee cost is the expected value of month four at no fee: the hours it would take, at the target rate, times the chance it triggers.</p>
+<div class="tablewrap"><table id="econTable">
+<thead><tr><th>Tier</th><th class="n">Revenue, 90 days</th><th class="n">Sam's hours</th><th class="n">Effective rate</th><th class="n">Versus target</th><th class="n">Guarantee cost, expected</th><th class="n">Net at target rate</th><th>Read</th></tr></thead>
+<tbody id="econBody"></tbody>
+</table></div>
+<div class="callout warn" id="fullNote"><span class="tag">Watch</span><p id="fullNoteText"></p></div>
+
+<h3 style="margin-top:1.8rem">The Full tier, month by month</h3>
+<p class="prose">Meta gross profit here means Meta-attributed revenue times gross margin. The share applies only to the part above the agreed baseline, and is capped. This is the honest version of a performance deal on thin margins: it pays UpClick more than the Sprint only once Jacob is spending at scale.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Month</th><th class="n">Spend</th><th class="n">Meta revenue</th><th class="n">Meta gross profit</th><th class="n">Above baseline</th><th class="n">Share (capped)</th><th class="n">Fixed fee</th><th class="n">Total to UpClick</th><th class="n">Core would be</th></tr></thead>
+<tbody id="fullBody"></tbody>
+</table></div>
+<p class="prose" id="breakeven"></p>
+
+<h2 id="account">4. What the account becomes</h2>
+<p class="prose">Circadian is currently Kris's retainer plus whatever line items Jacob buys. The Sprint puts a second, higher-value layer on the same client without adding a second delivery seat, because Jacob executes Meta himself.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Scenario</th><th class="n">Kris, 90 days</th><th class="n">Sam, 90 days</th><th class="n">Circadian to UpClick, 90 days</th><th class="n">Monthly run rate</th><th class="n">Change vs today</th></tr></thead>
+<tbody id="acctBody"></tbody>
+</table></div>
+
+<h2 id="rules">5. Rules that protect the margin</h2>
+<div class="prose">
+<ol>
+  <li><strong>Written only.</strong> Calls are the fastest way to turn a $178-an-hour engagement into a $60-an-hour one. If he wants calls, they are priced separately.</li>
+  <li><strong>Analyst access only, from UpClick's portfolio.</strong> Never admin, never the card, never publishing. The moment UpClick publishes, UpClick owns outcomes and the guarantee becomes uncapped exposure.</li>
+  <li><strong>The guarantee has conditions and they are written down.</strong> Five working days to implement each plan, an agreed spend floor, access from day one. Miss a condition, the guarantee lapses for that month.</li>
+  <li><strong>Full tier only with clean measurement.</strong> Margin figure from Jacob, Shopify Meta channel at Maximum data-sharing, and a baseline month on record before the share applies. No margin figure, no Full tier: Core becomes the top.</li>
+  <li><strong>Sell the Review, then let the Review sell the Sprint.</strong> The report's last page is the Sprint. Do not pitch the Sprint before the report exists; the report is where the numbers come from.</li>
+  <li><strong>Separate invoice line from Kris.</strong> Same UpClick invoice from month four, separate line, so either engagement can end without touching the other.</li>
+</ol>
+</div>
+
+<h2 id="decision">6. Decision</h2>
+<div class="callout good"><span class="tag">Recommend</span><p>Offer all three. Lead the email with the Sprint. Position the Review as the risk-free way in, with the credit. Keep the Full tier as the answer to his profit objection, and drop it silently if he will not share margin. Do not offer an hourly rate or a per-question price; he asked for structure, so sell one thing to buy now and one thing to buy after.</p></div>
+<p class="prose">If he takes the Review only, UpClick earns a fair rate for ten hours and gets the diagnosis that makes the next conversation easy. If he takes the Sprint, Circadian roughly doubles as an account for a quarter with no new delivery seat. If he takes Full, UpClick earns slightly less than the Sprint in a normal quarter and more than it only if he scales, which is the right shape of bet for a client whose objection was margin.</p>
+
+<footer>Internal. Prices and hours are proposals as of 18 September 2026. Companion to the Circadian Meta Relaunch Plan in the same client file.</footer>
+</main></div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const ids=['rate','hRev','hM1','hM','pEntry','pCore','pCoreUp','pFull','share','cap','margin','spend1','spend2','spend3','roas','baseline','kris','gProb'];
+  const num=id=>{const v=parseFloat($(id).value);return isNaN(v)?0:v;};
+  const money=v=>(v<0?'-':'')+'$'+Math.round(Math.abs(v)).toLocaleString('en-US');
+  const pct=v=>(v>=0?'+':'')+Math.round(v)+'%';
+  function load(){try{const s=localStorage.getItem('circ-offer-inputs');if(s){const o=JSON.parse(s);ids.forEach(i=>{if(o[i]!==undefined)$(i).value=o[i];});}}catch(e){}}
+  function save(){try{const o={};ids.forEach(i=>o[i]=$(i).value);localStorage.setItem('circ-offer-inputs',JSON.stringify(o));}catch(e){}}
+  function calc(){
+    const rate=num('rate'),hRev=num('hRev'),hM1=num('hM1'),hM=num('hM');
+    const pEntry=num('pEntry'),pCore=num('pCore'),pCoreUp=num('pCoreUp'),pFull=num('pFull');
+    const share=num('share')/100,cap=num('cap'),margin=num('margin')/100,roas=num('roas'),baseline=num('baseline');
+    const spends=[num('spend1'),num('spend2'),num('spend3')];
+    const kris=num('kris'),gProb=num('gProb')/100;
+    const sprintHours=hRev+hM1+hM*2;
+    const guardHours=hM; // month four at no fee
+    const guardCost=guardHours*rate*gProb;
+
+    // price labels
+    $('p-entry').innerHTML=money(pEntry)+'<small>one-off, delivered in five working days</small>';
+    $('p-core').innerHTML=money(pCore)+' a month<small>three months, or '+money(pCoreUp)+' paid upfront</small>';
+    $('p-full').innerHTML=money(pFull)+' a month<small>plus '+Math.round(share*100)+'% of Meta gross profit above a baseline, capped at '+money(cap)+' a month</small>';
+
+    // full tier months
+    let fullShare=0, rows='';
+    spends.forEach((sp,i)=>{
+      const rev=sp*roas, gp=rev*margin, above=Math.max(0,gp-baseline), sh=Math.min(cap,above*share);
+      fullShare+=sh;
+      rows+='<tr><td>Month '+(i+1)+'</td><td class="n">'+money(sp)+'</td><td class="n">'+money(rev)+'</td><td class="n">'+money(gp)+'</td><td class="n">'+money(above)+'</td><td class="n">'+money(sh)+'</td><td class="n">'+money(pFull)+'</td><td class="n">'+money(pFull+sh)+'</td><td class="n">'+money(pCore)+'</td></tr>';
+    });
+    const fullTotal=pFull*3+fullShare;
+    rows+='<tr class="total"><td>90 days</td><td class="n">'+money(spends.reduce((a,b)=>a+b,0))+'</td><td></td><td></td><td></td><td class="n">'+money(fullShare)+'</td><td class="n">'+money(pFull*3)+'</td><td class="n">'+money(fullTotal)+'</td><td class="n">'+money(pCore*3)+'</td></tr>';
+    $('fullBody').innerHTML=rows;
+
+    // break-even: gross profit at which Full month equals Core month
+    let be='';
+    if(share>0){
+      const gpNeeded=baseline+(pCore-pFull)/share;
+      const spendNeeded=(roas>0&&margin>0)?gpNeeded/(roas*margin):0;
+      const capped=(pCore-pFull)>cap;
+      be='Break-even: the Full tier pays UpClick as much as Core in a month once Meta gross profit reaches '+money(gpNeeded)+', which at these assumptions is about '+money(spendNeeded)+' of monthly spend.'+(capped?' At the current cap the Full tier can never match Core: the cap is below the fixed-fee gap.':'');
+    } else { be='With a zero share the Full tier is simply a cheaper Sprint.'; }
+    $('breakeven').textContent=be;
+
+    // econ table
+    function row(name,revenue,hours,gc,note){
+      const eff=hours>0?revenue/hours:0, vs=rate>0?(eff/rate-1)*100:0, net=revenue-hours*rate-gc;
+      const flag=vs>=0?'<span class="flag good">above target</span>':'<span class="flag warn">below target</span>';
+      return '<tr><td>'+name+'</td><td class="n">'+money(revenue)+'</td><td class="n">'+hours+'</td><td class="n">'+money(eff)+'/h</td><td class="n">'+pct(vs)+'</td><td class="n">'+money(gc)+'</td><td class="n">'+money(net)+'</td><td>'+flag+' '+note+'</td></tr>';
+    }
+    let e='';
+    e+=row('Entry: Review only',pEntry,hRev,0,'Fair for ten hours. Its job is the diagnosis that sells the Sprint.');
+    e+=row('Core: Sprint, monthly',pCore*3,sprintHours,guardCost,'The target. One client, no delivery seat, Jacob executes.');
+    e+=row('Core: Sprint, paid upfront',pCoreUp,sprintHours,guardCost,'Cash now, small discount. Still well above target.');
+    e+=row('Core after Review credit',pCore*3-pEntry,sprintHours,guardCost,'If he buys the Review first, then converts. Review hours are already inside the Sprint hours.');
+    e+=row('Full: fixed plus share',fullTotal,sprintHours,guardCost,fullTotal>=pCore*3?'Beats Core at these assumptions. He is scaling.':'Below Core at these assumptions. It is a bet on scale, priced as one.');
+    $('econBody').innerHTML=e;
+    $('fullNoteText').textContent='The Full tier is worth '+money(fullTotal)+' over 90 days at these assumptions, against '+money(pCore*3)+' for Core. '+(fullTotal>=pCore*3?'It only wins because spend scales through the quarter; if he holds spend flat it drops below Core.':'That is by design: it answers his margin objection and makes Core look like the sensible middle. Do not push him toward it.');
+
+    // account table
+    const today=kris*3;
+    function arow(name,samRev){
+      const total=today+samRev, run=total/3, chg=today>0?(total/today-1)*100:0;
+      return '<tr><td>'+name+'</td><td class="n">'+money(today)+'</td><td class="n">'+money(samRev)+'</td><td class="n">'+money(total)+'</td><td class="n">'+money(run)+'</td><td class="n">'+pct(chg)+'</td></tr>';
+    }
+    $('acctBody').innerHTML=arow('Today: Kris only',0)+arow('Review only',pEntry)+arow('Sprint',pCore*3)+arow('Full, at these assumptions',fullTotal);
+    save();
+  }
+  load();
+  ids.forEach(i=>$(i).addEventListener('input',calc));
+  calc();
+})();
+</script>
