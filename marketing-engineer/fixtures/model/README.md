@@ -27,3 +27,9 @@ model-judged hard checks (policy, brand flags, fabricated testimonial, coherence
 two shadow rubric scorings that alternate approve / reject. The warehouse-computed checks (`components`, `landing`,
 `verbatim`, rule-based `brand`) fail for real in dev mode; the model-judged failures are exercised with temporary
 fixtures in `tests/test_gate.py`. Re-record with `MODEL_BACKEND=claude` at go-live.
+
+`revise_copy.json` (FR-29, `scripts/render_creatives.py` retries) and `retranslate_brief.json` (FR-29, `scripts/plan_batch.py`
+re-translations): hand-written like the rest. `revise_copy` has the `write_copy` schema with exactly one execution and two
+outputs whose hook lines paraphrase every customer phrase, so a `verbatim` failure passes on its retry;
+`retranslate_brief` has the `translate_brief` schema and one output with no customer phrase. The gate's findings reach
+both tasks only inside the data block. Re-record both with `MODEL_BACKEND=claude` at go-live.

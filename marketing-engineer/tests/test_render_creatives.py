@@ -278,7 +278,7 @@ def test_produce_renders_six_creatives_with_full_components_through_storage_and_
 
 
 def test_a_chosen_brief_in_a_family_without_a_template_refuses_the_batch_before_any_render(producer_env, dev_root, capsys):
-    pick("default")                       # the ranker's top three include #2 stat_card, which has no weekend template
+    pick("1, 2, 3")                       # Sam's explicit pick of #2 stat_card, which has no weekend template (the default skips it)
     assert rc.main([]) == 2
     err = capsys.readouterr().err
     assert "brief #2" in err and "stat_card" in err and "stat-card.html" in err

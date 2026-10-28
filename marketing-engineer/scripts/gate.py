@@ -23,8 +23,9 @@
 `--verdicts` writes Sam's chat verdicts: one `gate_scores` row per named creative with `scored_by='sam'`,
 `decision_channel='chat'`, `verdict`, the reason in `feedback`; `approve` needs the hard checks passed (facts block)
 and moves the creative to `approved`; `reject` archives it. `default` writes nothing: nothing ships, said so.
-Worker role only; no side effect anywhere (SKILL.md §4 rule 1). Coherence feedback is recorded for the planner, not
-re-run automatically.
+Worker role only; no side effect anywhere (SKILL.md §4 rule 1). The feedback object is consumed by the next `produce`
+(scripts/render_creatives.py renders the next attempt, or marks the brief for `plan_batch.py` to re-translate when
+the route is `planner`); the gate itself never re-runs anything.
 """
 from __future__ import annotations
 

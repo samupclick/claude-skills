@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """`plan batch` / `my picks` (T4): the angle planner. SKILL.md §3, §4.2, §5.1; PRD FR-7 (guard), FR-8
-(consumer), FR-14 to FR-20.
+(consumer), FR-14 to FR-20, FR-29 (planner route).
 
     python3 scripts/plan_batch.py [--client upclicklabs] [--daily-budget 45] [--cpm 25] [--today YYYY-MM-DD]
     python3 scripts/plan_batch.py --select "2, 5, 9"                # Sam's picks (§5.1), optional `n: reason`
-    python3 scripts/plan_batch.py --select default                  # Sam quiet 20 minutes: the ranker's top N
+    python3 scripts/plan_batch.py --select default                  # Sam quiet 20 minutes: the ranker's top N with a template
+    python3 scripts/plan_batch.py --retranslate                     # FR-29: only re-translate briefs the gate sent back
 
 `plan batch`:
   1. opens a `runs` row (worker `planner`), prints "where are we", refuses when paused, when any action is
      `applying`, or when an inspo source failed twice without acknowledgement (FR-8, named);
   2. reads before planning (FR-14): learnings, `mart_component_leaderboard` (creatives >= 3, by
      `link_ctr_lcb`), the config floors, `voc_phrases`, `patterns`; every query is listed in `runs.counts.queries`;
+     then re-translates every brief the producer marked after the gate failed it on `coherence` (FR-29, see
+     `retranslate()`; committed before planning goes on);
   3. capacity = floor(daily_budget * 7 * 1000 / (cpm * kill_impressions)) (FR-15; `daily_budget` is
      `clients.daily_cap`, cpm is the last 7 days' observed CPM when there is one, else `config.cpm_estimate`);
      a batch (recipes * executions_per_recipe) larger than capacity is refused with the number said;
@@ -21,9 +24,13 @@
      (FR-17), each a translation through the model adapter that may change only offer, product nouns, VOC
      phrases, imagery subject (FR-18): the format layer is copied verbatim, the offer layer from `offers.offer_layer`;
   6. writes `experiments` (with `capacity`), one `hooks` row and one `briefs` row per proposal, and prints the
-     §5.1 numbered table; then waits for `my picks`.
+     §5.1 numbered table with the weekend template each family renders with (`NONE`: `produce` refuses the pick);
+     then waits for `my picks`.
 `--select` records the `selections` row (proposed, chosen, rejected, reason, selected_by) and marks the chosen
-briefs in `briefs.spec` (0003 grant). No ablation brief is created in phase 0; `ablation_allowed()` is the FR-19
+briefs in `briefs.spec` (0003 grant). `default` takes the ranker's top N whose family has a weekend template and
+names the ones it passed over; fewer than N such proposals refuses the default. Sam's explicit pick of a
+template-less family is recorded as given (selections are training data) with a warning; `produce` refuses it with
+its own message. No ablation brief is created in phase 0; `ablation_allowed()` is the FR-19
 guard only. Worker role only (`WAREHOUSE_URL_WORKER`); no side effect anywhere (SKILL.md §4 rule 1).
 """
 from __future__ import annotations
@@ -34,7 +41,7 @@ import math
 import os
 import re
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -47,7 +54,9 @@ from warehouse.client import Jsonb  # noqa: E402
 
 WORKER = "planner"
 TASK = "translate_brief"
+TASK_RETRANSLATE = "retranslate_brief"                                               # FR-29: the gate's coherence failure
 PROMPTS = ME_DIR / "references" / "prompts" / "planner.md"
+TEMPLATE_DIR = ME_DIR / "assets" / "creative-templates"                              # the producer's weekend templates
 ALLOWED_INGREDIENTS = ("offer", "product_nouns", "voc_phrases", "imagery_subject")   # FR-18, SKILL.md §4 rule 5
 FORMAT_LAYER_KEYS = ("family", "visual_structure", "copy_structure", "copy_length", "hook_type")
 ABLATION_MAX_CHANGED = 3                                                              # FR-19, CRUCIBLE A7
@@ -127,6 +136,13 @@ def rank_patterns(patterns: list[dict[str, Any]], n: int, retired: set[str] = fr
         picked.append(best)
         per_family[best["family"]] = per_family.get(best["family"], 0) + 1
     return picked
+
+
+def template_for(family: str, template_dir: Path = TEMPLATE_DIR) -> str | None:
+    """The weekend template a family renders with, by the producer's rule (`render_creatives.template_for_family`:
+    `<family with dashes>.html` in assets/creative-templates/), or None when there is none and `produce` refuses."""
+    name = family.replace("_", "-")
+    return name if (template_dir / f"{name}.html").exists() else None
 
 
 def complete_format_layer(p: dict[str, Any]) -> bool:
@@ -238,13 +254,38 @@ def offer_instructions(offer: dict[str, Any], icp: dict[str, Any] | None, config
     return "\n".join(lines)
 
 
+def _prompt_sections(path: Path) -> dict[str, str]:
+    sections = re.split(r"^## (\w+)\s*$", path.read_text(), flags=re.M)
+    return {sections[i].lower(): sections[i + 1].strip() for i in range(1, len(sections) - 1, 2)}
+
+
 def load_prompts(path: Path = PROMPTS) -> tuple[str, str]:
-    text = path.read_text()
-    sections = re.split(r"^## (\w+)\s*$", text, flags=re.M)
-    found = {sections[i].lower(): sections[i + 1].strip() for i in range(1, len(sections) - 1, 2)}
+    found = _prompt_sections(path)
     if "system" not in found or "instructions" not in found:
         raise RuntimeError(f"{path} needs '## System' and '## Instructions' sections")
     return found["system"], found["instructions"]
+
+
+def load_retranslation_prompt(path: Path = PROMPTS) -> str:
+    """The `## Retranslation` section: what changes when the gate sent a translation back (FR-29 planner route)."""
+    found = _prompt_sections(path)
+    if "retranslation" not in found:
+        raise RuntimeError(f"{path} needs a '## Retranslation' section")
+    return found["retranslation"]
+
+
+def untrusted_retranslation_text(pattern: dict[str, Any], voc: list[dict[str, Any]], brief: dict[str, Any],
+                                 feedback: list[dict[str, Any]]) -> str:
+    """The source recipe, the customer phrases, the previous translation and the gate's findings, as data: the findings
+    quote model output over ingested text (SKILL.md §4 rule 7), so they never reach the instructions."""
+    payload = json.loads(untrusted_pattern_text(pattern, voc))
+    spec = brief.get("spec") or {}
+    payload["previous_translation"] = {"hook_line": brief.get("hook_text") or spec.get("hook_line"), "product_nouns": spec.get("product_nouns"),
+                                       "imagery_subject": spec.get("imagery_subject"), "visual_spec": brief.get("visual_spec"),
+                                       "changed_ingredients": brief.get("changed_ingredients"), "coherence_note": spec.get("coherence_note")}
+    payload["gate_feedback"] = [{"criterion": f.get("criterion"), "issues": f.get("issues")}
+                                for row in feedback for f in ((row.get("feedback") or {}).get("failures") or []) if isinstance(f, dict)]
+    return json.dumps(payload, ensure_ascii=False, indent=1, default=str)
 
 
 def parse_picks(text: str) -> dict[int, str | None]:
@@ -341,6 +382,82 @@ select e.* from experiments e
 """
 
 
+MARKED_FOR_RETRANSLATION_SQL = """
+select b.*, h.text as hook_text, e.name as experiment_name from briefs b
+  left join hooks h on h.id = b.hook_id left join experiments e on e.id = b.experiment_id
+ where b.client_id = %s and b.spec ? 'retranslate' and not b.spec ? 'superseded_by'
+   and not coalesce(b.spec->'retranslate' ? 'refused', false)
+ order by b.created_at, b.id;
+"""
+
+GATE_FEEDBACK_SQL = """
+select distinct on (creative_id) creative_id, id, attempt, feedback from gate_scores
+ where creative_id = any(%s::uuid[]) and scored_by = 'agent' order by creative_id, attempt desc, created_at desc;
+"""
+
+
+def retranslate(conn: wh.Connection, r: wh.Run, reads: Reads, *, client: dict[str, Any], config: dict[str, Any], model: Model,
+                offer: dict[str, Any], icp: dict[str, Any] | None, voc: list[dict[str, Any]], retired: set[str]) -> list[dict[str, Any]]:
+    """FR-29, planner route: every brief the producer marked for re-translation (`briefs.spec.retranslate`, after the
+    gate failed `coherence`) is translated again from its source pattern with the gate's findings as data, and written
+    as a new brief of the same experiment and proposal number that carries the pick (`chosen`, `selection_id`) and
+    `recipe_brief_id`, the chosen brief the recipe started from. The old brief gets `superseded_by`; the producer
+    renders the next attempt from the new one. A translation the validator refuses is recorded as
+    `retranslate.refused` (the producer then drops the failed creative). Committed at once. Returns the new briefs."""
+    client_id = client["id"]
+    marked = reads.q("briefs_marked_for_retranslation", MARKED_FOR_RETRANSLATION_SQL, (client_id,))
+    r.counts.setdefault("retranslated", 0)
+    if not marked:
+        return []
+    system, instructions = load_prompts()
+    instructions = (instructions + "\n\n" + load_retranslation_prompt() + "\nFailed check: coherence (the gate routes it to the planner)."
+                    + "\n" + offer_instructions(offer, icp, config))
+    budget_tokens = int((((config.get("worker_budgets") or {}).get("planner") or {}).get("tokens")) or 0)
+    written = []
+    for old in marked:
+        spec = old.get("spec") or {}
+        mark = spec.get("retranslate") or {}
+        n = spec.get("proposal_number")
+        pattern = conn.execute("select * from patterns where id = %s", (old["source_pattern_id"],)).fetchone() if old.get("source_pattern_id") else None
+        refusal = None
+        if pattern is None or not complete_format_layer(pattern):
+            refusal = "the source pattern is gone or has no complete format layer"
+        else:
+            if budget_tokens and (r.tokens_used or 0) > budget_tokens:
+                raise BudgetExceeded(f"planner token budget {budget_tokens} spent before re-translating brief #{n}")
+            feedback = conn.execute(GATE_FEEDBACK_SQL, (list(mark.get("creative_ids") or []),)).fetchall()
+            result = model.generate_json(task=TASK_RETRANSLATE, system=system, instructions=instructions,
+                                         untrusted=untrusted_retranslation_text(pattern, voc, old, feedback), schema=translate_schema())
+            r.api_calls = (r.api_calls or 0) + 1
+            r.tokens_used = (r.tokens_used or 0) + result.tokens_used
+            values = brief_values(client_id=client_id, experiment_id=old["experiment_id"], offer=offer, icp=icp, pattern=pattern,
+                                  out=result.output, voc=voc, number=int(n or 0), backend=result.backend)
+            values["spec"].update(rank=spec.get("rank"), chosen=True, selection_id=spec.get("selection_id"),
+                                  selected_by=spec.get("selected_by"), pick_reason=spec.get("pick_reason"),
+                                  retranslation_of=str(old["id"]), recipe_brief_id=spec.get("recipe_brief_id") or str(old["id"]),
+                                  retranslation={k: mark.get(k) for k in ("creative_ids", "gate_score_ids", "attempt")})
+            try:
+                validate_brief(values, retired=retired, format_layer=spec.get("format_layer") or {}, voc_count=len(voc))
+            except BriefInvalid as exc:
+                refusal = str(exc)
+        if refusal:
+            conn.execute("update briefs set spec = jsonb_set(spec, '{retranslate,refused}', to_jsonb(%s::text)) where id = %s", (refusal, old["id"]))
+            r.count("retranslations_refused")
+            print(f"plan_batch: brief #{n} of {old.get('experiment_name')} cannot be re-translated: {refusal}; the producer drops its "
+                  f"failed creative (FR-29)", file=sys.stderr)
+            continue
+        brief = insert_brief(conn, client_id, values, pattern)
+        conn.execute("update briefs set spec = spec || %s where id = %s",
+                     (Jsonb({"superseded_by": str(brief["id"]), "retranslated_at": datetime.now(timezone.utc).isoformat()}), old["id"]))
+        r.count("retranslated")
+        written.append(brief)
+        print(f"plan_batch: brief #{n} of {old.get('experiment_name')} re-translated after the gate's coherence failure (attempt "
+              f"{mark.get('attempt')}): new brief {str(brief['id'])[:8]}, hook: {brief['hook_text'][:80]}. Next: `produce` renders attempt "
+              f"{int(mark.get('attempt') or 0) + 1}")
+    conn.commit()
+    return written
+
+
 def retired_for_icp(reads: Reads, client_id: Any, icp_id: Any) -> set[str]:
     """FR-7: a family is retired for the ICP when `families.status='retired'` or an applied `retire_family` action
     for this client names it (scoped to the ICP when its proposal carries `icp_id`). The retire flow itself is
@@ -389,6 +506,7 @@ def plan(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: dict
     retired = retired_for_icp(reads, client_id, icp["id"] if icp else None)
     r.counts.update(learnings_read=len(learnings), leaderboard_rows=len(leaderboard), voc_read=len(voc),
                     patterns_considered=len(patterns), retired_families=sorted(retired))
+    retranslate(conn, r, reads, client=client, config=config, model=model, offer=offer, icp=icp, voc=voc, retired=retired)
 
     # An open proposal already waits for picks: print it again rather than proposing twice.
     existing = open_experiment(conn, client_id)
@@ -456,52 +574,80 @@ def plan(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: dict
                                      untrusted=untrusted_pattern_text(p, voc), schema=schema)
         tokens += result.tokens_used
         r.api_calls = (r.api_calls or 0) + 1
-        out = result.output
-        format_layer = dict((p["recipe"] or {}).get("format_layer") or {})
-        voc_ids = [voc[i]["id"] for i in out["voc_phrase_indexes"] if 0 <= i < len(voc)]
-        values = dict(
-            client_id=client_id, experiment_id=exp["id"], offer_id=offer["id"], icp_id=icp["id"] if icp else None,
-            kind="replica", source_pattern_id=p["id"], changed_ingredients=list(out["changed_ingredients"]),
-            family=p["family"], angle=p.get("angle") or "", voc_phrase_ids=voc_ids, visual_spec=out["visual_spec"],
-            cta=(offer.get("offer_layer") or {}).get("cta_mechanic"),
-            spec={
-                "proposal_number": number, "rank": number, "format_layer": format_layer,
-                "offer_layer": offer.get("offer_layer") or {}, "hook_line": out["hook_line"],
-                "product_nouns": out["product_nouns"], "imagery_subject": out["imagery_subject"],
-                "voc_phrase_indexes": out["voc_phrase_indexes"], "coherence_note": out.get("coherence_note"),
-                "translation_backend": result.backend, "chosen": None,
-                "source": {"brand": p.get("source_brand"), "ad_id": _ad_id(p), "source_url": p.get("source_url"),
-                           "source_image_url": p.get("source_image_url"), "source_strength": p.get("source_strength"),
-                           "status": p.get("status"), "variant": p.get("variant"), "hook_type": p.get("hook_type")},
-            },
-        )
+        values = brief_values(client_id=client_id, experiment_id=exp["id"], offer=offer, icp=icp, pattern=p, out=result.output,
+                              voc=voc, number=number, backend=result.backend)
         try:
-            validate_brief(values, retired=retired, format_layer=format_layer, voc_count=len(voc))
+            validate_brief(values, retired=retired, format_layer=values["spec"]["format_layer"], voc_count=len(voc))
         except BriefInvalid as exc:
             r.count("briefs_refused")
             raise PlannerRefused(f"proposal {number} ({p.get('source_brand')} / {p['family']}) refused: {exc}") from exc
-        hook = wh.insert_hooks(conn, client_id=client_id, text=out["hook_line"], hook_type=p.get("hook_type"),
-                               pattern_id=p["id"], trust_tier="owned")
-        values["hook_id"] = hook["id"]
-        brief = wh.insert_briefs(conn, **values)
-        brief["hook_text"] = hook["text"]
-        briefs.append(brief)
+        briefs.append(insert_brief(conn, client_id, values, p))
         r.count("briefs_written")
     r.counts["proposals"] = len(briefs)
-    r.tokens_used = tokens
+    r.tokens_used = (r.tokens_used or 0) + tokens
     print(format_proposals(exp, briefs, config))
     return exp
 
 
+def brief_values(*, client_id: Any, experiment_id: Any, offer: dict[str, Any], icp: dict[str, Any] | None, pattern: dict[str, Any],
+                 out: dict[str, Any], voc: list[dict[str, Any]], number: int, backend: str) -> dict[str, Any]:
+    """A replica brief from one translation (FR-18): the format layer copied verbatim from the pattern, the offer layer
+    from `offers.offer_layer`, the translated ingredients from the model's validated output."""
+    p = pattern
+    return dict(
+        client_id=client_id, experiment_id=experiment_id, offer_id=offer["id"], icp_id=icp["id"] if icp else None,
+        kind="replica", source_pattern_id=p["id"], changed_ingredients=list(out["changed_ingredients"]),
+        family=p["family"], angle=p.get("angle") or "", voc_phrase_ids=[voc[i]["id"] for i in out["voc_phrase_indexes"] if 0 <= i < len(voc)],
+        visual_spec=out["visual_spec"], cta=(offer.get("offer_layer") or {}).get("cta_mechanic"),
+        spec={
+            "proposal_number": number, "rank": number, "format_layer": dict((p["recipe"] or {}).get("format_layer") or {}),
+            "offer_layer": offer.get("offer_layer") or {}, "hook_line": out["hook_line"],
+            "product_nouns": out["product_nouns"], "imagery_subject": out["imagery_subject"],
+            "voc_phrase_indexes": out["voc_phrase_indexes"], "coherence_note": out.get("coherence_note"),
+            "translation_backend": backend, "chosen": None,
+            "source": {"brand": p.get("source_brand"), "ad_id": _ad_id(p), "source_url": p.get("source_url"),
+                       "source_image_url": p.get("source_image_url"), "source_strength": p.get("source_strength"),
+                       "status": p.get("status"), "variant": p.get("variant"), "hook_type": p.get("hook_type")},
+        },
+    )
+
+
+def insert_brief(conn: wh.Connection, client_id: Any, values: dict[str, Any], pattern: dict[str, Any]) -> dict[str, Any]:
+    """The brief's hook line as its own `hooks` row, then the brief pointing at it."""
+    hook = wh.insert_hooks(conn, client_id=client_id, text=values["spec"]["hook_line"], hook_type=pattern.get("hook_type"),
+                           pattern_id=pattern["id"], trust_tier="owned")
+    brief = wh.insert_briefs(conn, **{**values, "hook_id": hook["id"]})
+    brief["hook_text"] = hook["text"]
+    return brief
+
+
+def proposal_number(b: dict[str, Any]) -> int:
+    return int((b.get("spec") or {}).get("proposal_number") or 0)
+
+
+def default_picks(briefs: list[dict[str, Any]], n: int) -> tuple[list[int], list[int]]:
+    """SKILL.md §5.1 default: the ranker's top `n` proposals whose family has a weekend template, in rank order, and
+    the template-less numbers passed over on the way. Fewer than `n` picks means the default cannot be taken."""
+    picks: list[int] = []
+    skipped: list[int] = []
+    for b in sorted(briefs, key=proposal_number):
+        if len(picks) == n:
+            break
+        (picks if template_for(b["family"]) else skipped).append(proposal_number(b))
+    return picks, skipped
+
+
 def format_proposals(exp: dict[str, Any], briefs: list[dict[str, Any]], config: dict[str, Any]) -> str:
-    """SKILL.md §5.1: number, family/variant, hook line, angle, source brand, source strength, changed ingredients."""
-    rows = [("#", "family / variant", "hook line", "angle", "source", "str", "changed")]
+    """SKILL.md §5.1: number, family/variant, hook line, angle, source brand, source strength, changed ingredients,
+    and the weekend template the family renders with (NONE: `produce` refuses the pick)."""
+    rows = [("#", "family / variant", "hook line", "angle", "source", "str", "changed", "template")]
     for b in briefs:
         s = b["spec"] or {}
         src = s.get("source") or {}
         rows.append((str(s.get("proposal_number")), f"{b['family']} / {src.get('variant') or '-'}",
                      (b.get("hook_text") or s.get("hook_line") or "")[:70], b["angle"], src.get("brand") or "-",
-                     str(src.get("source_strength", "-")), ", ".join(b.get("changed_ingredients") or [])))
+                     str(src.get("source_strength", "-")), ", ".join(b.get("changed_ingredients") or []),
+                     template_for(b["family"]) or "NONE"))
     widths = [min(max(len(r[i]) for r in rows), 72) for i in range(len(rows[0]))]
     lines = [f"\n{exp['name']} (capacity {exp['capacity']}): {len(briefs)} proposals"]
     for i, row in enumerate(rows):
@@ -509,9 +655,31 @@ def format_proposals(exp: dict[str, Any], briefs: list[dict[str, Any]], config: 
         if i == 0:
             lines.append("  ".join("-" * w for w in widths))
     n = int(config["batch"]["recipes"])
-    lines.append(f"\nReply `my picks: n, n, n` with exactly {n} numbers (optional `n: reason`). "
-                 f"Default after 20 minutes: the ranker's top {n} (`--select default`).")
+    picks, _ = default_picks(briefs, n)
+    default = (f"the ranker's top {n} with a template ({', '.join(f'#{k}' for k in picks)})" if len(picks) == n else
+               f"none: only {len(picks)} proposal(s) have a template, so nothing is produced until Sam picks")
+    lines.append(f"\ntemplate NONE: no weekend template in {TEMPLATE_DIR.relative_to(ME_DIR)}/ for that family; `produce` refuses such a pick.")
+    lines.append(f"Reply `my picks: n, n, n` with exactly {n} numbers (optional `n: reason`). "
+                 f"Default after 20 minutes: {default} (`--select default`).")
     return "\n".join(lines)
+
+
+def retranslate_only(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: dict[str, Any], model: Model) -> list[dict[str, Any]]:
+    """`plan batch --retranslate`: the FR-29 planner route alone, without proposing a batch (no FR-16 threshold, no
+    FR-8 block: a re-translation replaces a failed creative of a recipe Sam already picked)."""
+    reads = Reads(conn, r)
+    client_id = client["id"]
+    offer = reads.q("offer", "select * from offers where client_id = %s order by created_at limit 1", (client_id,))
+    if not offer:
+        raise ConfigMissing("no offers row for this client; run scripts/dev_db.sh --seed")
+    icp_rows = reads.q("icp", "select * from icps where client_id = %s order by created_at limit 1", (client_id,))
+    icp = icp_rows[0] if icp_rows else None
+    voc = reads.q("voc_phrases", VOC_SQL, (client_id, MAX_VOC_IN_PROMPT))
+    retired = retired_for_icp(reads, client_id, icp["id"] if icp else None)
+    written = retranslate(conn, r, reads, client=client, config=config, model=model, offer=offer[0], icp=icp, voc=voc, retired=retired)
+    if not written and not r.counts.get("retranslations_refused"):
+        print("plan_batch: no brief is marked for re-translation")
+    return written
 
 
 # ---------- --select ----------
@@ -524,12 +692,19 @@ def select(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: di
     if exp is None:
         raise PlannerRefused("no proposal is waiting for picks; run `plan batch` first")
     briefs = proposal_briefs(conn, exp["id"])
-    by_number = {int((b["spec"] or {}).get("proposal_number") or 0): b for b in briefs}
+    by_number = {proposal_number(b): b for b in briefs}
     n = int(config["batch"]["recipes"])
     if picks_text.strip().lower() == "default":
-        picks = {k: None for k in sorted(by_number)[:n]}
+        top, skipped = default_picks(briefs, n)
+        if len(top) < n:
+            listed = ", ".join(f"#{k}" for k in top) or "none"
+            raise PlannerRefused(f"the default needs {n} proposals with a weekend template; only {len(top)} of {len(briefs)} proposals "
+                                 f"have a weekend template ({listed}). Sam picks, or a template is added to {TEMPLATE_DIR.relative_to(ME_DIR)}/")
+        picks = {k: None for k in top}
         selected_by = "ranker_default"
-        reason = f"Sam quiet for 20 minutes: default taken, the deterministic ranker's top {n} (SKILL.md §5.1)"
+        passed_over = "; skipped for no weekend template: " + ", ".join(f"#{k} {by_number[k]['family']}" for k in skipped) if skipped else ""
+        reason = f"Sam quiet for 20 minutes: default taken, the deterministic ranker's top {n} with a weekend template (SKILL.md §5.1){passed_over}"
+        r.counts["skipped_no_template"] = skipped
     else:
         picks = parse_picks(picks_text)
         unknown = [k for k in picks if k not in by_number]
@@ -539,6 +714,13 @@ def select(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: di
             raise PlannerRefused(f"exactly {n} picks are needed (capacity/2 = recipes); got {len(picks)}")
         reasons = [f"{k}: {v}" for k, v in picks.items() if v]
         reason = "; ".join(reasons) or None
+        no_template = [k for k in picks if not template_for(by_number[k]["family"])]
+        for k in no_template:
+            family = by_number[k]["family"]
+            print(f"plan_batch: WARNING pick #{k} is family {family!r}, which has no weekend template "
+                  f"({TEMPLATE_DIR.relative_to(ME_DIR)}/{family.replace('_', '-')}.html); `produce` will refuse it", file=sys.stderr)
+        if no_template:
+            r.counts["picked_no_template"] = no_template
     chosen = [by_number[k]["id"] for k in picks]
     proposed = [b["id"] for b in briefs]
     rejected = [b["id"] for b in briefs if b["id"] not in chosen]
@@ -571,6 +753,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--client", default="upclicklabs")
     ap.add_argument("--select", metavar="PICKS", default=None, help='`"2, 5, 9"` (optional `n: reason`) or `default`')
     ap.add_argument("--by", default="sam", help="selected_by for --select (default sam)")
+    ap.add_argument("--retranslate", action="store_true", help="only re-translate the briefs the producer marked after a coherence failure (FR-29)")
     ap.add_argument("--daily-budget", type=float, default=None, help="override clients.daily_cap for the capacity formula (FR-15 test)")
     ap.add_argument("--cpm", type=float, default=None, help="override the CPM (observed 7-day, else config.cpm_estimate)")
     ap.add_argument("--today", type=date.fromisoformat, default=None)
@@ -599,6 +782,8 @@ def main(argv: list[str] | None = None) -> int:
                     raise PlannerRefused(f"{status['actions_stuck']} action(s) in `applying`; only the executor's reconcile mode may run (SKILL.md §2)")
                 if args.select is not None:
                     select(conn, r, client=client, config=config, picks_text=args.select, selected_by=args.by)
+                elif args.retranslate:
+                    retranslate_only(conn, r, client=client, config=config, model=get_model())
                 else:
                     plan(conn, r, client=client, config=config, model=get_model(), today=args.today or date.today(),
                          daily_budget=args.daily_budget, cpm_override=args.cpm)

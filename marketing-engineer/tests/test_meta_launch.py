@@ -193,6 +193,25 @@ def test_launch_proposes_one_build_campaign_and_running_twice_yields_one_action(
     assert p["campaign"]["name"] in out
 
 
+def test_a_retranslated_brief_stays_in_its_recipes_ad_set(h):
+    """FR-29 planner route: the producer renders a failed creative's retry from the re-translated brief, which names
+    the chosen brief it replaces in `spec.recipe_brief_id`; one recipe is still one ad set (FR-31)."""
+    exp, creatives = h.batch()
+    root = creatives[0]["brief_id"]
+    retranslated = insert(h.worker, "briefs", client_id=h.client_id, experiment_id=exp["id"], offer_id=h.offer["id"], family="ugc_selfie",
+                          angle="angle 0", spec={"proposal_number": 1, "chosen": True, "recipe_brief_id": str(root), "retranslation_of": str(root)})
+    h.worker.commit()
+    h.admin.execute("update creatives set brief_id = %s where id = %s", (retranslated["id"], creatives[1]["id"]))
+    h.admin.commit()
+    rc, out = h.launch()
+    assert rc == 0, out
+    p = h.actions("build_campaign")[0]["proposal"]
+    assert len(p["ad_sets"]) == 3 and [len(s["ads"]) for s in p["ad_sets"]] == [2, 2, 2]
+    recipe = [s for s in p["ad_sets"] if s["brief_id"] == str(root)]
+    assert len(recipe) == 1 and {a["creative_id"] for a in recipe[0]["ads"]} == {str(creatives[0]["id"]), str(creatives[1]["id"])}
+    assert str(retranslated["id"]) not in {s["brief_id"] for s in p["ad_sets"]}
+
+
 def test_launch_refuses_when_the_gate_shipped_nothing(h):
     h.batch(verdict=None)                                                                     # agent approvals only
     rc, out = h.launch()

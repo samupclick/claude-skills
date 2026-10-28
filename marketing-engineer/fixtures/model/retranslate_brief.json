@@ -1,0 +1,14 @@
+{
+  "_shape": "SYNTHETIC fixture for scripts/plan_batch.py re-translations in CI (MODEL_BACKEND=fixture, task retranslate_brief, FR-29 planner route): hand-written, not recorded from Claude (no ANTHROPIC_API_KEY in the build container). Same schema as translate_brief. One output, replayed for every call; voc_phrase_indexes is empty so any client validates. Hook line says FIXTURE on purpose. Record a real one at go-live and replace.",
+  "outputs": [
+    {
+      "hook_line": "FIXTURE re-translated hook: when your buyer asks an AI for a firm like yours, does it name you?",
+      "product_nouns": ["AI visibility audit", "15-minute call"],
+      "imagery_subject": "FIXTURE: a quiet office desk with a closed laptop and a notebook, no readable text",
+      "visual_spec": "FIXTURE: notes-app screenshot layout; imagery subject swapped to an office desk",
+      "voc_phrase_indexes": [],
+      "changed_ingredients": ["offer", "product_nouns", "imagery_subject"],
+      "coherence_note": "FIXTURE: the previous product nouns promised a deliverable the audit does not include; replaced with the audit and the call"
+    }
+  ]
+}

@@ -150,13 +150,14 @@ def build_proposal(*, slug: str, campaign_name: str, creatives: list[dict[str, A
                    config: dict[str, Any], currency: str, funnel_host: str,
                    experiment_id: Any, components: dict[str, set[str]], refs: dict[str, dict[str, str]] | None = None) -> dict[str, Any]:
     """One `new_recipes` campaign; one ad set per recipe (brief), in proposal order; the creatives of the brief as
-    its ads, created paused. Names are deterministic so the executor's name lookup finds what a crashed run
-    created (SKILL.md §6 step 6). Raises LaunchRefused for a creative that cannot be placed."""
+    its ads, created paused. A brief re-translated after a gate failure (FR-29, `briefs.spec.recipe_brief_id`) is the
+    same recipe: its creatives join the chosen brief's ad set. Names are deterministic so the executor's name lookup
+    finds what a crashed run created (SKILL.md §6 step 6). Raises LaunchRefused for a creative that cannot be placed."""
     by_brief: "OrderedDict[Any, list[dict[str, Any]]]" = OrderedDict()
     for c in creatives:
         if c.get("brief_id") is None:
             raise LaunchRefused(f"creative {c['id']} has no brief; an ad set is one recipe (FR-31) and this creative belongs to none")
-        by_brief.setdefault(c["brief_id"], []).append(c)
+        by_brief.setdefault((c.get("brief_spec") or {}).get("recipe_brief_id") or str(c["brief_id"]), []).append(c)
     camp_cfg = config["campaign"]
     budget = str(Decimal(str(camp_cfg["adset_daily_budget"])))
     event = camp_cfg["optimisation_event"]
