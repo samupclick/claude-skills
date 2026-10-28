@@ -4,13 +4,20 @@
     scripts/routines.py list                 the three routines: name, cron (UTC), prompt
     scripts/routines.py check                config/routines.json against the SKILL.md §8 table (exit 1 on drift)
     scripts/routines.py dry-run <name>       run the routine's steps locally, in order, against the dev warehouse
+    scripts/routines.py register --print     the exact create_trigger arguments per routine; registers nothing
 
 `dry-run` is quiz decision 7 (Sam, 2026-09-04): the routine's prompt is executed as its scripts, one subprocess
 per step with the environment as it is (dev backends, `.env`), and ends with the runs summary the prompt asks
 for (every `runs` row opened since the dry-run began). A step whose script does not exist yet is reported as
 "not built" and the dry-run continues, so the steps after it are still exercised; the exit code is 1 when any
-step did not run clean. Real registration as Claude Code Routines (`create_trigger`, fresh session per fire,
-cron from `cron_utc`) is T13 step 7; nothing here registers anything.
+step did not run clean. A step with `connector` is finished by the session through that claude.ai connector
+(the check-in's `--send-pending` prints the Gmail connector call); the dry-run runs the script part only.
+
+Registration as Claude Code Routines is T13 step 7 and Sam approves it; nothing here registers anything.
+`register --print` gives one `create_trigger` argument set per routine: the routine's name and prompt, the cron in
+CRON_TZ form kept in UTC as the §8 table states it, a fresh session per fire, `connectors` = the union of the
+routine's step connectors (`[]` stores none, so a routine that sends no email gets no connector), and
+`initiation: human_request` (Sam asks for it at go-live).
 """
 from __future__ import annotations
 
@@ -30,6 +37,7 @@ from adapters.env import ME_DIR, load_env  # noqa: E402
 ROUTINES = ME_DIR / "config" / "routines.json"
 SKILL = ME_DIR / "SKILL.md"
 ROW = re.compile(r"^\| `([a-z-]+)` \| `([^`]+)` \| `(.+)` \|$")
+KNOWN_CONNECTORS = ("Gmail",)
 
 
 def load() -> dict[str, Any]:
@@ -60,11 +68,44 @@ def drift(defs: dict[str, Any]) -> list[str]:
     return out
 
 
+def connectors(routine: dict[str, Any]) -> list[str]:
+    """The claude.ai connectors the routine's session needs: the union of its steps' `connector`."""
+    return sorted({s["connector"] for s in routine["steps"] if s.get("connector")})
+
+
+def connector_drift(defs: dict[str, Any]) -> list[str]:
+    """A prompt that tells the session to use a connector must have a step naming it, and the other way round."""
+    out = []
+    for r in defs["routines"]:
+        named = set(connectors(r))
+        said = {c for c in set(KNOWN_CONNECTORS) | named if f"{c} connector" in r["prompt"]}
+        out += [f"{r['name']}: the prompt uses the {c} connector but no step names connector {c!r}, so its trigger would lack it"
+                for c in sorted(said - named)]
+        out += [f"{r['name']}: a step names connector {c!r} but the prompt never says to use the {c} connector" for c in sorted(named - said)]
+    return out
+
+
+def trigger_arguments(defs: dict[str, Any]) -> list[dict[str, Any]]:
+    """One `create_trigger` argument set per routine (SKILL.md §8; registration is T13 step 7, Sam approves)."""
+    return [{"name": r["name"], "cron_expression": f"CRON_TZ=UTC {r['cron_utc']}", "prompt": r["prompt"],
+             "create_new_session_on_fire": True, "connectors": connectors(r), "initiation": "human_request"}
+            for r in defs["routines"]]
+
+
+def format_register(defs: dict[str, Any]) -> str:
+    lines = [f"# create_trigger arguments, one call per routine ({len(defs['routines'])}). Nothing was registered: registration is",
+             "# the go-live swap (T13 step 7) and Sam approves it. `connectors: []` stores no connector."]
+    for args in trigger_arguments(defs):
+        lines += [f"--- {args['name']}", json.dumps(args, indent=2, ensure_ascii=False)]
+    return "\n".join(lines)
+
+
 def format_list(defs: dict[str, Any]) -> str:
     lines = [f"session={defs['session']}  hook={defs['hook']}  client={defs['client']}"]
     for r in defs["routines"]:
         lines.append(f"{r['name']:<11} {r['cron_utc']:<12} {r['prompt']}")
-        lines.extend(f"    {i}. {s['say']}  →  {s['script'] or '(no script: say so and stop)'}" for i, s in enumerate(r["steps"], 1))
+        lines.extend(f"    {i}. {s['say']}  →  {s['script'] or '(no script: say so and stop)'}"
+                     + (f"  →  {s['connector']} connector (session)" if s.get("connector") else "") for i, s in enumerate(r["steps"], 1))
     return "\n".join(lines)
 
 
@@ -111,17 +152,24 @@ def dry_run(defs: dict[str, Any], name: str, client: str | None = None) -> int:
 
 def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(description="Routine definitions for the phase-0 stand-in. SKILL.md §8.")
-    p.add_argument("command", choices=("list", "check", "dry-run"))
+    p.add_argument("command", choices=("list", "check", "dry-run", "register"))
     p.add_argument("name", nargs="?")
     p.add_argument("--client")
+    p.add_argument("--print", dest="print_only", action="store_true", help="register: print the create_trigger arguments")
     args = p.parse_args(argv)
     load_env()
     defs = load()
     if args.command == "list":
         print(format_list(defs))
         return 0
+    if args.command == "register":
+        if not args.print_only:
+            p.error("register only prints the create_trigger arguments (register --print); registering the routines is a"
+                    " go-live step Sam approves (T13 step 7)")
+        print(format_register(defs))
+        return 0
     if args.command == "check":
-        problems = drift(defs)
+        problems = drift(defs) + connector_drift(defs)
         print("\n".join(problems) if problems else f"routines.json matches SKILL.md §8 ({len(defs['routines'])} routines)")
         return 1 if problems else 0
     if not args.name:

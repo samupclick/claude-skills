@@ -8,15 +8,19 @@ from pathlib import Path
 
 
 class FileEmail:
+    queued = False
+
     def __init__(self, outbox: Path):
         self.outbox = outbox
 
-    def send(self, *, to, subject, text, html=None, from_addr=None):
+    def send(self, *, to, subject, text, html=None, from_addr=None, key=None):
         msg = EmailMessage()
         msg["From"] = from_addr or "pipeline@dev.local"
         msg["To"] = to
         msg["Subject"] = subject
         msg["Message-ID"] = make_msgid(domain="dev.local")
+        if key:
+            msg["X-Message-Key"] = key
         msg.set_content(text)
         if html:
             msg.add_alternative(html, subtype="html")

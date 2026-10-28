@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -74,3 +75,62 @@ def test_morning_routine_dry_run_fires_the_checkin(db_env, dev_root, monkeypatch
 def test_dry_run_unknown_routine():
     res = subprocess.run([sys.executable, str(ME_DIR / "scripts" / "routines.py"), "dry-run", "me-never"], cwd=ME_DIR, capture_output=True, text=True)
     assert res.returncode == 2 and "no routine named 'me-never'" in res.stderr
+
+
+# ---------- the check-in goes out through the Gmail connector (Sam, 2026-10-28) ----------
+
+def test_morning_routine_sends_the_checkin_through_the_gmail_connector():
+    mod = load_script("routines")
+    defs = mod.load()
+    morning = next(r for r in defs["routines"] if r["name"] == "me-morning")
+    assert "check-in for client upclicklabs, then send the pending check-in through the Gmail connector and mark it sent." in morning["prompt"]
+    send = [s for s in morning["steps"] if s.get("connector")]
+    assert [(s["connector"], s["script"], s["args"][-1]) for s in send] == [("Gmail", "scripts/checkin.py", "--send-pending")]
+    assert [s["say"] for s in morning["steps"]].index(send[0]["say"]) == len(morning["steps"]) - 1   # after the check-in step
+    assert [mod.connectors(r) for r in defs["routines"]] == [["Gmail"], [], []]
+    assert mod.connector_drift(defs) == []
+    morning["steps"][-1].pop("connector")
+    assert any("me-morning" in p and "Gmail" in p for p in mod.connector_drift(defs))
+
+
+def register_blocks(out: str) -> dict[str, dict]:
+    blocks = re.findall(r"^--- ([a-z-]+)\n(\{.*?^\})$", out, flags=re.M | re.S)
+    return {name: json.loads(body) for name, body in blocks}
+
+
+def test_register_print_gives_the_create_trigger_arguments_and_registers_nothing():
+    defs = load_script("routines").load()
+    res = subprocess.run([sys.executable, str(ME_DIR / "scripts" / "routines.py"), "register", "--print"], cwd=ME_DIR,
+                         capture_output=True, text=True)
+    assert res.returncode == 0, res.stderr
+    blocks = register_blocks(res.stdout)
+    assert list(blocks) == [r["name"] for r in defs["routines"]]
+    for r in defs["routines"]:
+        args = blocks[r["name"]]
+        assert set(args) == {"name", "cron_expression", "prompt", "create_new_session_on_fire", "connectors", "initiation"}
+        assert args["name"] == r["name"] and args["prompt"] == r["prompt"]
+        assert args["cron_expression"] == f"CRON_TZ=UTC {r['cron_utc']}"         # the §8 table is UTC: kept UTC
+        assert args["create_new_session_on_fire"] is True and args["initiation"] == "human_request"
+    assert blocks["me-morning"]["connectors"] == ["Gmail"]
+    assert blocks["me-evening"]["connectors"] == [] and blocks["me-monday"]["connectors"] == []
+    assert "nothing was registered" in res.stdout.lower()
+    refused = subprocess.run([sys.executable, str(ME_DIR / "scripts" / "routines.py"), "register"], cwd=ME_DIR, capture_output=True, text=True)
+    assert refused.returncode == 2 and "--print" in refused.stderr and "Sam" in refused.stderr
+
+
+def test_morning_routine_dry_run_through_the_connector_queue(db_env, dev_root):
+    """EMAIL_BACKEND=gmail_connector: the check-in step queues the message, the send step prints the send_message
+    arguments the session passes to the Gmail connector; nothing is sent from Python, the queue keeps the file."""
+    env = {**os.environ, "EMAIL_BACKEND": "gmail_connector", "META_BACKEND": "fake", "CHECKIN_TO": "sam@example.invalid",
+           "PIPELINE_PAUSED": "false"}
+    env.pop("EMAIL_QUEUE_DIR", None)
+    res = subprocess.run([sys.executable, str(ME_DIR / "scripts" / "routines.py"), "dry-run", "me-morning"], cwd=ME_DIR, env=env,
+                         capture_output=True, text=True)
+    out = res.stdout + res.stderr
+    assert res.returncode == 0, out
+    assert "--- step 5: send the pending check-in through the Gmail connector and mark it sent" in out
+    assert "queued checkin-upclicklabs-" in out and "Gmail connector tool send_message" in out and "--mark-sent checkin-upclicklabs-" in out
+    pending = list((dev_root / "pending-send").glob("checkin-upclicklabs-*.json"))
+    assert len(pending) == 1 and not list((dev_root / "outbox").glob("*.eml"))
+    summary = out.split("--- runs summary", 1)[1]
+    assert "checkin    ok" in summary and "checkin_send ok" in summary

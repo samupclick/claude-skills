@@ -1,0 +1,17 @@
+{
+  "_shape": "ASSUMED SHAPE from the Gmail connector's send_message tool schema as a Claude Code session lists it (MCP tool mcp__Gmail__send_message: recipients in `to` as plain addresses, `subject`, plain text in `body`, HTML in `htmlBody`; returns a Message object with `id`, `threadId`, `labelIds`), read 2026-10-28; no public doc URL could be read from the build container (developers.google.com is outside its network allowlist); replace with a recorded response at go-live",
+  "connector": "Gmail",
+  "tool": "send_message",
+  "parameters": ["to", "cc", "bcc", "subject", "body", "htmlBody", "attachments", "draftId", "includeSignature", "replyThreadId", "replyToMessageId"],
+  "arguments": {
+    "to": ["sam@example.invalid"],
+    "subject": "[me] check-in upclicklabs 2026-10-28: 0 waiting, 0 taken, 0 warnings",
+    "body": "Check-in — upclicklabs — 2026-10-28 06:00 UTC (window since 2026-10-27 06:00 UTC)\n\n1. Actions waiting (0)\n   - none\n",
+    "htmlBody": "<pre style=\"font-family: ui-monospace, monospace; white-space: pre-wrap\">Check-in — upclicklabs — 2026-10-28 06:00 UTC (window since 2026-10-27 06:00 UTC)\n\n1. Actions waiting (0)\n   - none\n</pre>\n"
+  },
+  "result": {
+    "id": "19a2f3c4d5e6f708",
+    "threadId": "19a2f3c4d5e6f708",
+    "labelIds": ["SENT"]
+  }
+}

@@ -151,7 +151,7 @@ Two fixed wakes, fresh session each, SessionStart hook installs Chromium, Python
 
 | Name | Cron (UTC) | Prompt |
 |------|-----------|--------|
-| `me-morning` | `0 6 * * *` | `Use the marketing-engineer skill. Run: status, pull insights, apply actions --reconcile, check-in for client upclicklabs. Do not propose a new batch. End with the runs summary.` |
+| `me-morning` | `0 6 * * *` | `Use the marketing-engineer skill. Run: status, pull insights, apply actions --reconcile, check-in for client upclicklabs, then send the pending check-in through the Gmail connector and mark it sent. Do not propose a new batch. End with the runs summary.` |
 | `me-evening` | `0 18 * * *` | `Use the marketing-engineer skill. Run: status, pull insights for client upclicklabs. If capacity has freed (in-flight sub-sample creatives < capacity − batch_size), run plan batch and stop for Sam's picks. End with the runs summary.` |
 | `me-monday` | `0 7 * * 1` | `Use the marketing-engineer skill. Run: status, monday memo for client upclicklabs. Then stop.` |
 
