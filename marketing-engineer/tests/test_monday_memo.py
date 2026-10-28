@@ -363,9 +363,32 @@ def test_window_defaults_to_the_previous_memo(h):
     assert h.runs()[-1]["counts"]["since"] == first["started_at"].isoformat()
 
 
+def test_memo_goes_through_the_gmail_connector_queue_once_per_day(h, monkeypatch, dev_root):
+    """EMAIL_BACKEND=gmail_connector (the go-live value): the memo is queued under memo-<slug>-<UTC day> with the
+    check-in's claim, and the me-monday routine's last step delivers it with checkin.py --send-pending / --mark-sent."""
+    monkeypatch.setenv("EMAIL_BACKEND", "gmail_connector")
+    monkeypatch.delenv("EMAIL_QUEUE_DIR", raising=False)
+    key = f"memo-{h.slug}-2026-09-14"
+    rc, out = h.run()
+    assert rc == 0 and f"queued {key}: [me] monday memo {h.slug} 2026-09-14" in out and "sent <" not in out
+    assert [p.name for p in (dev_root / "pending-send").glob("*.json")] == [f"{key}.json"] and h.emails() == []
+    r = h.runs()[-1]
+    assert r["status"] == "ok" and r["counts"]["email_key"] == key and r["counts"]["queued"] == 1 and r["counts"]["sent"] == 0
+    rc, out = h.run()                                                        # same day: never queued twice
+    assert rc == 0 and f"not queued: memo {key} was already queued" in out and h.runs()[-1]["counts"]["duplicate"] == 1
+    checkin = load_script("checkin")
+    assert checkin.main(["--client", h.slug, "--send-pending"]) == 0
+    out = h.capsys.readouterr().out
+    assert f"--- {key}" in out and "Gmail connector tool send_message" in out and "1. Learnings promoted / refuted" in out
+    assert checkin.main(["--client", h.slug, "--mark-sent", key, "--message-id", "19a2f3c4d5e6f708"]) == 0
+    assert f"marked sent: {key}" in h.capsys.readouterr().out and not list((dev_root / "pending-send").glob("*.json"))
+    rc, out = h.run()                                                        # delivered: the warehouse still refuses
+    assert rc == 0 and "not queued" in out and "sent as 19a2f3c4d5e6f708" in out
+
+
 def test_memo_has_no_side_effect_beyond_the_email_adapter():
     src = (ME_DIR / "scripts" / "monday_memo.py").read_text()
-    assert "get_email().send" in src and "adapters.meta" not in src and "smtplib" not in src and "insert_actions" not in src
+    assert "get_email()" in src and "queue_checkin" in src and "adapters.meta" not in src and "smtplib" not in src and "insert_actions" not in src
     assert 'connect("worker"' in src and "WAREHOUSE_URL_EXECUTOR" not in src
 
 
@@ -381,6 +404,6 @@ def test_monday_routine_dry_run_sends_the_memo(db_env, dev_root):
     out = res.stdout + res.stderr
     assert res.returncode == 0, out
     steps = out.split("--- steps", 1)[1].split("--- runs summary", 1)[0]
-    assert [line.split()[-1] for line in steps.strip().splitlines()] == ["ok", "ok"]
+    assert [line.split()[-1] for line in steps.strip().splitlines()] == ["ok", "ok", "ok"]   # file backend: nothing pending to send
     assert "not built" not in out and "sent <" in out and list((dev_root / "outbox").glob("*.eml"))
     assert "memo       ok" in out.split("--- runs summary", 1)[1]

@@ -1,4 +1,4 @@
-"""Outbound email (check-in only, FR-42). EMAIL_BACKEND=file|gmail_connector (`gmail` is an alias of gmail_connector).
+"""Outbound email (the check-in, FR-42, and the Monday memo, FR-43). EMAIL_BACKEND=file|gmail_connector (`gmail` is an alias of gmail_connector).
 
 `send(..., key=None) -> str`. `file` writes an .eml under DEV_ROOT/outbox and returns its Message-ID (`queued = False`).
 `gmail_connector` queues the composed message for the routine session's Gmail connector and returns the key

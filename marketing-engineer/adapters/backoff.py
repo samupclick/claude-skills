@@ -1,8 +1,10 @@
 """Retry with backoff for the live HTTP adapters (FR-8 retry discipline, polite sources).
 
 `send` retries 429 and 5xx answers and transport errors a bounded number of times, honouring `Retry-After` and
-Reddit's `X-Ratelimit-Reset`, and returns the last response for the caller to judge. Read-only sources and image
-generation use it; nothing here ever writes to a vendor on its own.
+Reddit's `X-Ratelimit-Reset`, and returns the last response for the caller to judge. Read-only sources, image
+generation and Supabase Storage (idempotent upserts) use it; nothing here ever writes to a vendor on its own. The Meta,
+CAPI and Turnstile adapters keep their own loops because they decide on error codes inside the body (and Meta never
+re-sends a write).
 """
 from __future__ import annotations
 

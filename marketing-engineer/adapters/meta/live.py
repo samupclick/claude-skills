@@ -1,7 +1,8 @@
 """Live Meta Marketing API backend (META_BACKEND=live): the MetaAds protocol over the Graph API with plain httpx.
 FR-30, FR-31, FR-37, FR-38, NFR-1, NFR-4.
 
-- version: META_API_VERSION, default v26.0 (Marketing API version table, released 2026-07-29, read 2026-10-28)
+- version: META_API_VERSION, default v26.0 (Marketing API version table, released 2026-07-29, read 2026-10-28), shared with
+  the Conversions API adapter through adapters/graph.py
 - tokens: write mode (`get_meta(write=True)`, scripts/apply_actions.py only) uses META_ACCESS_TOKEN; read mode (workers)
   uses META_READ_TOKEN, an ads_read token, and refuses every create/update before a request is made. The token travels
   in the Authorization header, never in a URL, and is scrubbed from every error message
@@ -23,7 +24,6 @@ from __future__ import annotations
 import base64
 import json
 import os
-import re
 import time
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
@@ -32,10 +32,9 @@ from typing import Any, Callable, Iterator
 import httpx
 
 from adapters.env import MissingEnvVar, require
+from adapters.graph import DEFAULT_API_VERSION, base_url, env_api_version, is_api_version
 from adapters.meta import MetaApiError, MetaThrottled, review_status
 
-DEFAULT_API_VERSION = "v26.0"
-GRAPH_HOST = "https://graph.facebook.com"
 EDGES = {"campaign": "campaigns", "adset": "adsets", "creative": "adcreatives", "ad": "ads"}
 FIELDS = {
     "campaign": "id,name,status,effective_status,objective,daily_budget,created_time",
@@ -121,7 +120,7 @@ class LiveMeta:
                  transport: httpx.BaseTransport | None = None, fetch_image: Callable[[str], bytes] | None = None,
                  sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic,
                  max_wait: float = 300.0, insights_timeout: float = 900.0, poll_interval: float = 2.0, timeout: float = 60.0):
-        if not re.fullmatch(r"v\d+\.\d+", api_version or ""):
+        if not is_api_version(api_version):
             raise MetaApiError(f"META_API_VERSION must name a Graph API version such as {DEFAULT_API_VERSION}")
         self.write = write
         self.account = "act_" + str(ad_account_id).strip().removeprefix("act_")
@@ -134,7 +133,7 @@ class LiveMeta:
         self._fetch_image = fetch_image or _storage_get
         self._offset: int | None = None
         self._name_filter = True
-        self._http = httpx.Client(base_url=f"{GRAPH_HOST}/{api_version}/", transport=transport, timeout=timeout,
+        self._http = httpx.Client(base_url=base_url(api_version), transport=transport, timeout=timeout,
                                   headers={"Authorization": f"Bearer {token}"})
 
     @classmethod
@@ -143,7 +142,7 @@ class LiveMeta:
         env = require("meta (executor, writes)" if write else "meta (worker, read-only)", token_var, "META_AD_ACCOUNT_ID")
         return cls(token=env[token_var], ad_account_id=env["META_AD_ACCOUNT_ID"], write=write,
                    page_id=os.environ.get("META_PAGE_ID") or "", pixel_id=os.environ.get("META_PIXEL_ID") or "",
-                   api_version=os.environ.get("META_API_VERSION") or DEFAULT_API_VERSION,
+                   api_version=env_api_version(),
                    custom_conversions=parse_custom_conversions(os.environ.get("META_CUSTOM_CONVERSIONS") or ""))
 
     def close(self) -> None:

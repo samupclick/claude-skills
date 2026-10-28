@@ -11,7 +11,7 @@ https://graph.facebook.com/<META_API_VERSION>/<META_PIXEL_ID>/events with plain 
 - dedup: every event carries its event_id and Meta keeps the first copy per (event_id, event_name), which makes a retry
   safe. Network errors, 5xx, `is_transient` and codes 1, 2, 4, 17, 341, 613 are retried with short waits; any other
   error raises at once with Meta's code and fbtrace_id
-- version: META_API_VERSION, default v24.0
+- version: META_API_VERSION, default v26.0, shared with the Marketing API adapter (adapters/graph.py)
 """
 from __future__ import annotations
 
@@ -25,9 +25,8 @@ import httpx
 
 from adapters.capi import CapiError
 from adapters.env import require
+from adapters.graph import DEFAULT_API_VERSION, base_url, env_api_version, is_api_version
 
-DEFAULT_API_VERSION = "v24.0"
-GRAPH_HOST = "https://graph.facebook.com"
 HASHED_FIELDS = ("em", "ph", "fn", "ln", "db", "ge", "ct", "st", "zp", "country", "external_id")
 ACTION_SOURCES = frozenset({"email", "website", "app", "phone_call", "chat", "physical_store", "system_generated",
                             "business_messaging", "other"})
@@ -55,20 +54,20 @@ class LiveCapi:
                  sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.time):
         if not re.fullmatch(r"\d{1,30}", str(pixel_id or "")):
             raise CapiError("META_PIXEL_ID must be the numeric pixel (dataset) id from Events Manager")
-        if not re.fullmatch(r"v\d+\.\d+", api_version or ""):
+        if not is_api_version(api_version):
             raise CapiError(f"META_API_VERSION must name a Graph API version such as {DEFAULT_API_VERSION}")
         self.pixel_id, self.api_version = str(pixel_id), api_version
         self.test_event_code = test_event_code or None
         self.attempts, self.backoff = max(1, attempts), backoff
         self._token = token
         self._sleep, self._clock = sleep, clock
-        self._http = httpx.Client(base_url=f"{GRAPH_HOST}/{api_version}/", transport=transport, timeout=timeout)
+        self._http = httpx.Client(base_url=base_url(api_version), transport=transport, timeout=timeout)
 
     @classmethod
     def from_env(cls, **kw: Any) -> "LiveCapi":
         env = require("capi (quiz funnel)", "META_PIXEL_ID", "META_CAPI_TOKEN")
         return cls(pixel_id=env["META_PIXEL_ID"], token=env["META_CAPI_TOKEN"],
-                   api_version=os.environ.get("META_API_VERSION") or DEFAULT_API_VERSION,
+                   api_version=env_api_version(),
                    test_event_code=os.environ.get("META_TEST_EVENT_CODE") or None, **kw)
 
     def close(self) -> None:

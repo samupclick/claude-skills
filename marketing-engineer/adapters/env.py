@@ -56,10 +56,3 @@ def choose_backend(var: str, choices: Mapping[str, Callable[[], T]], default: st
     if value not in choices:
         raise UnknownBackend(f"{var}={value!r} is not one of {sorted(choices)}")
     return choices[value]()
-
-
-def not_built(var: str, value: str, ticket: str) -> Callable[[], T]:
-    """Factory entry for a live backend that a later ticket delivers."""
-    def _raise() -> T:
-        raise NotImplementedError(f"{var}={value} is the live backend; it lands in {ticket} (go-live swap)")
-    return _raise

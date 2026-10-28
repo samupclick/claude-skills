@@ -14,6 +14,7 @@ import pytest
 
 from adapters.capi import CapiError, get_capi, hash_user_field
 from adapters.capi.live import DEFAULT_API_VERSION, LiveCapi
+from adapters.meta.live import DEFAULT_API_VERSION as META_DEFAULT_API_VERSION
 from adapters.env import MissingEnvVar
 
 ME_DIR = Path(__file__).resolve().parent.parent
@@ -84,8 +85,9 @@ def test_send_posts_one_event_to_the_pixel_events_edge(sleeps):
     assert sleeps == []
 
 
-def test_default_version_is_v24_and_meta_api_version_overrides(monkeypatch, sleeps):
-    assert DEFAULT_API_VERSION == "v24.0"
+def test_default_version_is_the_shared_graph_version_and_meta_api_version_overrides(monkeypatch, sleeps):
+    # one META_API_VERSION default for the Marketing API and CAPI adapters (adapters/graph.py)
+    assert DEFAULT_API_VERSION == META_DEFAULT_API_VERSION == "v26.0"
     graph = Graph("events_received")
     monkeypatch.setenv("META_PIXEL_ID", PIXEL)
     monkeypatch.setenv("META_CAPI_TOKEN", TOKEN)

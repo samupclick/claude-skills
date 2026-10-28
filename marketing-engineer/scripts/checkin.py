@@ -42,7 +42,8 @@ check-in of the client, the session calls the tool, and `--mark-sent <key> --mes
 the compose run claims it in its own `runs.counts.email_key` under an advisory lock, and a later run for the same
 client and day (or one racing it) composes, proposes brakes, and queues nothing. A check-in queued in the last
 `UNSENT_DAYS` days and never marked sent is a warning in part 5 of the next one. Delivery runs (`checkin_send`)
-never move the window.
+never move the window. The Monday memo (`scripts/monday_memo.py`) queues the same way under `memo-<slug>-<UTC day>`,
+and `--send-pending` / `--mark-sent` deliver it too (the `me-monday` routine's last step).
 """
 from __future__ import annotations
 
@@ -67,6 +68,8 @@ from warehouse.client import Jsonb, blocked_sources, client_by_slug, connect, fo
 
 WORKER = "checkin"
 WORKER_SEND = "checkin_send"              # --send-pending / --mark-sent: delivery runs, never the window's anchor
+MEMO_WORKER = "memo"                      # scripts/monday_memo.py queues under memo-<slug>-<UTC day> through queue_checkin
+QUEUE_WORKERS = [WORKER, MEMO_WORKER]
 UNSENT_DAYS = 7
 STALE_MINUTES = 15                        # same threshold as the executor's reconcile (SKILL.md §6 step 8)
 PARTS = ("Actions waiting", "Actions taken", "Active lever per campaign", "New learnings", "Warnings")
@@ -334,16 +337,17 @@ class Checkin:
         return w
 
     def unsent_checkins(self) -> list[str]:
-        """Check-ins queued for the Gmail connector in the last UNSENT_DAYS days that no `--mark-sent` recorded: Sam has
-        not read them, and this email's window opens after theirs did."""
+        """Check-ins (and Monday memos) queued for the Gmail connector in the last UNSENT_DAYS days that no `--mark-sent`
+        recorded: Sam has not read them, and this email's window opens after theirs did."""
         rows = self.q(
             "select c.counts->>'email_key' as key, c.counts->>'since' as since, c.started_at from runs c"
-            " where c.client_id=%s and c.worker=%s and c.counts->>'queued'='1' and c.started_at >= %s and c.started_at < %s and c.id <> %s"
+            " where c.client_id=%s and c.worker = any(%s) and c.counts->>'queued'='1' and c.started_at >= %s and c.started_at < %s and c.id <> %s"
             " and not exists (select 1 from runs s where s.client_id=c.client_id and s.worker=%s and s.counts->>'sent'='1'"
             " and s.counts->>'email_key' = c.counts->>'email_key') order by c.started_at",
-            self.client_id, WORKER, self.now - timedelta(days=UNSENT_DAYS), self.now, self.run.id, WORKER_SEND)
-        return [f"check-in {clean(r['key'], 80)} queued {ts(r['started_at'])} was never marked sent (Gmail connector):"
-                f" `scripts/checkin.py --since {clean(r['since'], 40)} --dry-run` prints its window again" for r in rows]
+            self.client_id, QUEUE_WORKERS, self.now - timedelta(days=UNSENT_DAYS), self.now, self.run.id, WORKER_SEND)
+        return [f"{message_label(r['key'])} {clean(r['key'], 80)} queued {ts(r['started_at'])} was never marked sent (Gmail connector):"
+                f" `scripts/{'monday_memo' if r['key'].startswith('memo-') else 'checkin'}.py --since {clean(r['since'], 40)} --dry-run`"
+                f" prints its window again" for r in rows]
 
     def zero_learnings(self) -> list[str]:
         """SKILL.md §4 rule 2 / FR-41. The loop (`scripts/meta_insights.py`, T10) judges this at pull time and leaves
@@ -405,7 +409,12 @@ def checkin_key(slug: str, now: datetime) -> str:
 
 
 def key_pattern(slug: str) -> re.Pattern[str]:
-    return re.compile(rf"checkin-{re.escape(slug)}-\d{{4}}-\d{{2}}-\d{{2}}")
+    """A queued message of the client: its check-in or its Monday memo, one per UTC day each."""
+    return re.compile(rf"(?:checkin|memo)-{re.escape(slug)}-\d{{4}}-\d{{2}}-\d{{2}}")
+
+
+def message_label(key: str) -> str:
+    return "memo" if key.startswith("memo-") else "check-in"
 
 
 def delivered(conn, client_id, key: str) -> dict[str, Any] | None:
@@ -414,17 +423,19 @@ def delivered(conn, client_id, key: str) -> dict[str, Any] | None:
                         " and counts->>'sent'='1' order by started_at limit 1", (client_id, WORKER_SEND, key)).fetchone()
 
 
-def queue_checkin(conn, r, mailer, client: dict[str, Any], key: str, *, to: str, subject: str, text: str, html_body: str) -> None:
-    """Queue the composed check-in once per client and day. The key is claimed in this run's `counts` under an advisory
-    lock before the file is written, so two runs racing for one day queue one message; a run that fails releases its
-    claim (run() rewrites counts on close), one that crashes keeps it, and nothing is queued again that day."""
+def queue_checkin(conn, r, mailer, client: dict[str, Any], key: str, *, to: str, subject: str, text: str, html_body: str,
+                  worker: str = WORKER) -> None:
+    """Queue the composed check-in (or, with `worker='memo'`, the Monday memo) once per client and day. The key is
+    claimed in this run's `counts` under an advisory lock before the file is written, so two runs racing for one day
+    queue one message; a run that fails releases its claim (run() rewrites counts on close), one that crashes keeps it,
+    and nothing is queued again that day."""
     r.count("queued", 0)
     r.count("sent", 0)
     conn.execute("select pg_advisory_xact_lock(hashtext(%s))", (key,))
     prior = conn.execute(
         "select id, started_at from runs where client_id=%s and worker=%s and id<>%s and counts->>'email_key'=%s"
         " and (status='running' or counts->>'queued'='1') order by started_at limit 1",
-        (client["id"], WORKER, r.id, key)).fetchone() or delivered(conn, client["id"], key)
+        (client["id"], worker, r.id, key)).fetchone() or delivered(conn, client["id"], key)
     if prior is None:
         conn.execute("update runs set counts = coalesce(counts, '{}'::jsonb) || jsonb_build_object('email_key', %s::text) where id=%s",
                      (key, r.id))
@@ -447,11 +458,11 @@ def queue_checkin(conn, r, mailer, client: dict[str, Any], key: str, *, to: str,
     when = f" at {ts(prior['started_at'])}" if prior.get("started_at") else " (its file is in the queue)"
     state = (f"; sent as {sent['counts']['message_id']} at {ts(sent['started_at'])}" if sent
              else "; still pending: `scripts/checkin.py --send-pending` prints it")
-    print(f"not queued: check-in {key} was already queued{when}{state}")
+    print(f"not queued: {message_label(key)} {key} was already queued{when}{state}")
 
 
 def send_pending(conn, r, mailer, client: dict[str, Any]) -> None:
-    """Print, for every queued check-in of the client, the exact `send_message` call the session makes and the
+    """Print, for every queued check-in or memo of the client, the exact `send_message` call the session makes and the
     `--mark-sent` command that follows it. Sends nothing; a file whose key is already recorded as sent is removed."""
     r.counts["mode"] = "send_pending"
     r.count("pending", 0)
@@ -477,17 +488,18 @@ def send_pending(conn, r, mailer, client: dict[str, Any]) -> None:
         print(f"then: python3 scripts/checkin.py --client {client['slug']} --mark-sent {key} --message-id <id returned by {TOOL}>")
     conn.rollback()
     if not r.counts["pending"]:
-        print(f"no pending check-in for {client['slug']}")
+        print(f"no pending check-in for {client['slug']} (and no pending memo)")
 
 
 def mark_sent(conn, r, mailer, client: dict[str, Any], key: str, message_id: str) -> None:
-    """Record the delivery of a queued check-in (the id the connector returned), then remove its file. The record is
+    """Record the delivery of a queued check-in or memo (the id the connector returned), then remove its file. The record is
     committed before the file goes, so a crash in between leaves a file `--send-pending` drops, never a resend."""
     r.counts["mode"] = "mark_sent"
     if not MESSAGE_ID.fullmatch(message_id):
         raise DeliveryError(f"--message-id must be the `id` {TOOL} returned (letters, digits and ._:@+=/- only, at most 256)")
     if not key_pattern(client["slug"]).fullmatch(key):
-        raise DeliveryError(f"{key!r} is not a check-in key for {client['slug']} (checkin-{client['slug']}-YYYY-MM-DD)")
+        raise DeliveryError(f"{key!r} is not a check-in key for {client['slug']} (checkin-{client['slug']}-YYYY-MM-DD, or "
+                            f"memo-{client['slug']}-YYYY-MM-DD for the Monday memo)")
     if not mailer.queued:
         raise DeliveryError("the email backend does not queue (EMAIL_BACKEND is not gmail_connector): nothing to mark sent")
     r.counts["email_key"] = key
@@ -501,9 +513,9 @@ def mark_sent(conn, r, mailer, client: dict[str, Any], key: str, message_id: str
     try:
         mailer.get(key)
     except NotQueued:
-        raise DeliveryError(f"no pending check-in {key} in the queue: nothing to mark sent") from None
-    queued_by = conn.execute("select id from runs where client_id=%s and worker=%s and counts->>'email_key'=%s and counts->>'queued'='1'"
-                             " order by started_at desc limit 1", (client["id"], WORKER, key)).fetchone()
+        raise DeliveryError(f"no pending {message_label(key)} {key} in the queue: nothing to mark sent") from None
+    queued_by = conn.execute("select id from runs where client_id=%s and worker = any(%s) and counts->>'email_key'=%s and counts->>'queued'='1'"
+                             " order by started_at desc limit 1", (client["id"], QUEUE_WORKERS, key)).fetchone()
     r.counts["message_id"] = message_id
     r.counts["queued_run"] = str(queued_by["id"]) if queued_by else None
     r.count("sent")
@@ -544,8 +556,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true", help="print the email instead of sending it; brakes still propose")
     mode.add_argument("--send-pending", action="store_true",
-                      help=f"print the {CONNECTOR} connector {TOOL} arguments for every queued check-in of the client; sends nothing")
-    mode.add_argument("--mark-sent", metavar="KEY", help="record that the queued check-in KEY was sent and remove it from the queue")
+                      help=f"print the {CONNECTOR} connector {TOOL} arguments for every queued check-in and memo of the client; sends nothing")
+    mode.add_argument("--mark-sent", metavar="KEY", help="record that the queued check-in or memo KEY was sent and remove it from the queue")
     p.add_argument("--message-id", help=f"with --mark-sent: the `id` the {CONNECTOR} connector's {TOOL} returned")
     args = p.parse_args(argv)
     if (args.mark_sent is None) != (args.message_id is None):

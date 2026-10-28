@@ -23,7 +23,9 @@ Sections, in this order and no others:
 The window opens at the previous successful memo (`runs.worker='memo'`), else 7 days ago; `--since` overrides it
 and `--now` fixes the reference time so the golden-file test is reproducible. Every string out of a row passes the
 check-in's `clean()` (no URL survives, NFR-2); the HTML part is the escaped text. Delivery is the email adapter, to
-`CHECKIN_TO` (or `--to`). Refuses while paused (SKILL.md §0 step 4) or while an action is `applying` (§2). Worker
+`CHECKIN_TO` (or `--to`): `EMAIL_BACKEND=file` writes the .eml at once; `gmail_connector` queues the memo under
+`memo-<slug>-<UTC day>` with the check-in's claim (`queue_checkin`), and the `me-monday` routine's last step delivers
+it through the Gmail connector (`scripts/checkin.py --send-pending`, then `--mark-sent`). Refuses while paused (SKILL.md §0 step 4) or while an action is `applying` (§2). Worker
 role only; the only warehouse write is the `runs` row.
 """
 from __future__ import annotations
@@ -66,6 +68,12 @@ def _load_script(name: str):
 
 _checkin = _load_script("checkin")
 clean, ts, parse_when = _checkin.clean, _checkin.ts, _checkin.parse_when
+
+
+def memo_key(slug: str, now: datetime) -> str:
+    """The queue key under EMAIL_BACKEND=gmail_connector: one memo per client and UTC day (`scripts/checkin.py
+    --send-pending` prints it for the Gmail connector, `--mark-sent memo-<slug>-<day> --message-id <id>` records it)."""
+    return f"memo-{slug}-{now.astimezone(timezone.utc).date().isoformat()}"
 
 
 class MemoRefused(RuntimeError):
@@ -470,9 +478,14 @@ def main(argv: list[str]) -> int:
                     print(f"subject: {subject}\n{text}", end="")
                     r.count("sent", 0)
                 else:
-                    message_id = get_email().send(to=to, subject=subject, text=text, html=html_body)
-                    r.count("sent")
-                    print(f"sent {message_id}: {subject}")
+                    mailer = get_email()
+                    if mailer.queued:     # EMAIL_BACKEND=gmail_connector: the routine session sends it (checkin.py --send-pending)
+                        _checkin.queue_checkin(conn, r, mailer, client, memo_key(client["slug"], now), to=to, subject=subject,
+                                               text=text, html_body=html_body, worker=WORKER)
+                    else:
+                        message_id = mailer.send(to=to, subject=subject, text=text, html=html_body)
+                        r.count("sent")
+                        print(f"sent {message_id}: {subject}")
         except MemoRefused as exc:
             print(f"monday_memo: refused: {exc}", file=sys.stderr)
             return 2

@@ -1,5 +1,5 @@
 {
-  "_doc": "Phase-0 reactor stand-in (SKILL.md §8, PRD FR-48, CRUCIBLE A23). Machine-readable twin of the SKILL.md §8 table: tests/test_routines.py fails when the two drift. Each routine is a Claude Code Routine that starts a fresh session in the marketing-engineer environment on its cron (UTC); the SessionStart hook (.claude/hooks/session-start.sh) installs Chromium, Python deps, and reads secrets from the host store. Registration itself is T13 step 7 (quiz decision 7, Sam 2026-09-04): one create_trigger per entry with create_new_session_on_fire=true; `scripts/routines.py register --print` prints the exact arguments and registers nothing. `scripts/routines.py dry-run <name>` runs a routine's steps locally against the dev warehouse; `steps[].script` null means the orchestrator says so and stops (SKILL.md §3). `steps[].connector` names the claude.ai connector the session uses after that step's script (Sam 2026-10-28: the check-in goes out through the Gmail connector: `scripts/checkin.py --send-pending` prints the send_message call, the session makes it, then `--mark-sent <key> --message-id <id>`); a routine's connectors are the union of its steps' and are the only connectors its trigger gets.",
+  "_doc": "Phase-0 reactor stand-in (SKILL.md §8, PRD FR-48, CRUCIBLE A23). Machine-readable twin of the SKILL.md §8 table: tests/test_routines.py fails when the two drift. Each routine is a Claude Code Routine that starts a fresh session in the marketing-engineer environment on its cron (UTC); the SessionStart hook (.claude/hooks/session-start.sh) installs Chromium, Python deps, and reads secrets from the host store. Registration itself is T13 step 7 (quiz decision 7, Sam 2026-09-04): one create_trigger per entry with create_new_session_on_fire=true; `scripts/routines.py register --print` prints the exact arguments and registers nothing. `scripts/routines.py dry-run <name>` runs a routine's steps locally against the dev warehouse; `steps[].script` null means the orchestrator says so and stops (SKILL.md §3). `steps[].connector` names the claude.ai connector the session uses after that step's script (Sam 2026-10-28: the check-in goes out through the Gmail connector: `scripts/checkin.py --send-pending` prints the send_message call, the session makes it, then `--mark-sent <key> --message-id <id>`; the Monday memo goes out the same way under `memo-<slug>-<UTC day>`); a routine's connectors are the union of its steps' and are the only connectors its trigger gets.",
   "session": "fresh",
   "hook": ".claude/hooks/session-start.sh",
   "client": "upclicklabs",
@@ -29,10 +29,11 @@
     {
       "name": "me-monday",
       "cron_utc": "0 7 * * 1",
-      "prompt": "Use the marketing-engineer skill. Run: status, monday memo for client upclicklabs. Then stop.",
+      "prompt": "Use the marketing-engineer skill. Run: status, monday memo for client upclicklabs, then send the pending memo through the Gmail connector and mark it sent. Then stop.",
       "steps": [
         { "say": "status", "script": "warehouse/client.py", "args": ["status", "{client}"] },
-        { "say": "monday memo", "script": "scripts/monday_memo.py", "args": ["--client", "{client}"] }
+        { "say": "monday memo", "script": "scripts/monday_memo.py", "args": ["--client", "{client}"] },
+        { "say": "send the pending memo through the Gmail connector and mark it sent", "script": "scripts/checkin.py", "args": ["--client", "{client}", "--send-pending"], "connector": "Gmail" }
       ]
     }
   ]

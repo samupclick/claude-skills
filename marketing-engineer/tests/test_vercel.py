@@ -241,7 +241,7 @@ def test_four_routes_through_the_runtime_with_the_live_adapters(live_deps, vendo
 
     assert [f["remoteip"] for f in vendors.siteverify_forms] == [IP, IP]
     assert [f["response"] for f in vendors.siteverify_forms] == ["good-1", "good-2"]
-    assert {f["path"] for f in vendors.capi_forms} == {f"/v24.0/{PIXEL}/events"}
+    assert {f["path"] for f in vendors.capi_forms} == {f"/v26.0/{PIXEL}/events"}
     assert {f["test_event_code"] for f in vendors.capi_forms} == {"TEST123"}
     assert all(f["access_token"] == TOKEN for f in vendors.capi_forms)
     by = {e["event_name"]: e for e in vendors.events}
@@ -390,7 +390,7 @@ EXPECTED_UPLOAD = {
     "vercel.json", "api/funnel.py", "api/requirements.txt", "api/.python-version",
     "funnel/__init__.py", "funnel/app.py", "funnel/quiz.py", "funnel/wsgi.py",
     "funnel/static/index.html", "funnel/static/quiz.css", "funnel/static/quiz.js",
-    "adapters/__init__.py", "adapters/env.py", "adapters/capi/__init__.py", "adapters/capi/live.py",
+    "adapters/__init__.py", "adapters/env.py", "adapters/graph.py", "adapters/capi/__init__.py", "adapters/capi/live.py",
     "adapters/turnstile/__init__.py", "adapters/turnstile/live.py",
     "warehouse/__init__.py", "warehouse/client.py",
 }

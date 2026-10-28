@@ -17,6 +17,7 @@
 /adapters/*
 !/adapters/__init__.py
 !/adapters/env.py
+!/adapters/graph.py
 !/adapters/capi
 !/adapters/turnstile
 /adapters/capi/fake.py

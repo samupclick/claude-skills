@@ -96,7 +96,7 @@ tested by invoking the function the way Vercel's Python runtime (vercel-runtime 
    | `META_PIXEL_ID` | the pixel (dataset) id | same | also shown to the page for the browser pixel |
    | `META_CAPI_TOKEN` | Events Manager → Settings → Conversions API → access token | same | secret |
    | `META_TEST_EVENT_CODE` | **unset** | Events Manager → Test events code | set in Production it marks every real event as a test event (the function logs `capi_test_mode_in_production`) |
-   | `META_API_VERSION` | optional (default `v24.0`) | same | |
+   | `META_API_VERSION` | optional (default `v26.0`, shared with the Marketing API adapter) | same | |
    | `TURNSTILE_SITE_KEY` | the widget's site key | `1x00000000000000000000AA` (Cloudflare's always-pass test key) | public |
    | `TURNSTILE_SECRET_KEY` | the widget's secret key | `1x0000000000000000000000000000000AA` (test secret) | secret in Production |
    | `TURNSTILE_EXPECTED_HOSTNAME` | `go.upclicklabs.com` | unset | optional; siteverify's `hostname` must match |

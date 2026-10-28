@@ -87,7 +87,7 @@ def test_morning_routine_sends_the_checkin_through_the_gmail_connector():
     send = [s for s in morning["steps"] if s.get("connector")]
     assert [(s["connector"], s["script"], s["args"][-1]) for s in send] == [("Gmail", "scripts/checkin.py", "--send-pending")]
     assert [s["say"] for s in morning["steps"]].index(send[0]["say"]) == len(morning["steps"]) - 1   # after the check-in step
-    assert [mod.connectors(r) for r in defs["routines"]] == [["Gmail"], [], []]
+    assert [mod.connectors(r) for r in defs["routines"]] == [["Gmail"], [], ["Gmail"]]   # me-monday sends the memo
     assert mod.connector_drift(defs) == []
     morning["steps"][-1].pop("connector")
     assert any("me-morning" in p and "Gmail" in p for p in mod.connector_drift(defs))
@@ -112,7 +112,7 @@ def test_register_print_gives_the_create_trigger_arguments_and_registers_nothing
         assert args["cron_expression"] == f"CRON_TZ=UTC {r['cron_utc']}"         # the §8 table is UTC: kept UTC
         assert args["create_new_session_on_fire"] is True and args["initiation"] == "human_request"
     assert blocks["me-morning"]["connectors"] == ["Gmail"]
-    assert blocks["me-evening"]["connectors"] == [] and blocks["me-monday"]["connectors"] == []
+    assert blocks["me-evening"]["connectors"] == [] and blocks["me-monday"]["connectors"] == ["Gmail"]
     assert "nothing was registered" in res.stdout.lower()
     refused = subprocess.run([sys.executable, str(ME_DIR / "scripts" / "routines.py"), "register"], cwd=ME_DIR, capture_output=True, text=True)
     assert refused.returncode == 2 and "--print" in refused.stderr and "Sam" in refused.stderr

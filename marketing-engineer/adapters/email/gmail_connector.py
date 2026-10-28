@@ -1,4 +1,4 @@
-"""Gmail connector hand-off for the check-in (FR-42; Sam, 2026-10-28). EMAIL_BACKEND=gmail_connector (alias `gmail`).
+"""Gmail connector hand-off for the check-in and the Monday memo (FR-42, FR-43; Sam, 2026-10-28). EMAIL_BACKEND=gmail_connector (alias `gmail`).
 
 The check-in is delivered through the Gmail connector, an MCP tool of the Claude session that runs the routine. A
 Python script cannot call it, so this backend sends nothing: `send()` writes the composed message to a pending-send

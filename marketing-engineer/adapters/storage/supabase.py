@@ -20,12 +20,13 @@ from urllib.parse import quote, unquote, urlsplit
 
 import httpx
 
+from adapters import backoff
 from adapters.env import MissingEnvVar, require
 
 DEFAULT_BUCKET = "creatives"
 CACHE_CONTROL = "3600"
 CREDENTIAL_VARS = ("SUPABASE_PUBLISHABLE_KEY", "SUPABASE_STORAGE_EMAIL", "SUPABASE_STORAGE_PASSWORD")
-TRANSIENT = {502, 503, 504}
+ATTEMPTS = 2
 REFRESH_MARGIN_S = 60
 
 
@@ -151,16 +152,10 @@ class SupabaseStorage:
     # ---------- HTTP ----------
 
     def _send(self, method: str, url: str, **kw: Any) -> httpx.Response:
-        """One retry on a transport error or a 502/503/504; every call this adapter makes is idempotent (upsert)."""
+        """One retry on a transport error, a 429 or a 5xx (the shared adapters/backoff.py); every call this adapter
+        makes is idempotent (upsert)."""
         try:
-            resp = self._http.request(method, url, **kw)
-            if resp.status_code not in TRANSIENT:
-                return resp
-        except httpx.TransportError:
-            pass
-        self._sleep(1.0)
-        try:
-            return self._http.request(method, url, **kw)
+            return backoff.send(self._http, method, url, attempts=ATTEMPTS, base_delay=1.0, sleep=self._sleep, **kw)
         except httpx.TransportError as exc:
             raise SupabaseStorageError(f"supabase {method} {urlsplit(url).path}: {type(exc).__name__} twice") from None
 

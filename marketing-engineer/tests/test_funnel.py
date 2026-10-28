@@ -446,7 +446,7 @@ def test_events_live_sends_the_three_events_with_the_test_code(db_env, dev_root,
     out = capsys.readouterr().out
     assert os.environ["CAPI_BACKEND"] == "live"
     assert sorted(e["event_name"] for e in sent) == ["QuizComplete", "QuizStart", "Schedule"]
-    assert {e["test_event_code"] for e in sent} == {"TEST123"} and {e["path"] for e in sent} == {"/v24.0/123456789012345/events"}
+    assert {e["test_event_code"] for e in sent} == {"TEST123"} and {e["path"] for e in sent} == {"/v26.0/123456789012345/events"}
     lead = sent[0]["event_id"].split(":")[0]
     assert {e["event_id"] for e in sent} == {f"{lead}:QuizStart", f"{lead}:QuizComplete", f"{lead}:Schedule"}
     assert out.count("events_received=1") == 3 and "AbCdEfGhIjKlMnOp123" in out

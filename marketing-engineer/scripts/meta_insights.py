@@ -12,7 +12,7 @@ One invocation, as `worker_rw`, reads only through the Meta adapter and writes e
   2. account-level spend today into `account_spend_hourly` (one row per run; the routine runs hourly) for the
      executor's observational brake (FR-47);
   2a. review status (FR-37): every ad read gets `ad_entities.review_status` / `review_feedback` from Meta's
-     `effective_status` and `ad_review_feedback` (0014 grant); `runs.counts.review.disapproved` lists the ads Meta
+     `effective_status` and `ad_review_feedback` (0008 grant); `runs.counts.review.disapproved` lists the ads Meta
      disapproves now, and an ad counts as a disapproval when the loop first saw it disapproved within 7 days. When
      that count reaches `clients.config.disapproval_pause_threshold`, one proposed `set_pause_flag` carries the ads
      as evidence (Sam applies it as `sam_admin`); a missing key is a warning, never a default. An ad Meta cannot

@@ -51,3 +51,24 @@ Execution of `references/dev-mode.md` § "Go-live swap checklist" steps 1–8: `
 STAYS BLOCKED until Sam clears it. Requires real credentials in the executor's env only; never in a worker, never in git. Status is `needs-info` (waiting on Sam), not `ready-for-agent`.
 
 ## Comments
+
+- 2026-10-28 (integrator, phase 0 completion build on `claude/sleepy-brahmagupta-jng3kp`): everything this ticket's swap
+  needs from code now exists; the swap itself still waits on Sam's credentials and accounts (Friday checklist,
+  `SKILL.md` §11), so the status stays `needs-info`. Added by this build (merges `175592e`, `2a2cdfd`, `75f4a38`,
+  `e675cbb`, `26ea37c`, `0aac34d`, then the integration commit; details in `CHANGELOG.md` § "Phase 0 completion"):
+  - every live backend: `storage/supabase`, `meta/live` (write token in the executor only, `META_READ_TOKEN` for
+    workers), `capi/live`, `turnstile/live`, `inspo/scrapecreators`, `voc/reddit`, `image/gemini`,
+    `email/gmail_connector`. All contract-tested with `httpx.MockTransport` against ASSUMED-SHAPE fixtures; **none is
+    live-verified**, and each swap step now ends by recording a real response over its fixture;
+  - step 1 is `scripts/apply_migrations.py` (`--dry-run`, `--baseline`, `--storage-writer`, `--verify`), not a hand
+    apply; migrations are `0001` to `0008` (`0008_loop_review_sync.sql`, the FR-37 review-sync grant);
+  - step 6 deploys the funnel **from this repo** to Vercel (`api/funnel.py`, `vercel.json`, `funnel/README.md` §
+    "Deploy on Vercel"), not to a separate `go-upclicklabs` repo; `scripts/test_events.py --live` checks it. The
+    acceptance line naming the `go-upclicklabs` repo is superseded by that (Sam, 2026-10-28: keep the funnel here);
+  - step 7 is `EMAIL_BACKEND=gmail_connector` (check-in and Monday memo queued, sent by the routine session's Gmail
+    connector, `--send-pending` / `--mark-sent`), and the routines register from `scripts/routines.py register --print`;
+  - one `META_API_VERSION` default (v26.0) for the Marketing API and CAPI (`adapters/graph.py`).
+  The rewritten checklist is `references/dev-mode.md` § "Go-live swap checklist"; `.env.example` names every variable
+  and the only process that may hold it. Open questions for Sam from the builders are in the build report (bucket
+  privacy for inspo copies, Data API exposure, read token, custom conversions, Gemini model, Reddit app, function
+  region, staging database for Preview, re-send path).
