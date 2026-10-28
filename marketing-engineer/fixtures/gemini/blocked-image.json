@@ -1,0 +1,13 @@
+{
+  "_shape": "ASSUMED SHAPE from https://ai.google.dev/api/generate-content (a filtered output keeps the candidate without content and sets finishReason, e.g. IMAGE_SAFETY, IMAGE_PROHIBITED_CONTENT or NO_IMAGE), read 2026-10-28; the page was not opened from the build session, so the shape comes from search-result summaries of it; replace with a recorded response at go-live",
+  "request": "POST https://generativelanguage.googleapis.com/v1beta/models/gemini-nano-banana-2.1:generateContent",
+  "status": 200,
+  "headers": {"content-type": "application/json; charset=UTF-8"},
+  "body": {
+    "candidates": [
+      {"finishReason": "IMAGE_SAFETY", "index": 0}
+    ],
+    "usageMetadata": {"promptTokenCount": 52, "totalTokenCount": 52},
+    "modelVersion": "gemini-nano-banana-2.1"
+  }
+}

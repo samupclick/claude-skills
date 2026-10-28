@@ -5,7 +5,9 @@ These files imitate what we *assume* a scrapecreators Meta Ad Library "company a
 `is_active`, `publisher_platform`, and a `snapshot` carrying `body.text`, `title`, `link_url`,
 `cta_text`, `display_format`, `images[].original_image_url`, `videos[]`, `cards[]`). Nobody has seen a
 real response yet (CRUCIBLE.md §4). Go-live step 4 saves one real call as `real-001.json`; if the shape
-differs, fix `adapters/inspo/fixture.py::normalise` and nothing else.
+differs, fix the shape functions at the top of `adapters/inspo/scrapecreators.py` (`page_rows`, `normalise`) and
+nothing else: this fixture backend and the live `INSPO_BACKEND=scrapecreators` share them. The live backend's own
+contract fixtures (search, two cursor pages) are in `fixtures/scrapecreators/`.
 
 Every ad body is synthetic and says so. Image URLs use the `fixture://` scheme; the fixture adapter
 renders a deterministic placeholder PNG for them, so nothing binary lives in git. Five DTC seed brands,

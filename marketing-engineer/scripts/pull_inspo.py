@@ -196,6 +196,16 @@ def known_patterns(conn: wh.Connection, brand: str) -> dict[str, dict[str, Any]]
 # ---------- the pull ----------
 
 def pull(conn: wh.Connection, r: wh.Run, *, brands: list[str], inspo: Any, storage: Any, model: Any, today: date) -> None:
+    """The pull; a backend that tallies vendor calls (`usage()`) has them in `runs.counts.inspo_usage`, failed run too."""
+    try:
+        _pull(conn, r, brands=brands, inspo=inspo, storage=storage, model=model, today=today)
+    finally:
+        usage = getattr(inspo, "usage", None)
+        if callable(usage):
+            r.counts["inspo_usage"] = usage()
+
+
+def _pull(conn: wh.Connection, r: wh.Run, *, brands: list[str], inspo: Any, storage: Any, model: Any, today: date) -> None:
     fam = load_families(conn)
     format_families, hook_types, angles = fam["format"], fam["hook_type"], fam["angle"]
     schema = decompose_schema(format_families, hook_types, angles)

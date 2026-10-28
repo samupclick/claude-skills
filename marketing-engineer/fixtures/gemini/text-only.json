@@ -1,0 +1,17 @@
+{
+  "_shape": "ASSUMED SHAPE from https://ai.google.dev/gemini-api/docs/generate-content/image-generation (the model may decline in text with finishReason STOP and no image part), read 2026-10-28; the page was not opened from the build session, so the shape comes from search-result summaries of it; replace with a recorded response at go-live",
+  "request": "POST https://generativelanguage.googleapis.com/v1beta/models/gemini-nano-banana-2.1:generateContent",
+  "status": 200,
+  "headers": {"content-type": "application/json; charset=UTF-8"},
+  "body": {
+    "candidates": [
+      {
+        "content": {"role": "model", "parts": [{"text": "I can't generate that image."}]},
+        "finishReason": "STOP",
+        "index": 0
+      }
+    ],
+    "usageMetadata": {"promptTokenCount": 52, "candidatesTokenCount": 8, "totalTokenCount": 60},
+    "modelVersion": "gemini-nano-banana-2.1"
+  }
+}

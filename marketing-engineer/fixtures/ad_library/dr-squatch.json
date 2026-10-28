@@ -1,5 +1,5 @@
 {
-  "_shape": "ASSUMED shape of a scrapecreators Meta Ad Library company-ads response; replace with a real response (real-001.json, go-live step 4) and fix adapters/inspo/fixture.py::normalise if it differs",
+  "_shape": "ASSUMED shape of a scrapecreators Meta Ad Library company-ads response; replace with a real response (real-001.json, go-live step 4) and fix the shape functions in adapters/inspo/scrapecreators.py (page_rows, normalise) if it differs",
   "brand": "Dr. Squatch",
   "searchResults": [
     {

@@ -3,15 +3,16 @@
 `fetch_thread(url)` returns one normalised thread: `url`, `title`, `comments` (list of `{id, text, score}`).
 There is no author field anywhere in the shape, by design (CRUCIBLE A13): the worker never needs usernames
 and the row it writes to `raw_ingest` must not carry them. The fixture backend reads `fixtures/voc/*.json`
-(SYNTHETIC threads) and never touches the network; the live backend lands in T13 and normalises Reddit's
-JSON into this same shape, here and only here.
+(SYNTHETIC threads) and never touches the network; the reddit backend (`reddit.py`) normalises Reddit's JSON into
+this same shape, there and only there: app-only OAuth with REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET, else the
+anonymous `.json` endpoint; REDDIT_USER_AGENT optional.
 """
 from __future__ import annotations
 
 import hashlib
 from typing import Any, Protocol
 
-from adapters.env import ME_DIR, choose_backend, not_built
+from adapters.env import ME_DIR, choose_backend
 
 FIXTURE_DIR = ME_DIR / "fixtures" / "voc"
 
@@ -39,8 +40,9 @@ def get_voc() -> PublicThreads:
     import os
 
     from adapters.voc.fixture import FixtureThreads
+    from adapters.voc.reddit import RedditThreads
 
     return choose_backend("VOC_BACKEND", {
         "fixture": lambda: FixtureThreads(os.environ.get("VOC_FIXTURE_DIR") or FIXTURE_DIR),
-        "reddit": not_built("VOC_BACKEND", "reddit", "T13"),
+        "reddit": RedditThreads.from_env,
     })

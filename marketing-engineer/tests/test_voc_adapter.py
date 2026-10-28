@@ -41,10 +41,12 @@ def test_unknown_url_is_an_error_that_never_prints_the_url(threads):
     assert "T13" in str(exc.value)
 
 
-def test_live_backend_lands_in_t13(monkeypatch):
+def test_live_backend_is_the_reddit_adapter(monkeypatch):
+    from adapters.voc.reddit import RedditThreads
     monkeypatch.setenv("VOC_BACKEND", "reddit")
-    with pytest.raises(NotImplementedError, match="T13"):
-        get_voc()
+    monkeypatch.setenv("REDDIT_CLIENT_ID", "")
+    monkeypatch.setenv("REDDIT_CLIENT_SECRET", "")
+    assert isinstance(get_voc(), RedditThreads), "contract tests in tests/test_voc_reddit.py"
 
 
 def test_url_ref_is_a_stable_hash_without_the_url():

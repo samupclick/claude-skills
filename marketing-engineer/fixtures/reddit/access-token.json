@@ -1,0 +1,7 @@
+{
+  "_shape": "ASSUMED SHAPE from https://github.com/reddit-archive/reddit/wiki/OAuth2 (Application Only OAuth: POST https://www.reddit.com/api/v1/access_token with HTTP Basic client_id:client_secret and grant_type=client_credentials; API calls then go to https://oauth.reddit.com with `Authorization: bearer <token>`), read 2026-10-28; the page was not opened from the build session, so the shape comes from search-result summaries and prior knowledge of the API; the token is fake; replace with a recorded response at go-live (never commit a real token)",
+  "request": "POST https://www.reddit.com/api/v1/access_token (Basic auth, form grant_type=client_credentials)",
+  "status": 200,
+  "headers": {"content-type": "application/json; charset=UTF-8"},
+  "body": {"access_token": "fixture-token-not-real", "token_type": "bearer", "expires_in": 86400, "scope": "*"}
+}

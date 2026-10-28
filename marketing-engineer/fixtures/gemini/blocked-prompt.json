@@ -1,0 +1,16 @@
+{
+  "_shape": "ASSUMED SHAPE from https://ai.google.dev/api/generate-content (a blocked prompt sets promptFeedback.blockReason, e.g. SAFETY, PROHIBITED_CONTENT or IMAGE_SAFETY, and returns no candidates), read 2026-10-28; the page was not opened from the build session, so the shape comes from search-result summaries of it; replace with a recorded response at go-live",
+  "request": "POST https://generativelanguage.googleapis.com/v1beta/models/gemini-nano-banana-2.1:generateContent",
+  "status": 200,
+  "headers": {"content-type": "application/json; charset=UTF-8"},
+  "body": {
+    "promptFeedback": {
+      "blockReason": "SAFETY",
+      "safetyRatings": [
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "probability": "HIGH", "blocked": true}
+      ]
+    },
+    "usageMetadata": {"promptTokenCount": 40, "totalTokenCount": 40},
+    "modelVersion": "gemini-nano-banana-2.1"
+  }
+}

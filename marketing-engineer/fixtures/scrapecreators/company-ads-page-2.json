@@ -1,0 +1,63 @@
+{
+  "_shape": "ASSUMED SHAPE from https://scrapecreators.com/facebook-ad-library/endpoints/company-ads (second page: the request carries `cursor`; the last page has no cursor), read 2026-10-28; the page was not reachable from the build session, so the keys are unverified; every ad is SYNTHETIC; replace with a recorded response at go-live",
+  "request": "GET https://api.scrapecreators.com/v1/facebook/adLibrary/company/ads?pageId=fx-page-200&cursor=fx-cursor-page-2 (header x-api-key)",
+  "status": 200,
+  "headers": {"content-type": "application/json"},
+  "body": {
+    "results": [
+      {
+        "ad_archive_id": "fx-sc-1004",
+        "ad_id": null,
+        "collation_id": "fx-coll-4",
+        "collation_count": 1,
+        "page_id": "fx-page-200",
+        "page_name": "AG1",
+        "is_active": true,
+        "start_date": "2026-09-03",
+        "end_date": null,
+        "publisher_platform": ["FACEBOOK"],
+        "snapshot": {
+          "page_name": "AG1",
+          "body": "SYNTHETIC scrapecreators fixture body 4: body as a plain string and an ISO start date.",
+          "title": "SYNTHETIC title 4",
+          "link_url": "https://example.invalid/fixture-4",
+          "cta_text": "Shop now",
+          "cta_type": "SHOP_NOW",
+          "display_format": "DCO",
+          "images": [],
+          "videos": [],
+          "cards": [
+            {"title": "SYNTHETIC dco card", "body": "dco body", "original_image_url": "https://scontent-fixture.xx.fbcdn.net/v/t39/fx-sc-1004-dco.jpg", "resized_image_url": null}
+          ]
+        }
+      },
+      {
+        "ad_archive_id": "fx-sc-1005",
+        "ad_id": null,
+        "collation_id": "fx-coll-5",
+        "collation_count": 1,
+        "page_id": "fx-page-200",
+        "page_name": "AG1",
+        "is_active": false,
+        "start_date": 1786752000,
+        "end_date": 1788393600,
+        "publisher_platform": ["FACEBOOK", "INSTAGRAM"],
+        "snapshot": {
+          "page_name": "AG1",
+          "body": {"text": "SYNTHETIC scrapecreators fixture body 5: ended."},
+          "title": "SYNTHETIC title 5",
+          "link_url": "https://example.invalid/fixture-5",
+          "cta_text": "Learn more",
+          "cta_type": "LEARN_MORE",
+          "display_format": "IMAGE",
+          "images": [
+            {"original_image_url": "https://scontent-fixture.xx.fbcdn.net/v/t39/fx-sc-1005-original.jpg", "resized_image_url": "https://scontent-fixture.xx.fbcdn.net/v/t39/fx-sc-1005-resized.jpg"}
+          ],
+          "videos": [],
+          "cards": []
+        }
+      }
+    ],
+    "cursor": null
+  }
+}
