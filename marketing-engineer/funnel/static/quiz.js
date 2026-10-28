@@ -17,7 +17,7 @@
   });
   var fbclid = params.get("fbclid") || null;
 
-  var state = { config: null, questions: [], index: 0, answers: {}, leadId: null, tracking: false, turnstileToken: null };
+  var state = { config: null, questions: [], index: 0, answers: {}, leadId: null, tracking: false };
 
   function show(id) {
     Array.prototype.forEach.call(document.querySelectorAll(".screen"), function (s) { s.hidden = s.id !== id; });
@@ -51,16 +51,36 @@
     if (state.tracking && window.fbq && eventId) { window.fbq("track", name, {}, { eventID: eventId }); }
   }
 
-  /* --- Turnstile: rendered when a site key is configured; in dev the token is a placeholder. --- */
+  /* --- Turnstile: tokens are single-use, so each POST has its own widget (Start on the consent screen, submit on the
+         contact screen) and a POST that failed resets its widget for a fresh token. Rendered only when a site key is
+         configured; in dev the token is a placeholder. --- */
+  var ts = { siteKey: null, ready: null, widgets: {}, tokens: { start: null, complete: null } };
   function setupTurnstile(siteKey) {
-    if (!siteKey) { state.turnstileToken = "dev-pass"; return; }
-    var s = document.createElement("script");
-    s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-    s.async = true; s.defer = true;
-    s.onload = function () {
-      window.turnstile.render("#turnstile-box", { sitekey: siteKey, callback: function (t) { state.turnstileToken = t; } });
-    };
-    document.head.appendChild(s);
+    if (!siteKey) { ts.tokens.start = ts.tokens.complete = "dev-pass"; return; }
+    ts.siteKey = siteKey;
+    ts.ready = new Promise(function (resolve) {
+      var s = document.createElement("script");
+      s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      s.async = true; s.defer = true; s.onload = resolve;
+      document.head.appendChild(s);
+    });
+    renderWidget("start", "#turnstile-box");
+  }
+  function renderWidget(purpose, selector) {
+    if (!ts.siteKey || purpose in ts.widgets) { return; }
+    ts.widgets[purpose] = null;
+    ts.ready.then(function () {
+      ts.widgets[purpose] = window.turnstile.render(selector, {
+        sitekey: ts.siteKey,
+        callback: function (t) { ts.tokens[purpose] = t; },
+        "expired-callback": function () { ts.tokens[purpose] = null; }
+      });
+    });
+  }
+  function freshToken(purpose) {
+    if (!ts.siteKey) { return; }
+    ts.tokens[purpose] = null;
+    if (ts.widgets[purpose] !== null && ts.widgets[purpose] !== undefined) { window.turnstile.reset(ts.widgets[purpose]); }
   }
 
   function renderQuestion() {
@@ -74,7 +94,10 @@
       b.addEventListener("click", function () {
         state.answers[q.id] = opt;
         if (state.index + 1 < state.questions.length) { state.index += 1; renderQuestion(); }
-        else { progress(state.questions.length + 1, state.questions.length + 2); show("screen-contact"); $("contact-email").focus(); }
+        else {
+          progress(state.questions.length + 1, state.questions.length + 2); show("screen-contact");
+          renderWidget("complete", "#turnstile-box-contact"); $("contact-email").focus();
+        }
       });
       box.appendChild(b);
     });
@@ -83,28 +106,29 @@
 
   function start() {
     clear("error-consent");
-    if (!state.turnstileToken) { fail("error-consent", "Please complete the verification first."); return; }
+    if (!ts.tokens.start) { fail("error-consent", "Please complete the verification first."); return; }
     var btn = $("btn-start"); btn.disabled = true;
     var consent = { tracking: $("consent-tracking").checked, marketing: $("consent-marketing").checked, verbatim_use: $("consent-verbatim").checked };
-    api("POST", "/quiz/start", { client: client, consent: consent, utm: utm, fbclid: fbclid, turnstile_token: state.turnstileToken })
+    api("POST", "/quiz/start", { client: client, consent: consent, utm: utm, fbclid: fbclid, turnstile_token: ts.tokens.start })
       .then(function (r) {
         btn.disabled = false;
-        if (!r.ok) { fail("error-consent", r.body.error || "Something went wrong."); return; }
+        if (!r.ok) { freshToken("start"); fail("error-consent", r.body.error || "Something went wrong."); return; }
         state.leadId = r.body.lead_id; state.tracking = consent.tracking;
         if (state.tracking) { initPixel(state.config.pixel_id); pixelTrack("QuizStart", r.body.event_id); }
         state.index = 0; renderQuestion();
       })
-      .catch(function () { btn.disabled = false; fail("error-consent", "Network error; please try again."); });
+      .catch(function () { btn.disabled = false; freshToken("start"); fail("error-consent", "Network error; please try again."); });
   }
 
   function submit(ev) {
     ev.preventDefault(); clear("error-contact");
+    if (!ts.tokens.complete) { fail("error-contact", "Please complete the verification first."); return; }
     var btn = $("btn-submit"); btn.disabled = true;
     var contact = { email: $("contact-email").value.trim(), name: $("contact-name").value.trim() || null, phone: $("contact-phone").value.trim() || null };
-    api("POST", "/quiz", { client: client, lead_id: state.leadId, answers: state.answers, contact: contact, turnstile_token: state.turnstileToken })
+    api("POST", "/quiz", { client: client, lead_id: state.leadId, answers: state.answers, contact: contact, turnstile_token: ts.tokens.complete })
       .then(function (r) {
         btn.disabled = false;
-        if (!r.ok) { fail("error-contact", r.body.error || "Something went wrong."); return; }
+        if (!r.ok) { freshToken("complete"); fail("error-contact", r.body.error || "Something went wrong."); return; }
         pixelTrack("QuizComplete", r.body.event_id);
         progress(1, 1);
         if (r.body.calendar_url) {
@@ -117,7 +141,7 @@
         }
         show("screen-done");
       })
-      .catch(function () { btn.disabled = false; fail("error-contact", "Network error; please try again."); });
+      .catch(function () { btn.disabled = false; freshToken("complete"); fail("error-contact", "Network error; please try again."); });
   }
 
   api("GET", "/quiz/config?client=" + encodeURIComponent(client)).then(function (r) {

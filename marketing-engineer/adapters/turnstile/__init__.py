@@ -1,9 +1,9 @@
-"""Cloudflare Turnstile verification. TURNSTILE_BACKEND=pass|live. Rate limits are enforced elsewhere."""
+"""Cloudflare Turnstile verification. TURNSTILE_BACKEND=pass|live. Rate limits are enforced elsewhere (funnel/app.py)."""
 from __future__ import annotations
 
 from typing import Protocol
 
-from adapters.env import choose_backend, not_built
+from adapters.env import choose_backend
 
 
 class Turnstile(Protocol):
@@ -16,7 +16,9 @@ class PassTurnstile:
 
 
 def get_turnstile() -> Turnstile:
-    return choose_backend("TURNSTILE_BACKEND", {
-        "pass": PassTurnstile,
-        "live": not_built("TURNSTILE_BACKEND", "live", "T13"),
-    })
+    def live() -> Turnstile:
+        from adapters.turnstile.live import LiveTurnstile
+
+        return LiveTurnstile.from_env()
+
+    return choose_backend("TURNSTILE_BACKEND", {"pass": PassTurnstile, "live": live})

@@ -2,8 +2,8 @@
 """Local runner for the quiz funnel (dev-mode.md: FUNNEL_HOST=http://localhost:8788).
 
 Serves funnel/static/ (the quiz page at / and /quiz) and routes the function paths to funnel/app.py,
-one warehouse connection per request as role `app`. Emulates what Vercel + the Edge Functions do in
-production; nothing here is deployed (T13). Usage: python3 funnel/server.py [--port 8788]
+one warehouse connection per request as role `app`. Emulates what vercel.json + api/funnel.py do in
+production; this file is not deployed. Usage: python3 funnel/server.py [--port 8788]
 """
 from __future__ import annotations
 

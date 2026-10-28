@@ -1,0 +1,13 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ads-pixel/events.md (error 100 Invalid parameter) and the Graph API error object (message, type, code, error_subcode, is_transient, error_user_title, error_user_msg, fbtrace_id) in https://developers.facebook.com/documentation/ads-commerce/marketing-api/error-reference.md, read 2026-10-28; replace with a recorded response at go-live. Title and message text are illustrative",
+  "_status": 400,
+  "error": {
+    "message": "Invalid parameter",
+    "type": "OAuthException",
+    "code": 100,
+    "is_transient": false,
+    "error_user_title": "Invalid event",
+    "error_user_msg": "The event is missing a required parameter.",
+    "fbtrace_id": "AaBbCcDdEeFf01234"
+  }
+}

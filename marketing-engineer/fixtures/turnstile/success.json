@@ -1,0 +1,9 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.cloudflare.com/turnstile/get-started/server-side-validation/ (API response format: success, challenge_ts, hostname, error-codes, action, cdata), read 2026-10-28; replace with a recorded response at go-live. POST /turnstile/v0/siteverify",
+  "success": true,
+  "challenge_ts": "2026-10-28T09:14:30.096Z",
+  "hostname": "go.upclicklabs.com",
+  "error-codes": [],
+  "action": "",
+  "cdata": ""
+}

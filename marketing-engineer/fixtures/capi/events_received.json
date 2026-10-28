@@ -1,0 +1,6 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ads-pixel/events.md (Return Type: events_received, messages, fbtrace_id) and https://developers.facebook.com/documentation/ads-commerce/conversions-api/using-the-api.md, read 2026-10-28; replace with a recorded response at go-live. POST /<META_API_VERSION>/<META_PIXEL_ID>/events with one event",
+  "events_received": 1,
+  "messages": [],
+  "fbtrace_id": "AbCdEfGhIjKlMnOp123"
+}

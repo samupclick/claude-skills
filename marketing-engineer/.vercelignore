@@ -1,0 +1,33 @@
+# Vercel uploads only what api/funnel.py imports and the quiz page (funnel/README.md, "Deploy on Vercel").
+# Allowlist: ignore everything at the project root, then re-include.
+/*
+!/vercel.json
+!/api
+!/funnel
+!/adapters
+!/warehouse
+
+/funnel/*
+!/funnel/__init__.py
+!/funnel/app.py
+!/funnel/quiz.py
+!/funnel/wsgi.py
+!/funnel/static
+
+/adapters/*
+!/adapters/__init__.py
+!/adapters/env.py
+!/adapters/capi
+!/adapters/turnstile
+/adapters/capi/fake.py
+
+/warehouse/*
+!/warehouse/__init__.py
+!/warehouse/client.py
+
+# never, wherever they appear
+__pycache__/
+*.pyc
+.env
+.env.*
+.dev/
