@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime as dt
 import importlib.util
+import json
 import os
 import re
 import subprocess
@@ -329,3 +330,165 @@ def test_no_side_effect_beyond_email_adapter_and_proposals():
     src = (ME_DIR / "scripts" / "checkin.py").read_text() + (ME_DIR / "scripts" / "pause.py").read_text()
     assert "adapters.meta" not in src and "get_meta" not in src and "smtplib" not in src
     assert 'connect("worker"' in src and "WAREHOUSE_URL_EXECUTOR" not in src
+
+
+# ---------- delivery through the Gmail connector (EMAIL_BACKEND=gmail_connector; Sam, 2026-10-28) ----------
+# The routine session composes the check-in, the adapter queues it, `--send-pending` prints what the session passes to
+# the Gmail connector's send_message tool, and `--mark-sent` records the returned id. One message per client and day.
+
+MSG_ID = "19a2f3c4d5e6f708"     # the `id` of fixtures/gmail_connector/send_message.json's result
+
+
+@pytest.fixture
+def g(h, monkeypatch):
+    monkeypatch.setenv("EMAIL_BACKEND", "gmail_connector")
+    monkeypatch.delenv("EMAIL_QUEUE_DIR", raising=False)
+    h.queue_dir = h.outbox.parent / "pending-send"
+    return h
+
+
+def key_for(h, day=NOW):
+    return f"checkin-{h.slug}-{day.date().isoformat()}"
+
+
+def queued(h):
+    return sorted(p.name for p in h.queue_dir.glob("*.json")) if h.queue_dir.exists() else []
+
+
+def connector_args(out: str) -> list[dict]:
+    """The JSON argument blocks `--send-pending` prints, in order."""
+    return [json.loads(block) for block in re.findall(r"^arguments:\n(.*?)\nthen: ", out, flags=re.M | re.S)]
+
+
+def test_connector_backend_queues_the_checkin_once_per_client_and_day(g):
+    rc, out = g.run()
+    key = key_for(g)
+    assert rc == 0 and f"queued {key}: [me] check-in {g.slug} 2026-09-10" in out and "sent <" not in out
+    assert queued(g) == [f"{key}.json"] and not list(g.outbox.glob("*.eml"))
+    r = g.runs()[-1]
+    assert r["status"] == "ok" and r["counts"]["email_key"] == key and r["counts"]["queued"] == 1 and r["counts"]["sent"] == 0
+    rc, out = g.run()                                            # same client, same day: never queued twice
+    assert rc == 0 and f"not queued: check-in {key} was already queued" in out and "still pending" in out
+    assert queued(g) == [f"{key}.json"]
+    r = g.runs()[-1]
+    assert r["status"] == "ok" and r["counts"]["queued"] == 0 and r["counts"]["duplicate"] == 1 and "email_key" not in r["counts"]
+    tomorrow = NOW + dt.timedelta(days=1)
+    rc, out = g.run(now=tomorrow)                                # the next day is a new message
+    assert rc == 0 and queued(g) == sorted([f"{key}.json", f"{key_for(g, tomorrow)}.json"])
+
+
+def test_send_pending_prints_the_connector_arguments_and_mark_sent_records_the_delivery(g):
+    from adapters.email.gmail_connector import connector_arguments
+    rc, _ = g.run()
+    key = key_for(g)
+    record = json.loads((g.queue_dir / f"{key}.json").read_text())
+    rc, out = g.run("--send-pending")
+    assert rc == 0, out
+    assert f"--- {key}" in out and "Gmail connector tool send_message" in out
+    assert connector_args(out) == [connector_arguments(record)]
+    args = connector_args(out)[0]
+    assert args["to"] == ["sam@example.invalid"] and args["body"] == record["text"] and args["htmlBody"] == record["html"]
+    assert args["body"].startswith(f"Check-in — {g.slug} — 2026-09-10 06:00 UTC") and "5. Warnings" in args["body"]
+    assert f"then: python3 scripts/checkin.py --client {g.slug} --mark-sent {key} --message-id <id returned by send_message>" in out
+    send = g.runs("checkin_send")[-1]
+    assert send["status"] == "ok" and send["counts"] == {"mode": "send_pending", "pending": 1}
+    assert queued(g) == [f"{key}.json"]                         # printing sends nothing and keeps the file
+
+    rc, out = g.run("--mark-sent", key, "--message-id", MSG_ID)
+    assert rc == 0 and f"marked sent: {key} as {MSG_ID}" in out and queued(g) == []
+    mark = g.runs("checkin_send")[-1]
+    assert mark["status"] == "ok" and mark["counts"]["mode"] == "mark_sent" and mark["counts"]["sent"] == 1
+    assert mark["counts"]["email_key"] == key and mark["counts"]["message_id"] == MSG_ID
+    assert mark["counts"]["queued_run"] == str(g.runs()[-1]["id"])
+
+    rc, out = g.run("--send-pending")
+    assert rc == 0 and f"no pending check-in for {g.slug}" in out and connector_args(out) == []
+    rc, out = g.run("--mark-sent", key, "--message-id", MSG_ID)          # idempotent: recorded once
+    assert rc == 0 and f"{key} was already marked sent as {MSG_ID}" in out
+    assert [r["counts"].get("sent") for r in g.runs("checkin_send")].count(1) == 1
+    rc, out = g.run()                                                    # the file is gone; the warehouse still refuses
+    assert rc == 0 and f"not queued: check-in {key} was already queued" in out and f"sent as {MSG_ID}" in out and queued(g) == []
+
+
+def test_the_window_ignores_delivery_runs(g):
+    rc, _ = g.run(since=None)
+    first = g.runs()[-1]
+    g.run("--send-pending")
+    g.run("--mark-sent", key_for(g), "--message-id", MSG_ID)
+    rc, _ = g.run(now=NOW + dt.timedelta(days=1), since=None)
+    assert g.runs()[-1]["counts"]["since"] == first["started_at"].isoformat()
+
+
+def test_queued_body_is_the_body_the_file_backend_sends(g, monkeypatch):
+    monkeypatch.setenv("EMAIL_BACKEND", "file")
+    rc, _ = g.run()
+    sent = g.emails()[-1]
+    monkeypatch.setenv("EMAIL_BACKEND", "gmail_connector")
+    rc, _ = g.run()
+    record = json.loads((g.queue_dir / f"{key_for(g)}.json").read_text())
+    assert record["text"] == g.body(sent) and record["subject"] == sent["Subject"]
+    assert record["html"] == sent.get_body(preferencelist=("html",)).get_content()
+
+
+def test_a_claim_in_flight_blocks_a_second_queue(g):
+    """Two sessions checking in for one client on one day: the run that claimed the key first wins, even before it
+    finished (a crashed claim stays `running` and keeps blocking: never two messages)."""
+    g.ins("runs", worker="checkin", client_id=g.client_id, status="running", counts={"email_key": key_for(g)})
+    rc, out = g.run()
+    assert rc == 0 and "not queued" in out and queued(g) == []
+
+
+def test_mark_sent_refuses_what_it_cannot_record(g, monkeypatch):
+    rc, _ = g.run()
+    key = key_for(g)
+    rc, out = g.run("--mark-sent", key, "--message-id", "<id>")
+    assert rc == 2 and "--message-id" in out and queued(g) == [f"{key}.json"]
+    assert g.runs("checkin_send")[-1]["status"] == "failed"
+    rc, out = g.run("--mark-sent", f"checkin-{g.slug}-2026-09-11", "--message-id", MSG_ID)
+    assert rc == 2 and "no pending check-in" in out
+    rc, out = g.run("--mark-sent", "checkin-someone-else-2026-09-10", "--message-id", MSG_ID)
+    assert rc == 2 and "not a check-in key for" in out
+    assert all(r["status"] == "failed" for r in g.runs("checkin_send")) and not any(r["counts"].get("sent") for r in g.runs("checkin_send"))
+    monkeypatch.setenv("EMAIL_BACKEND", "file")
+    rc, out = g.run("--mark-sent", key, "--message-id", MSG_ID)
+    assert rc == 2 and "EMAIL_BACKEND" in out
+    with pytest.raises(SystemExit):
+        g.mod.parse_args(["--mark-sent", key])                           # --message-id is required with --mark-sent
+
+
+def test_send_pending_with_the_file_backend_has_nothing_to_send(h):
+    rc, out = h.run("--send-pending")
+    assert rc == 0 and "nothing is pending" in out
+    assert h.runs("checkin_send")[-1]["counts"] == {"mode": "send_pending", "pending": 0}
+
+
+def test_send_pending_drops_a_leftover_file_that_was_already_marked_sent(g):
+    rc, _ = g.run()
+    key = key_for(g)
+    leftover = (g.queue_dir / f"{key}.json").read_text()
+    g.run("--mark-sent", key, "--message-id", MSG_ID)
+    (g.queue_dir / f"{key}.json").write_text(leftover)              # a crash between the warehouse record and the unlink
+    rc, out = g.run("--send-pending")
+    assert rc == 0 and connector_args(out) == [] and f"{key} was already marked sent as {MSG_ID}" in out and queued(g) == []
+    assert g.runs("checkin_send")[-1]["counts"]["stale_removed"] == 1
+
+
+def test_a_checkin_never_marked_sent_is_a_warning_in_the_next_one(g, monkeypatch):
+    first = dt.datetime.now(UTC)                                     # runs.started_at is the database clock
+    rc, _ = g.run(now=first, since=None)
+    key = key_for(g, first)
+    monkeypatch.setenv("EMAIL_BACKEND", "file")
+    rc, _ = g.run(now=first + dt.timedelta(days=1), since=None)
+    warnings = g.body(g.emails()[-1]).split("5. Warnings")[1]
+    assert f"check-in {key} queued" in warnings and "was never marked sent" in warnings and "--dry-run" in warnings
+    monkeypatch.setenv("EMAIL_BACKEND", "gmail_connector")
+    g.run("--mark-sent", key, "--message-id", MSG_ID)
+    monkeypatch.setenv("EMAIL_BACKEND", "file")
+    rc, _ = g.run(now=first + dt.timedelta(days=1, minutes=5), since=None)
+    assert "never marked sent" not in g.body(g.emails()[-1])
+
+
+def test_delivery_modes_are_exclusive(checkin_mod):
+    for argv in (["--send-pending", "--dry-run"], ["--send-pending", "--mark-sent", "k", "--message-id", "m"], ["--message-id", "m"]):
+        with pytest.raises(SystemExit):
+            checkin_mod.parse_args(argv)
