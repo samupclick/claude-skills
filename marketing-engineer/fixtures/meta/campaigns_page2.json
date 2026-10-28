@@ -1,0 +1,9 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-account/campaigns.md (Reading: data / paging), read 2026-10-28; replace with a recorded response at go-live. The last page has cursors but no paging.next",
+  "data": [
+    {"id": "120200000000000010", "name": "ucl-new_recipes-b1", "status": "PAUSED", "effective_status": "PAUSED", "objective": "OUTCOME_LEADS", "created_time": "2026-10-27T09:10:02+0000"}
+  ],
+  "paging": {
+    "cursors": {"before": "QVFIUmJlZm9yZTI", "after": "QVFIUmFmdGVyMg"}
+  }
+}

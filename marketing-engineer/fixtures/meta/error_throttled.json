@@ -1,0 +1,16 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/overview/rate-limiting.md (codes 80000/80003/80004/80014, X-Business-Use-Case header with call_count, total_cputime, total_time, estimated_time_to_regain_access; X-Ad-Account-Usage with acc_id_util_pct, reset_time_duration) and https://developers.facebook.com/documentation/ads-commerce/marketing-api/error-reference.md, read 2026-10-28; replace with a recorded response at go-live. _status and _headers are the HTTP status and headers the stub serves with the body",
+  "_status": 400,
+  "_headers": {
+    "x-business-use-case-usage": "{\"100000000000001\":[{\"type\":\"ads_management\",\"call_count\":100,\"total_cputime\":34,\"total_time\":41,\"estimated_time_to_regain_access\":1,\"ads_api_access_tier\":\"development_access\"}]}",
+    "x-ad-account-usage": "{\"acc_id_util_pct\":100,\"reset_time_duration\":60,\"ads_api_access_tier\":\"development_access\"}"
+  },
+  "error": {
+    "message": "(#80004) There have been too many calls to this ad-account. Wait a bit and try again. For more info, please refer to https://developers.facebook.com/docs/graph-api/overview/rate-limiting#ads-management.",
+    "type": "OAuthException",
+    "code": 80004,
+    "error_subcode": 2446079,
+    "is_transient": true,
+    "fbtrace_id": "AbCdEfGhIjKlMnOp"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/adgroup.md (effective_status DISAPPROVED, ad_review_feedback: AdgroupReviewFeedback with global / placement_specific maps; the inner shape is not on the .md page and is assumed), read 2026-10-28; replace with a recorded response at go-live",
+  "id": "120200000000000041",
+  "name": "ucl-new_recipes-b1-ad2",
+  "status": "PAUSED",
+  "effective_status": "DISAPPROVED",
+  "adset_id": "120200000000000020",
+  "campaign_id": "120200000000000010",
+  "creative": {"id": "120200000000000031"},
+  "ad_review_feedback": {"global": {"Personal Attributes": "Ads must not assert or imply personal attributes."}},
+  "created_time": "2026-10-27T09:11:19+0000"
+}

@@ -1,0 +1,10 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-account/campaigns.md (Reading: data / paging) and https://developers.facebook.com/documentation/ads-commerce/marketing-api/insights/best-practices.md (paging.cursors), read 2026-10-28; replace with a recorded response at go-live. GET /act_<id>/campaigns?fields=...&filtering=[{field:name,operator:EQUAL,value:...}]&effective_status=[...]; a name filter Meta matches loosely still returns neighbours, so the adapter compares names itself",
+  "data": [
+    {"id": "120200000000000011", "name": "ucl-new_recipes-b1 (copy)", "status": "PAUSED", "effective_status": "PAUSED", "objective": "OUTCOME_LEADS", "created_time": "2026-10-20T08:00:00+0000"}
+  ],
+  "paging": {
+    "cursors": {"before": "QVFIUmJlZA", "after": "QVFIUmFmdGVy"},
+    "next": "https://graph.facebook.com/v26.0/act_100000000000001/campaigns?after=QVFIUmFmdGVy"
+  }
+}

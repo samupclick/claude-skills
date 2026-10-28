@@ -1,6 +1,7 @@
 """scripts/meta_insights.py (T10) against the throwaway warehouse (conftest.test_db) and the fake Meta account under the
 session DEV_ROOT. Nothing is mocked. Each test gets its own client row with its own campaign, ads and creatives, the
-state T9 leaves behind after `activate`. Covers FR-2, FR-3, FR-38, FR-39, FR-40, FR-41 and stop point D."""
+state T9 leaves behind after `activate`. Covers FR-2, FR-3, FR-37 (review sync, disapproval brake), FR-38, FR-39,
+FR-40, FR-41 and stop point D."""
 from __future__ import annotations
 
 import datetime as dt
@@ -10,10 +11,11 @@ import uuid
 from decimal import Decimal
 from pathlib import Path
 
+import psycopg
 import pytest
 from psycopg.types.json import Jsonb
 
-from adapters.meta import get_meta
+from adapters.meta import MetaThrottled, get_meta
 from warehouse.client import connect, insert
 
 ME_DIR = Path(__file__).resolve().parent.parent
@@ -123,7 +125,7 @@ def h(db_env, meta_root, monkeypatch, loop_mod, capsys):
     monkeypatch.setenv("PIPELINE_PAUSED", "false")
     for var in ("META_FAKE_FAIL", "META_FAKE_THROTTLE_AFTER"):
         monkeypatch.delenv(var, raising=False)
-    cfg = {k: BASE_CONFIG[k] for k in ("targets", "floors", "trust", "rate_limits", "campaign")}
+    cfg = {k: BASE_CONFIG[k] for k in ("targets", "floors", "trust", "rate_limits", "campaign", "disapproval_pause_threshold")}
     admin, worker = (connect(r, job="test") for r in ("sam_admin", "worker"))
     client = insert(admin, "clients", name="T10 test", slug=f"t10-{uuid.uuid4().hex[:8]}", daily_cap=Decimal("45.00"), currency="EUR", config=cfg)
     insert(admin, "offers", client_id=client["id"], name="AI visibility audit", funnel_host="http://localhost:8788")
@@ -359,6 +361,135 @@ def test_stop_point_d_sam_writes_the_first_learning_by_hand(h):
     assert h.runs()[-1]["counts"] == {"learnings_written_by_sam": 1}
     rc, out = h.run("--learning", "  ")
     assert rc == 2 and "needs the hypothesis text" in out and len(h.learnings()) == 1
+
+
+# ---------- FR-37: review status sync and the disapproval brake ----------
+
+DISAPPROVED = {"global": {"Personal Attributes": "Ads must not assert or imply personal attributes."}}
+
+
+def review_rows(h, camp):
+    return {r["ad_id"]: r for r in h.q("select ad_id, review_status, review_feedback from ad_entities where campaign_id=%s", camp["id"])}
+
+
+def test_pull_syncs_review_status_for_every_ad_it_reads(h):
+    camp, ads = h.campaign(ads=3, active_on=TODAY - dt.timedelta(days=1))
+    h.meta.update("ad", ads[1]["ad_id"], review_status="DISAPPROVED", ad_review_feedback=DISAPPROVED)
+    h.meta.update("ad", ads[2]["ad_id"], review_status="WITH_ISSUES", ad_review_feedback={"placement_specific": {"instagram": {"Text": "x"}}})
+    rc, out = h.run()
+    assert rc == 0, out
+    rows = review_rows(h, camp)
+    assert rows[ads[0]["ad_id"]]["review_status"] == "APPROVED" and rows[ads[0]["ad_id"]]["review_feedback"] == {}
+    assert rows[ads[1]["ad_id"]]["review_status"] == "DISAPPROVED" and rows[ads[1]["ad_id"]]["review_feedback"] == DISAPPROVED
+    assert rows[ads[2]["ad_id"]]["review_status"] == "WITH_ISSUES"
+    review = h.runs()[-1]["counts"]["review"]
+    assert review["read"] == 3 and review["changed"] == 2 and review["errors"] == {}
+    assert review["status"] == {"APPROVED": 1, "DISAPPROVED": 1, "WITH_ISSUES": 1}
+    assert review["disapproved"] == [ads[1]["ad_id"]] and review["disapproved_7d"] == 1 and review["threshold"] == 3
+    assert h.actions("set_pause_flag") == [], "1 disapproval is below the threshold of 3"
+
+    h.meta.update("ad", ads[1]["ad_id"], review_status="APPROVED", ad_review_feedback={})          # Meta re-approves after an edit
+    rc, out = h.run()
+    assert review_rows(h, camp)[ads[1]["ad_id"]]["review_status"] == "APPROVED" and review_rows(h, camp)[ads[1]["ad_id"]]["review_feedback"] == {}
+    review = h.runs()[-1]["counts"]["review"]
+    assert review["changed"] == 1 and review["disapproved"] == [] and review["disapproved_7d"] == 1, "a disapproval in the window still counts"
+
+
+def test_disapprovals_reaching_the_threshold_propose_set_pause_flag_once_and_never_apply_it(h):
+    h.set_config(["disapproval_pause_threshold"], 2)
+    camp, ads = h.campaign(ads=3, status="PAUSED")
+    h.meta.update("ad", ads[0]["ad_id"], review_status="DISAPPROVED", ad_review_feedback=DISAPPROVED)
+    rc, out = h.run()
+    assert rc == 0 and h.actions("set_pause_flag") == [] and h.runs()[-1]["counts"]["review"]["disapproved_7d"] == 1
+    h.meta.update("ad", ads[2]["ad_id"], review_status="DISAPPROVED", ad_review_feedback={"global": {"Misleading": "claims"}})
+    rc, out = h.run()
+    assert rc == 0, out
+    (brake,) = h.actions("set_pause_flag")
+    assert brake["status"] == "proposed" and brake["target_type"] == "client" and brake["target_id"] == str(h.client_id)
+    assert brake["rule"] == "disapprovals_7d" and brake["proposal"]["paused"] is True and "2 ads disapproved" in brake["proposal"]["reason"]
+    ev = brake["evidence"]
+    assert ev["disapproved_7d"] == 2 and ev["threshold"] == 2 and ev["window_days"] == 7 and ev["observed_at"]
+    assert sorted(x["ad_id"] for x in ev["ads"]) == sorted([ads[0]["ad_id"], ads[2]["ad_id"]])
+    by_ad = {x["ad_id"]: x for x in ev["ads"]}
+    assert by_ad[ads[2]["ad_id"]]["review_feedback"] == {"global": {"Misleading": "claims"}} and by_ad[ads[0]["ad_id"]]["ad_entity_id"] == str(ads[0]["id"])
+    assert all(x["first_seen"] for x in ev["ads"])
+    assert "brake: proposed set_pause_flag (disapprovals_7d" in out and h.runs()[-1]["counts"]["disapproval_brake_proposed"] == 1
+
+    rc, out = h.run()
+    assert len(h.actions("set_pause_flag")) == 1 and h.runs()[-1]["counts"]["disapproval_brake_open"] == 1
+    assert h.q("select paused from clients where id=%s", h.client_id)[0]["paused"] is False, "proposed only; Sam applies it as sam_admin"
+    h.admin.execute("update actions set status='rejected', reject_reason='appealed' where id=%s", (brake["id"],))
+    h.admin.commit()
+    rc, out = h.run()
+    assert len(h.actions("set_pause_flag")) == 1 and h.runs()[-1]["counts"]["disapproval_brake_seen"] == 1, "the same disapprovals are not proposed again"
+
+
+def test_only_disapprovals_first_seen_in_the_last_7_days_count(h):
+    h.set_config(["disapproval_pause_threshold"], 2)
+    camp, ads = h.campaign(ads=2, status="PAUSED")
+    h.meta.update("ad", ads[0]["ad_id"], review_status="DISAPPROVED", ad_review_feedback=DISAPPROVED)
+    rc, out = h.run()
+    h.admin.execute("update runs set started_at = started_at - interval '8 days' where id=%s", (h.runs()[-1]["id"],))
+    h.admin.commit()
+    h.meta.update("ad", ads[1]["ad_id"], review_status="DISAPPROVED", ad_review_feedback=DISAPPROVED)
+    rc, out = h.run()
+    assert rc == 0, out
+    review = h.runs()[-1]["counts"]["review"]
+    assert review["disapproved"] == sorted(a["ad_id"] for a in ads) and review["disapproved_7d"] == 1
+    assert h.actions("set_pause_flag") == [], "the first disapproval was seen 8 days ago"
+
+
+def test_a_missing_threshold_is_a_warning_never_a_default(h):
+    h.admin.execute("update clients set config = config - 'disapproval_pause_threshold' where id=%s", (h.client_id,))
+    h.admin.commit()
+    camp, ads = h.campaign(ads=3, status="PAUSED")
+    for a in ads:
+        h.meta.update("ad", a["ad_id"], review_status="DISAPPROVED", ad_review_feedback=DISAPPROVED)
+    rc, out = h.run()
+    assert rc == 0, out
+    counts = h.runs()[-1]["counts"]
+    assert counts["review"]["disapproved_7d"] == 3 and counts["review"]["threshold"] is None and h.actions("set_pause_flag") == []
+    assert [w for w in counts["warnings"] if "disapproval_pause_threshold" in w] == [
+        "config disapproval_pause_threshold is missing: 3 disapproval(s) in 7 days, the FR-37 brake is not evaluated"]
+    assert "WARNING config disapproval_pause_threshold is missing" in out
+    assert all(r["review_status"] == "DISAPPROVED" for r in review_rows(h, camp).values()), "the sync itself does not need the key"
+
+
+def test_an_ad_meta_cannot_read_is_reported_and_a_throttle_stops_the_sync_not_the_pull(h, monkeypatch):
+    camp, ads = h.campaign(ads=2, status="PAUSED")
+    insert(h.worker, "ad_entities", client_id=h.client_id, campaign_id=camp["id"], ad_id="990000000000001", status="PAUSED", review_status="APPROVED")
+    h.worker.commit()
+    rc, out = h.run()
+    assert rc == 0, out
+    counts = h.runs()[-1]["counts"]
+    assert counts["review"]["read"] == 2 and list(counts["review"]["errors"]) == ["990000000000001"]
+    assert any("990000000000001" in w for w in counts["warnings"]) and counts["campaigns_levered"] == 1
+    assert review_rows(h, camp)["990000000000001"]["review_status"] == "APPROVED"
+
+    class Throttling:
+        def __init__(self, inner):
+            self.inner, self.last_headers = inner, {}
+
+        def get(self, kind, object_id):
+            raise MetaThrottled("throttled (80004)", {"x-business-use-case-usage": "{}"})
+
+        def __getattr__(self, name):
+            return getattr(self.inner, name)
+    monkeypatch.setattr(h.mod, "get_meta", lambda **kw: Throttling(get_meta()))
+    rc, out = h.run()
+    assert rc == 0, out
+    counts = h.runs()[-1]["counts"]
+    assert counts["review"]["read"] == 0 and "review sync stopped: Meta throttled after 0 of 3 ads" in counts["warnings"]
+    assert counts["campaigns_levered"] == 1, "levers and kill/scale still ran"
+
+
+def test_the_loop_role_may_mirror_review_columns_and_nothing_else_on_ad_entities(h):
+    camp, (ad,) = h.campaign(ads=1, status="PAUSED")
+    h.worker.execute("update ad_entities set review_status='PENDING', review_feedback='{}' where id=%s", (ad["id"],))
+    h.worker.commit()
+    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+        h.worker.execute("update ad_entities set status='ACTIVE' where id=%s", (ad["id"],))
+    h.worker.rollback()
 
 
 # ---------- refusals ----------

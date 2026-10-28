@@ -1,0 +1,17 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/get-started/basic-ad-creation/create-an-ad-creative.md and https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-account/adcreatives.md, read 2026-10-28; replace with a recorded response at go-live. GET /<creative id>?fields=id,name,status,object_story_spec,created_time",
+  "id": "120200000000000030",
+  "name": "ucl-new_recipes-b1-cr1",
+  "status": "ACTIVE",
+  "object_story_spec": {
+    "page_id": "400000000000001",
+    "link_data": {
+      "image_hash": "0f3b5c1e9a7d4c2b8e6f1a0d3c5b7e9f",
+      "link": "http://localhost:8788/quiz?utm_source=facebook&utm_medium=paid&utm_campaign=ucl-new_recipes-b1&utm_content=c1",
+      "message": "Is ChatGPT naming your competitors instead of you?",
+      "name": "Free 15-minute AI visibility audit",
+      "call_to_action": {"type": "LEARN_MORE", "value": {"link": "http://localhost:8788/quiz?utm_source=facebook&utm_medium=paid&utm_campaign=ucl-new_recipes-b1&utm_content=c1"}}
+    }
+  },
+  "created_time": "2026-10-27T09:10:41+0000"
+}

@@ -12,7 +12,8 @@ from what Meta returned, and only then the action is `applied`. Any exception ma
 failures of one type propose `set_pause_flag`. `--reconcile` settles `applying` rows older than
 `--stale-minutes` by reading Meta, never by re-sending.
 
-Roles: `executor` (WAREHOUSE_URL_EXECUTOR) applies pause / kill / activate / scale / build_campaign.
+Roles: `executor` (WAREHOUSE_URL_EXECUTOR) applies pause / kill / activate / scale / build_campaign, through the
+only `get_meta(write=True)` in the code base (live: META_ACCESS_TOKEN; workers read with META_READ_TOKEN).
 `set_pause_flag`, `promote_trust`, `quote_release` are Sam-only by trigger; Sam runs this script
 with `--role sam_admin` for those and it never touches Meta in that mode. The service role is never used.
 
@@ -757,7 +758,7 @@ def main(argv: list[str]) -> int:
             with run(conn, WORKER, client["id"]) as r:
                 print(format_where_are_we(where_are_we(conn, args.client)))
                 check_config(client)
-                meta = get_meta() if args.role == "executor" else None
+                meta = get_meta(write=True) if args.role == "executor" else None
                 conn.execute("select pg_advisory_lock(hashtext(%s))", (LOCK_KEY,))
                 conn.commit()
                 try:

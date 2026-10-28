@@ -1,0 +1,14 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/error-reference.md (code 100 Invalid parameter; error_data.blame_field_specs) and the Graph API error object (message, type, code, error_subcode, error_user_title, error_user_msg, fbtrace_id), read 2026-10-28; replace with a recorded response at go-live",
+  "_status": 400,
+  "error": {
+    "message": "Invalid parameter",
+    "type": "OAuthException",
+    "code": 100,
+    "error_subcode": 1885272,
+    "is_transient": false,
+    "error_user_title": "Budget Too Low",
+    "error_user_msg": "Your budget is too low.",
+    "fbtrace_id": "QrStUvWxYz012345"
+  }
+}

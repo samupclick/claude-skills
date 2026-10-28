@@ -1,0 +1,13 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-campaign.md and https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-promoted-object.md, read 2026-10-28; replace with a recorded response at go-live. GET /<ad set id>?fields=id,name,status,effective_status,campaign_id,daily_budget,optimization_goal,promoted_object,targeting,created_time; daily_budget is in the account currency's minor units as a numeric string",
+  "id": "120200000000000020",
+  "name": "ucl-new_recipes-b1-as1",
+  "status": "PAUSED",
+  "effective_status": "CAMPAIGN_PAUSED",
+  "campaign_id": "120200000000000010",
+  "daily_budget": "1500",
+  "optimization_goal": "OFFSITE_CONVERSIONS",
+  "promoted_object": {"pixel_id": "200000000000001", "custom_event_type": "OTHER", "custom_conversion_id": "300000000000001"},
+  "targeting": {"geo_locations": {"countries": ["GB", "IE", "NL", "DE"]}, "age_min": 25, "age_max": 65, "targeting_automation": {"advantage_audience": 0}},
+  "created_time": "2026-10-27T09:10:20+0000"
+}
