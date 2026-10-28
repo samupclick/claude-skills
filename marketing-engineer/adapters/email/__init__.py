@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from adapters.email.gmail_connector import CONNECTOR, MESSAGE_ID, TOOL, AlreadyQueued, NotQueued, connector_arguments  # noqa: F401
+from adapters.email.gmail_connector import CONNECTOR, MESSAGE_ID, TOOL, AlreadyQueued, NotQueued, connector_arguments, framed_arguments  # noqa: F401
 from adapters.env import choose_backend, dev_root
 
 

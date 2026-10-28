@@ -48,6 +48,8 @@ def _json(res: httpx.Response) -> Any:
 
 
 class LiveCapi:
+    backend = "live"                      # /quiz/config reports it (scripts/test_events.py refuses it without --live)
+
     def __init__(self, *, pixel_id: str, token: str, api_version: str = DEFAULT_API_VERSION,
                  test_event_code: str | None = None, transport: httpx.BaseTransport | None = None,
                  timeout: float = 5.0, attempts: int = 3, backoff: float = 0.5,

@@ -18,7 +18,9 @@ Test events tab. When nothing answers on FUNNEL_HOST it starts the runner in-pro
 Meta to acknowledge each event once (events_received=1, fbtrace_id printed). Against a funnel it did not start (a
 Vercel preview) it first asks /quiz/config whether that funnel has a test event code (capi_test_mode) and sends nothing
 when it does not; it cannot see Meta's replies there, so it prints what Events Manager must show. Without --live the
-script refuses CAPI_BACKEND=live. Turnstile: the token sent is Cloudflare's dummy token, which the `pass` backend and
+script refuses CAPI_BACKEND=live, and against a funnel it did not start it asks /quiz/config for that funnel's backend
+(capi_backend) and sends nothing unless it is `fake` (a deployment runs `live` and would send the synthetic prospects
+to the production pixel). Turnstile: the token sent is Cloudflare's dummy token, which the `pass` backend and
 Turnstile's test secret key accept and a production secret refuses.
 Opens and closes a `runs` row (worker `test_events`, role worker_rw) including on failure; exit 1 = not green.
 """
@@ -57,6 +59,7 @@ class RecordingCapi:
 
     def __init__(self, inner: Any):
         self.inner = inner
+        self.backend = getattr(inner, "backend", None)
         self.sent: list[dict[str, Any]] = []
 
     def send(self, **event: Any) -> dict[str, Any]:
@@ -235,6 +238,10 @@ def main(argv: list[str]) -> int:
                 status, cfg = _call(host, "GET", f"/quiz/config?client={CLIENT}")
                 if status != 200 or not cfg.get("questions"):
                     raise NotGreen(f"/quiz/config returned {status}: {cfg.get('error') or 'no questions configured'}")
+                if not args.live and server is None and cfg.get("capi_backend") != "fake":
+                    raise NotGreen(f"the funnel at {host} reports capi_backend {cfg.get('capi_backend')!r}: without --live this "
+                                   "script drives only a funnel on CAPI_BACKEND=fake (its own runner or funnel/server.py); "
+                                   "nothing was sent")
                 if args.live and recorder is None and cfg.get("capi_test_mode") is not True:
                     raise NotGreen(f"the funnel at {host} reports capi_test_mode false: set META_TEST_EVENT_CODE in that "
                                    "environment first; nothing was sent")

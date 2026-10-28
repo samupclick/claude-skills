@@ -8,6 +8,8 @@ from typing import Any
 
 
 class FakeCapi:
+    backend = "fake"                      # /quiz/config reports it (scripts/test_events.py refuses a live funnel without --live)
+
     def __init__(self, path: Path):
         self.path = path
 

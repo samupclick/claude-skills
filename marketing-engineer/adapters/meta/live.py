@@ -16,7 +16,8 @@ FR-30, FR-31, FR-37, FR-38, NFR-1, NFR-4.
 - insights: one async report job per call, polled with growing waits, read page by page through cursors
 - throttling: codes 4, 17, 32, 613, 80000-80014 wait as long as the usage headers say (estimated_time_to_regain_access,
   reset_time_duration) and retry within `max_wait`, then raise MetaThrottled with those headers; a response showing
-  90% usage or more paces the next call. A write that failed any other way is never re-sent (the executor's name
+  90% usage or more paces the next call (by those headers, or PACE_DEFAULT_WAIT when they state 0, as Meta does until
+  the caller is blocked). A write that failed any other way is never re-sent (the executor's name
   lookup finds a create that landed); reads retry transient errors
 """
 from __future__ import annotations
@@ -435,11 +436,13 @@ class LiveMeta:
         return max(values) if values else 0.0
 
     def _pace(self, deadline: float) -> None:
+        """At PACE_AT% usage or more, wait before the next call: as long as the headers ask, else PACE_DEFAULT_WAIT.
+        Meta sends estimated_time_to_regain_access (and reset_time_duration) as 0 until the caller is blocked, so a 0
+        here means "no wait stated", never "no wait needed"."""
         if self._utilisation() < PACE_AT:
             return
-        wait = self._header_wait()
-        wait = PACE_DEFAULT_WAIT if wait is None else wait
-        if wait > 0 and self._fits(wait, deadline):
+        wait = self._header_wait() or PACE_DEFAULT_WAIT
+        if self._fits(wait, deadline):
             self._sleep(wait)
 
     # ---- normalising Meta's answers to the fake's shapes ----------------------------------------

@@ -412,6 +412,20 @@ def test_high_usage_headers_pace_the_next_call(graph, clock):
     assert clock.sleeps == [42]
 
 
+def test_high_usage_paces_even_when_the_headers_say_no_wait(graph, clock):
+    """Meta sends estimated_time_to_regain_access in every x-business-use-case-usage entry, 0 until the caller is
+    blocked, and reset_time_duration 0 below the limit: at 90% or more the next call still waits PACE_DEFAULT_WAIT."""
+    from adapters.meta.live import PACE_DEFAULT_WAIT
+    busy = {"x-business-use-case-usage": json.dumps({ACCOUNT: [{"type": "ads_management", "call_count": 95, "total_cputime": 20,
+                                                                "total_time": 30, "estimated_time_to_regain_access": 0}]}),
+            "x-ad-account-usage": json.dumps({"acc_id_util_pct": 96, "reset_time_duration": 0})}
+    graph.on("GET", r"/120200000000000040$", lambda r: httpx.Response(200, headers=busy, json=fixture("ad_active")[2]))
+    meta = live(graph, clock)
+    for _ in range(3):
+        meta.get("ad", "120200000000000040")
+    assert clock.sleeps == [PACE_DEFAULT_WAIT, PACE_DEFAULT_WAIT]
+
+
 def test_a_write_that_may_have_landed_is_never_resent_but_a_read_is_retried(graph, clock):
     def boom(request):
         raise httpx.ReadTimeout("timed out", request=request)

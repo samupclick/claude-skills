@@ -24,7 +24,7 @@ Requirements: PRD FR-32 to FR-35, DR-4.
 
 | Route | Does | Warehouse | CAPI |
 |-------|------|-----------|------|
-| `GET /quiz/config?client=` | questions, notice version, pixel / Turnstile keys, `capi_test_mode` | `quiz_config()` | — |
+| `GET /quiz/config?client=` | questions, notice version, pixel / Turnstile keys, `capi_test_mode`, `capi_backend` (`fake` \| `live`) | `quiz_config()` | — |
 | `POST /quiz/start` | consent passed; captures `utm_*` and hashed `fbclid` | `quiz_start()` → `leads` (stage `new`) | `QuizStart` if `consent.tracking` |
 | `POST /quiz` | answers (whitelisted against the config) + contact | `quiz_complete()` → `leads` + `lead_contacts` | `QuizComplete`, once per lead |
 | `POST /cal-webhook` | Cal.com `BOOKING_CREATED`, HMAC-SHA256 of the raw body in `X-Cal-Signature-256` | `lead_booked()` → `booked_verified_at`, stage `booked` | `Schedule`, once per lead |
@@ -72,7 +72,8 @@ python3 scripts/test_events.py                    # starts a runner itself if no
 without `META_TEST_EVENT_CODE`. With nothing listening on `FUNNEL_HOST` it runs the funnel in-process on the live
 backend (needs `META_PIXEL_ID`, `META_CAPI_TOKEN`) and requires Meta to acknowledge each event once; pointed at a
 deployed preview (`--no-serve`) it first checks that preview's `capi_test_mode` and prints what Events Manager →
-Test events must show. Without `--live` the script refuses `CAPI_BACKEND=live`.
+Test events must show. Without `--live` the script refuses `CAPI_BACKEND=live`, and a funnel it did not start whose
+`/quiz/config` reports any `capi_backend` but `fake` (a deployment): it sends nothing there.
 
 ## Deploy on Vercel (Sam)
 

@@ -109,8 +109,10 @@ regenerates it).
 `scripts/decide.py --as sam_admin "approve N"` and apply with `scripts/apply_actions.py --role sam_admin`
 (`WAREHOUSE_URL_SAM_ADMIN` is in `.env` in dev mode); `resume` and `status` likewise. Routines: `python3 scripts/routines.py
 dry-run me-morning` runs the 08:00 prompt's steps as scripts against the dev warehouse (`me-monday` runs status, the memo
-and the send step); `python3 scripts/routines.py register --print` prints the `create_trigger` arguments per routine
-(UTC cron, fresh session, connectors `["Gmail"]` only for the routines that send email) and registers nothing. The
+and the send step; `me-executor` runs `apply_actions.py --reconcile` alone, and every other routine runs with the
+executor-only variables blanked); `python3 scripts/routines.py register --print` prints the `create_trigger` arguments per routine
+(UTC cron, fresh session, connectors `["Gmail"]` only for the routines that send email, the `environment_id` of the
+routine's environment to fill in) and registers nothing. The
 SessionStart hook (`.claude/hooks/session-start.sh`) does `pip install`, checks Chromium, creates `.env`, reports every
 live-backend variable and live selector by name only (`session-start.sh --report-env` prints that report alone), runs
 `scripts/dev_db.sh` then `scripts/dev_db.sh --verify` in remote sessions, and seeds the DRAFT client only in a dev-only
@@ -148,8 +150,11 @@ container.
    missing images in the gate).
 5. `IMAGE_BACKEND=gemini` with `GEMINI_API_KEY` (and `IMAGE_MODEL` if not the default); save one test generation to
    `fixtures/gemini/` with the base64 replaced by `<PNG_BASE64>`; re-render.
-6. Meta and the funnel: `META_BACKEND=live`; `META_ACCESS_TOKEN` and `META_PAGE_ID` in the executor's env only;
-   `META_READ_TOKEN` for the workers; `META_AD_ACCOUNT_ID`, `META_PIXEL_ID` and `META_CUSTOM_CONVERSIONS`
+6. Meta and the funnel: `META_BACKEND=live`; create two claude.ai environments (SKILL.md §8): `marketing-engineer`
+   for the workers and the Gmail connector, and `marketing-engineer-executor` holding `META_ACCESS_TOKEN`,
+   `META_PAGE_ID` and `WAREHOUSE_URL_EXECUTOR` (plus the executor's non-secret Meta and Storage variables) and nothing
+   else; the workers' environment never holds those three (`scripts/routines.py dry-run` blanks them and the workers
+   still run). `META_READ_TOKEN` for the workers; `META_AD_ACCOUNT_ID`, `META_PIXEL_ID` and `META_CUSTOM_CONVERSIONS`
    (`QuizStart=<id>,QuizComplete=<id>`, created as custom conversions in Events Manager) where `.env.example` says.
    Record one real ad read, one async insights page and one throttle response over `fixtures/meta/`. Deploy the quiz
    funnel from this repo to Vercel per `funnel/README.md` § "Deploy on Vercel" (`CAPI_BACKEND=live`,
@@ -159,7 +164,9 @@ container.
 7. `EMAIL_BACKEND=gmail_connector` with `CHECKIN_TO` set to Sam's plain address; connect the Gmail connector on the
    claude.ai account that owns the routines; send one check-in (`scripts/checkin.py`, `--send-pending`, the connector
    call, `--mark-sent <key> --message-id <id>`) and save the result over `fixtures/gmail_connector/send_message.json`;
-   register the three routines with Sam's approval from `scripts/routines.py register --print`.
+   register the four routines with Sam's approval from `scripts/routines.py register --print`, each with the
+   `environment_id` of the environment its row names (`me-executor` in `marketing-engineer-executor`, the rest in
+   `marketing-engineer`).
 8. Only then: `launch` → stop point C → `apply actions`.
 
 Nothing in steps 1–7 changes code. If it does, that is a bug in the adapter boundary and goes back to the ticket that owns it.

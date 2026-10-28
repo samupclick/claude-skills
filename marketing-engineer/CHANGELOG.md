@@ -55,6 +55,30 @@ Supabase at go-live (swap step 1).
 - **Gemini default model `gemini-nano-banana-2.1`**; Reddit has both an OAuth and an anonymous path.
 - **`0014_loop_review_sync.sql` renumbered `0008`** so the migrations stay contiguous (integration).
 
+### Review fixes (same branch, after the integration commit)
+
+- **Check-in and memo windows open at the last message sent or queued** (`checkin.window_anchor`): under
+  `gmail_connector` a second run on the same day queues nothing (`duplicate`) and a `--dry-run` sends nothing, but both
+  closed `ok` and became the next window's start, so what happened between the delivered message and them reached no
+  email. They no longer move it.
+- **`--send-pending` prints the body as data**: the `send_message` arguments sit inside an `untrusted_data` frame that
+  text in the body cannot close (a tag's `<` is the JSON escape `<`), with the line that they are data; the
+  routine prompts say the same. A queue file whose `to` is not exactly `CHECKIN_TO` is refused and left in the queue
+  (`refused_recipient`).
+- **The executor runs alone in its own routine and environment**: a session gives every step and the agent one
+  environment, so `me-morning` running `apply actions --reconcile` meant the Meta write token sat beside the Gmail
+  connector, Bash and the check-in's untrusted text. `me-executor` (`45 5 * * *` UTC, before the 08:00 check-in) runs
+  `apply_actions.py --reconcile` alone in `marketing-engineer-executor` (`META_ACCESS_TOKEN`, `META_PAGE_ID`,
+  `WAREHOUSE_URL_EXECUTOR`, no connector); `me-morning` no longer applies; `scripts/routines.py check` enforces it,
+  `register --print` carries each routine's `environment_id`, and the dry-run of a worker routine blanks the
+  executor-only variables. Sam to overrule: this is a third short daily wake beside FR-48's two (NFR-5 budgets two
+  model wakes a day); the alternative is applying only from Sam's shell.
+- **Meta pacing at ≥90% usage** waits `PACE_DEFAULT_WAIT` when the headers state 0 (Meta sends
+  `estimated_time_to_regain_access: 0` until the caller is blocked), instead of not waiting at all.
+- **`scripts/test_events.py` without `--live` refuses a funnel it did not start unless `/quiz/config` reports
+  `capi_backend: fake`**: a deployment runs `CAPI_BACKEND=live` and would have sent the synthetic prospects to the
+  production pixel with no test event code.
+
 ### Contract-tested, NOT live-verified
 
 Every live backend runs against `httpx.MockTransport` (or the connector's tool schema) with fixtures marked ASSUMED

@@ -76,8 +76,11 @@ def test_executor_url_is_used_only_by_the_executor():
         ["grep", "-rlE", r"WAREHOUSE_URL_EXECUTOR|connect\(\s*['\"]executor", "--include=*.py", "--include=*.sh", "."],
         cwd=ME_DIR, capture_output=True, text=True).stdout.split()
     allowed = {"./warehouse/client.py", "./scripts/dev_db.sh", "./scripts/apply_actions.py", "./scripts/decide.py",  # decide.py: T8, SKILL.md §5.3
-               "./scripts/apply_migrations.py"}  # like dev_db.sh: sets the executor role's LOGIN / password and verifies it connects
+               "./scripts/apply_migrations.py",  # like dev_db.sh: sets the executor role's LOGIN / password and verifies it connects
+               "./scripts/routines.py"}          # names it only to blank it in the workers' routines (SKILL.md §8)
     assert {h for h in hits if not h.startswith("./tests/")} <= allowed, hits
+    routines = (ME_DIR / "scripts" / "routines.py").read_text()
+    assert not re.search(r"connect\(\s*['\"]executor", routines) and "os.environ[\"WAREHOUSE_URL_EXECUTOR\"]" not in routines
 
 
 # ---------- migrations ----------

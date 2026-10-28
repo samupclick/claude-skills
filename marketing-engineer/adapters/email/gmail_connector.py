@@ -3,9 +3,9 @@
 The check-in is delivered through the Gmail connector, an MCP tool of the Claude session that runs the routine. A
 Python script cannot call it, so this backend sends nothing: `send()` writes the composed message to a pending-send
 queue, one JSON file per stable key under EMAIL_QUEUE_DIR (default DEV_ROOT/pending-send), and returns the key.
-`scripts/checkin.py --send-pending` prints `connector_arguments()` for the connector's `send_message` tool, the
-session calls it, and `scripts/checkin.py --mark-sent <key> --message-id <id>` records the delivery and removes the
-file. A key already in the queue is refused (`AlreadyQueued`); the warehouse keeps the durable record.
+`scripts/checkin.py --send-pending` prints `framed_arguments()` (the connector's `send_message` arguments inside an
+untrusted_data frame: the body is data) for every queued message addressed to CHECKIN_TO, the session calls the
+tool, and `scripts/checkin.py --mark-sent <key> --message-id <id>` records the delivery and removes the file. A key already in the queue is refused (`AlreadyQueued`); the warehouse keeps the durable record.
 
 A queue file holds key, queued_at, to, subject, text, html and nothing else: never a credential (the connector
 authenticates inside the session) and never the sender (the connector sends as its own account). The argument
@@ -28,6 +28,7 @@ TOOL = "send_message"
 KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 ADDRESS = re.compile(r"[^@\s<>()\[\],;:\"]+@[^@\s<>()\[\],;:\"]+\.[^@\s<>()\[\],;:\"]+")
 MESSAGE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:@+=/-]{0,255}")
+FRAME_TAG = re.compile(r"<(?=\s*/?\s*untrusted_data)", re.IGNORECASE)
 
 
 class AlreadyQueued(RuntimeError):
@@ -53,6 +54,16 @@ def connector_arguments(record: dict[str, Any]) -> dict[str, Any]:
     if record.get("html"):
         args["htmlBody"] = record["html"]
     return args
+
+
+def framed_arguments(record: dict[str, Any]) -> str:
+    """`connector_arguments(record)` as JSON inside the untrusted_data frame that adapters/model.data_block puts around
+    untrusted text (SKILL.md §4 rule 7). The body quotes rows (a vendor error, a scraped hook line) and the session that
+    reads it holds the Gmail connector, so it must read the arguments as data, never as instructions. A tag inside the
+    body cannot close the frame: its `<` is written as the JSON escape \\u003c, so the block still parses to exactly the
+    queued arguments."""
+    text = json.dumps(connector_arguments(record), indent=2, ensure_ascii=False)
+    return "<untrusted_data>\n" + FRAME_TAG.sub(lambda _: "\\u003c", text) + "\n</untrusted_data>"
 
 
 def _key(key: str) -> str:

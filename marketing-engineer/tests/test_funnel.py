@@ -260,6 +260,7 @@ def test_config_says_whether_server_events_go_to_the_test_tab(deps, monkeypatch)
     monkeypatch.setattr(deps, "test_event_code", "TEST123")
     body = handle(Request("GET", "/quiz/config", query={"client": "upclicklabs"}), deps).body
     assert body["capi_test_mode"] is True and "TEST123" not in json.dumps(body)
+    assert body["capi_backend"] == "fake"                     # scripts/test_events.py refuses a live one without --live
 
 
 def test_turnstile_failure_and_rate_limit(deps, monkeypatch):
@@ -464,6 +465,43 @@ def test_events_live_against_a_running_funnel_needs_its_test_mode(runner, db_env
                          capture_output=True, text=True, env={**os.environ, "META_TEST_EVENT_CODE": "TEST123"})
     assert res.returncode == 1 and "capi_test_mode" in res.stderr
     assert last_run(admin)["status"] == "failed" and not (dev_root / "capi.jsonl").exists()
+
+
+def test_events_without_live_refuses_a_funnel_that_sends_to_meta(db_env, dev_root, admin, monkeypatch):
+    """This shell says CAPI_BACKEND=fake but FUNNEL_HOST answers with a funnel the script did not start (a deployment,
+    which runs CAPI_BACKEND=live): /quiz/config reports that funnel's backend and the script posts nothing to it, so
+    no synthetic prospect reaches Meta's production pixel without a test event code."""
+    class SendsToMeta:
+        backend = "live"
+
+        def __init__(self):
+            self.sent = []
+
+        def send(self, **event):
+            self.sent.append(event["event_name"])
+            return {"events_received": 1, "fbtrace_id": "x"}
+
+    from funnel.server import serve
+    monkeypatch.setenv("TURNSTILE_BACKEND", "pass")
+    port, capi = free_port(), SendsToMeta()
+    deps = Deps(db=lambda: connect("app", job="test", autocommit=True), capi=capi, turnstile=get_turnstile(),
+                limiter=RateLimiter(1000), log=lambda event, **f: None, cal_webhook_secret=SECRET,
+                funnel_host=f"http://localhost:{port}")
+    server = serve(port, deps)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    for k, v in {"FUNNEL_HOST": f"http://localhost:{port}", "CAL_WEBHOOK_SECRET": SECRET, "CAPI_BACKEND": "fake"}.items():
+        monkeypatch.setenv(k, v)
+    leads = admin.execute("select count(*) as n from leads").fetchone()["n"]
+    admin.rollback()
+    mod = load_test_events()
+    try:
+        with pytest.raises(mod.NotGreen, match="capi_backend 'live'"):
+            mod.main([])
+    finally:
+        server.shutdown()
+        server.server_close()
+    assert capi.sent == [] and admin.execute("select count(*) as n from leads").fetchone()["n"] == leads
+    assert last_run(admin)["status"] == "failed" and "nothing was sent" in last_run(admin)["error"]
 
 
 def test_events_sends_vercels_protection_bypass_header_only_when_set(monkeypatch):

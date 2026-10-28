@@ -20,9 +20,9 @@ Sections, in this order and no others:
   5. the next batch's proposals: the open proposal (an experiment without a `selections` row) with each brief's
      weekend template and the default the planner would take, or "none open".
 
-The window opens at the previous successful memo (`runs.worker='memo'`), else 7 days ago; `--since` overrides it
-and `--now` fixes the reference time so the golden-file test is reproducible. Every string out of a row passes the
-check-in's `clean()` (no URL survives, NFR-2); the HTML part is the escaped text. Delivery is the email adapter, to
+The window opens at the previous memo that was sent or queued (a same-day duplicate or a dry run never moves it),
+else 7 days ago; `--since` overrides it and `--now` fixes the reference time so the golden-file test is reproducible.
+Every string out of a row passes the check-in's `clean()` (no URL survives, NFR-2); the HTML part is the escaped text. Delivery is the email adapter, to
 `CHECKIN_TO` (or `--to`): `EMAIL_BACKEND=file` writes the .eml at once; `gmail_connector` queues the memo under
 `memo-<slug>-<UTC day>` with the check-in's claim (`queue_checkin`), and the `me-monday` routine's last step delivers
 it through the Gmail connector (`scripts/checkin.py --send-pending`, then `--mark-sent`). Refuses while paused (SKILL.md §0 step 4) or while an action is `applying` (§2). Worker
@@ -427,8 +427,8 @@ class Memo:
 
 
 def previous_memo(conn, client_id) -> datetime | None:
-    row = conn.execute("select max(started_at) as at from runs where client_id=%s and worker=%s and status='ok'", (client_id, WORKER)).fetchone()
-    return row["at"] if row else None
+    """The last memo that was sent or queued (`checkin.window_anchor`): a same-day duplicate or a dry run never moves it."""
+    return _checkin.window_anchor(conn, client_id, WORKER)
 
 
 def check_ready(client: dict[str, Any], status: dict[str, Any]) -> None:
@@ -447,7 +447,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Compose and send the five-section Monday memo. SKILL.md §3, FR-43.")
     p.add_argument("--client", default="upclicklabs")
     p.add_argument("--to", help="recipient; default CHECKIN_TO from the environment")
-    p.add_argument("--since", help="window start: `7d`, `24h`, or an ISO timestamp; default the previous successful memo, else 7 days")
+    p.add_argument("--since", help="window start: `7d`, `24h`, or an ISO timestamp; default the previous memo sent or queued, else 7 days")
     p.add_argument("--now", help="reference time as an ISO timestamp (tests); default the current time")
     p.add_argument("--dry-run", action="store_true", help="print the memo instead of sending it")
     p.add_argument("--code-root", type=Path, default=ME_DIR, help="tree the DR-3 key scan reads (tests); default marketing-engineer/")

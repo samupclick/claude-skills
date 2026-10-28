@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Routine definitions for the phase-0 reactor stand-in (T11). SKILL.md §8, PRD FR-48, CRUCIBLE A23.
 
-    scripts/routines.py list                 the three routines: name, cron (UTC), prompt
-    scripts/routines.py check                config/routines.json against the SKILL.md §8 table (exit 1 on drift)
+    scripts/routines.py list                 the four routines: name, cron (UTC), environment, prompt
+    scripts/routines.py check                config/routines.json against the SKILL.md §8 table, the connectors and the
+                                             executor's isolation (exit 1 on any problem)
     scripts/routines.py dry-run <name>       run the routine's steps locally, in order, against the dev warehouse
     scripts/routines.py register --print     the exact create_trigger arguments per routine; registers nothing
 
@@ -13,16 +14,25 @@ for (every `runs` row opened since the dry-run began). A step whose script does 
 step did not run clean. A step with `connector` is finished by the session through that claude.ai connector
 (the check-in's `--send-pending` prints the Gmail connector call); the dry-run runs the script part only.
 
+Isolation (SKILL.md §1): a routine's session gives every step, and the agent itself, one environment. The agent reads
+the check-in's untrusted text, runs Bash and holds the Gmail connector, so the Meta write token cannot sit beside it:
+`scripts/apply_actions.py` runs only in `me-executor`, alone, with no connector, in the `marketing-engineer-executor`
+environment, and nothing else runs there (`isolation_problems`, part of `check`). The dry-run of any other routine
+blanks the executor-only variables, so a worker step that needed them fails here first.
+
 Registration as Claude Code Routines is T13 step 7 and Sam approves it; nothing here registers anything.
 `register --print` gives one `create_trigger` argument set per routine: the routine's name and prompt, the cron in
 CRON_TZ form kept in UTC as the §8 table states it, a fresh session per fire, `connectors` = the union of the
-routine's step connectors (`[]` stores none, so a routine that sends no email gets no connector), and
-`initiation: human_request` (Sam asks for it at go-live).
+routine's step connectors (`[]` stores none, so a routine that sends no email gets no connector), the
+`environment_id` of its environment (a placeholder naming it: Sam fills in the id `list_environments` gives; without
+it the trigger would inherit the registering session's environment), and `initiation: human_request` (Sam asks for it
+at go-live).
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -38,6 +48,9 @@ ROUTINES = ME_DIR / "config" / "routines.json"
 SKILL = ME_DIR / "SKILL.md"
 ROW = re.compile(r"^\| `([a-z-]+)` \| `([^`]+)` \| `(.+)` \|$")
 KNOWN_CONNECTORS = ("Gmail",)
+EXECUTOR_SCRIPT = "scripts/apply_actions.py"
+EXECUTOR_ENVIRONMENT = "marketing-engineer-executor"
+EXECUTOR_ONLY = ("META_ACCESS_TOKEN", "META_PAGE_ID", "WAREHOUSE_URL_EXECUTOR")   # SKILL.md §1: the executor's alone
 
 
 def load() -> dict[str, Any]:
@@ -85,16 +98,39 @@ def connector_drift(defs: dict[str, Any]) -> list[str]:
     return out
 
 
+def isolation_problems(defs: dict[str, Any]) -> list[str]:
+    """The executor's write token never shares a session with anything else (SKILL.md §1): every routine names a known
+    environment; a routine that runs scripts/apply_actions.py runs it alone, with no connector, in EXECUTOR_ENVIRONMENT;
+    and no other step runs in that environment."""
+    envs = defs.get("environments") or {}
+    out = []
+    for r in defs["routines"]:
+        env = r.get("environment")
+        others = [s["say"] for s in r["steps"] if s.get("script") != EXECUTOR_SCRIPT]
+        if env not in envs:
+            out.append(f"{r['name']}: environment {env!r} is not one of {sorted(envs)}")
+        if len(others) < len(r["steps"]) and (others or connectors(r) or env != EXECUTOR_ENVIRONMENT):
+            out.append(f"{r['name']}: runs {EXECUTOR_SCRIPT} beside other steps, a connector or outside {EXECUTOR_ENVIRONMENT}; "
+                       f"its session would hand {', '.join(EXECUTOR_ONLY)} to all of them (SKILL.md §1)")
+        if env == EXECUTOR_ENVIRONMENT and (others or connectors(r)):
+            out.append(f"{r['name']}: {EXECUTOR_ENVIRONMENT} runs {EXECUTOR_SCRIPT} alone, with no connector; "
+                       f"move {', '.join(others) or 'the connector'} to another environment")
+    return out
+
+
 def trigger_arguments(defs: dict[str, Any]) -> list[dict[str, Any]]:
     """One `create_trigger` argument set per routine (SKILL.md §8; registration is T13 step 7, Sam approves)."""
     return [{"name": r["name"], "cron_expression": f"CRON_TZ=UTC {r['cron_utc']}", "prompt": r["prompt"],
-             "create_new_session_on_fire": True, "connectors": connectors(r), "initiation": "human_request"}
+             "create_new_session_on_fire": True, "connectors": connectors(r),
+             "environment_id": f"<environment_id of {r['environment']}>", "initiation": "human_request"}
             for r in defs["routines"]]
 
 
 def format_register(defs: dict[str, Any]) -> str:
     lines = [f"# create_trigger arguments, one call per routine ({len(defs['routines'])}). Nothing was registered: registration is",
-             "# the go-live swap (T13 step 7) and Sam approves it. `connectors: []` stores no connector."]
+             "# the go-live swap (T13 step 7) and Sam approves it. `connectors: []` stores no connector. Replace each",
+             "# environment_id placeholder with the id list_environments gives that environment; the executor's holds the",
+             "# Meta write token and nothing else (SKILL.md §1, §8)."]
     for args in trigger_arguments(defs):
         lines += [f"--- {args['name']}", json.dumps(args, indent=2, ensure_ascii=False)]
     return "\n".join(lines)
@@ -103,7 +139,7 @@ def format_register(defs: dict[str, Any]) -> str:
 def format_list(defs: dict[str, Any]) -> str:
     lines = [f"session={defs['session']}  hook={defs['hook']}  client={defs['client']}"]
     for r in defs["routines"]:
-        lines.append(f"{r['name']:<11} {r['cron_utc']:<12} {r['prompt']}")
+        lines.append(f"{r['name']:<11} {r['cron_utc']:<12} [{r['environment']}] {r['prompt']}")
         lines.extend(f"    {i}. {s['say']}  →  {s['script'] or '(no script: say so and stop)'}"
                      + (f"  →  {s['connector']} connector (session)" if s.get("connector") else "") for i, s in enumerate(r["steps"], 1))
     return "\n".join(lines)
@@ -118,6 +154,9 @@ def dry_run(defs: dict[str, Any], name: str, client: str | None = None) -> int:
     started = datetime.now(timezone.utc)
     print(f"dry-run {name} ({routine['cron_utc']} UTC) for client {slug}\nprompt: {routine['prompt']}\n")
     outcomes: list[tuple[str, str]] = []
+    env = dict(os.environ)
+    if routine.get("environment") != EXECUTOR_ENVIRONMENT:      # as at go-live: blank beats .env (load_env never overrides)
+        env.update({var: "" for var in EXECUTOR_ONLY})
     for i, step in enumerate(routine["steps"], 1):
         script = ME_DIR / step["script"] if step.get("script") else None
         print(f"--- step {i}: {step['say']}")
@@ -126,7 +165,7 @@ def dry_run(defs: dict[str, Any], name: str, client: str | None = None) -> int:
             outcomes.append((step["say"], "not built"))
             continue
         argv = [sys.executable, str(script), *(a.replace("{client}", slug) for a in step.get("args", []))]
-        res = subprocess.run(argv, cwd=ME_DIR, capture_output=True, text=True)
+        res = subprocess.run(argv, cwd=ME_DIR, env=env, capture_output=True, text=True)
         for line in (res.stdout + res.stderr).rstrip().splitlines():
             print(f"    {line}")
         outcomes.append((step["say"], "ok" if res.returncode == 0 else f"exit {res.returncode}"))
@@ -169,7 +208,7 @@ def main(argv: list[str]) -> int:
         print(format_register(defs))
         return 0
     if args.command == "check":
-        problems = drift(defs) + connector_drift(defs)
+        problems = drift(defs) + connector_drift(defs) + isolation_problems(defs)
         print("\n".join(problems) if problems else f"routines.json matches SKILL.md §8 ({len(defs['routines'])} routines)")
         return 1 if problems else 0
     if not args.name:

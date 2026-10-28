@@ -202,6 +202,7 @@ def get_config(req: Request, deps: Deps) -> Response:
         "pixel_id": deps.pixel_id,
         "turnstile_site_key": deps.turnstile_site_key,
         "capi_test_mode": bool(deps.test_event_code),
+        "capi_backend": getattr(deps.capi, "backend", None),   # fake | live: never a credential
     })
 
 

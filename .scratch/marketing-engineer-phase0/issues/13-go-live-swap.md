@@ -26,7 +26,7 @@ Execution of `references/dev-mode.md` § "Go-live swap checklist" steps 1–8: `
 - [ ] `scripts/dev_db.sh --verify` passes against Supabase as each role; `select count(*) from families` ≥ 15
 - [ ] `test_events.py` green in the Events Manager test tool for `QuizStart`, `QuizComplete`, `Schedule` with dedup
 - [ ] Objects created in the real Ads Manager are paused until the `activate` approval at stop point C; `check_daily_cap()` true after activation
-- [ ] The funnel is deployed from `marketing-engineer/funnel/` to the `go-upclicklabs` repo on Vercel (quiz decision 4) and the three routines from `SKILL.md` §8 are registered (quiz decision 7)
+- [ ] The funnel is deployed from `marketing-engineer/funnel/` to the `go-upclicklabs` repo on Vercel (quiz decision 4) and the four routines from `SKILL.md` §8 are registered (quiz decision 7), `me-executor` alone in the `marketing-engineer-executor` environment that holds the Meta write token
 
 ## Constraints
 
@@ -72,3 +72,11 @@ STAYS BLOCKED until Sam clears it. Requires real credentials in the executor's e
   and the only process that may hold it. Open questions for Sam from the builders are in the build report (bucket
   privacy for inspo copies, Data API exposure, read token, custom conversions, Gemini model, Reddit app, function
   region, staging database for Preview, re-send path).
+- 2026-10-28 (review fixes on the same branch): a routine's session gives every step and the agent one environment, so
+  the Meta write token could not stay executor-only while `me-morning` ran `apply actions --reconcile`. The executor
+  now runs alone in `me-executor` (`45 5 * * *` UTC, before the 08:00 check-in) in its own environment
+  `marketing-engineer-executor` (`META_ACCESS_TOKEN`, `META_PAGE_ID`, `WAREHOUSE_URL_EXECUTOR`, no connector);
+  `me-morning` no longer applies; `scripts/routines.py check` enforces it and `register --print` carries an
+  `environment_id` per routine. For Sam: this is a third short daily wake beside FR-48's two (NFR-5 budgets two model
+  wakes a day); the alternative is applying only from Sam's shell. `--send-pending` now frames the body as untrusted
+  data and refuses any `to` but `CHECKIN_TO`.

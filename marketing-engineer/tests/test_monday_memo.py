@@ -386,6 +386,22 @@ def test_memo_goes_through_the_gmail_connector_queue_once_per_day(h, monkeypatch
     assert rc == 0 and "not queued" in out and "sent as 19a2f3c4d5e6f708" in out
 
 
+def test_a_duplicate_or_a_dry_run_memo_never_moves_the_window(h, monkeypatch):
+    """A second memo on the same Monday queues nothing and a mid-week dry run sends nothing: the next memo's window
+    still opens at the memo that was queued, so no section-1 learning falls between two delivered memos."""
+    monkeypatch.setenv("EMAIL_BACKEND", "gmail_connector")
+    monkeypatch.delenv("EMAIL_QUEUE_DIR", raising=False)
+    rc, _ = h.run(since=None)
+    first = h.runs()[-1]
+    assert rc == 0 and first["counts"]["queued"] == 1
+    rc, out = h.run(since=None)
+    assert "not queued" in out and h.runs()[-1]["counts"]["duplicate"] == 1 and h.runs()[-1]["status"] == "ok"
+    rc, _ = h.run("--dry-run")
+    assert h.runs()[-1]["status"] == "ok" and h.runs()[-1]["counts"]["sent"] == 0
+    rc, _ = h.run(now=NOW + dt.timedelta(days=7), since=None)
+    assert h.runs()[-1]["counts"]["since"] == first["started_at"].isoformat()
+
+
 def test_memo_has_no_side_effect_beyond_the_email_adapter():
     src = (ME_DIR / "scripts" / "monday_memo.py").read_text()
     assert "get_email()" in src and "queue_checkin" in src and "adapters.meta" not in src and "smtplib" not in src and "insert_actions" not in src
