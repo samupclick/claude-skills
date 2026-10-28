@@ -2,11 +2,13 @@
 # scripts/dev_db.sh — local Postgres 16 for phase 0 dev mode (references/dev-mode.md). Idempotent.
 #
 #   scripts/dev_db.sh            start cluster, install pgvector, create db gw, apply migrations, roles LOGIN
-#   scripts/dev_db.sh --verify   connect as each of the five roles from .env and print the role + families count
+#   scripts/dev_db.sh --verify   connect as each of the five roles and print the role + families count; the URLs come
+#                                from the environment, else .env, and may be remote (Supabase): the local cluster is
+#                                started only when all five point at localhost (scripts/apply_migrations.py --verify)
 #   scripts/dev_db.sh --seed     load families, client, offer, icp from the DRAFT config (scripts/seed.py)
 #
 # Migrations: every numbered file in warehouse/ (schema.sql is 0001) is applied once, in order; the
-# bookkeeping table dev_migrations exists only in the local cluster (Supabase is applied by hand, T13).
+# bookkeeping table dev_migrations exists only in the local cluster (a remote target gets scripts/apply_migrations.py).
 # Passwords are never printed; they are read from the WAREHOUSE_URL_* strings in .env and reach psql on
 # stdin, never on a command line. Debian/Ubuntu tooling (pg_ctlcluster, apt-get); root or sudo.
 set -euo pipefail
@@ -102,23 +104,19 @@ EOSQL
   echo "dev_db: roles updated now: $changed"
 }
 
-verify() {
-  local key role url rc
-  for key in WORKER:worker_rw EXECUTOR:executor SAM_ADMIN:sam_admin APP:app MCP_RO:mcp_ro; do
-    role="${key#*:}"; url="$(url_for "${key%%:*}")"
-    psql -X -q "$url" -tAc "select current_user" >/dev/null || { echo "verify: $role cannot connect"; exit 1; }
-    if rc="$(psql -X -q "$url" -tAc "select current_user || ' families=' || count(*) from families" 2>/dev/null)"; then
-      echo "verify: $rc"
-    else
-      echo "verify: $role connected; no select on families (0002 grants none to $role)"
-    fi
+all_role_urls_local() {  # true when the five role URLs (environment first, then .env) all name localhost or a socket
+  local key var url
+  for key in WORKER EXECUTOR SAM_ADMIN APP MCP_RO; do
+    var="WAREHOUSE_URL_$key"; url="${!var:-}"
+    [[ -n "$url" ]] || url="$( { grep -E "^$var=" "$ENV_FILE" || true; } | tail -n1 | cut -d= -f2-)"
+    [[ "$url" =~ ^[a-z]+://([^@/]*@)?(localhost|127\.0\.0\.1|\[::1\])?(:[0-9]+)?(/|$) ]] || return 1
   done
 }
 
 MODE="${1:-}"
 case "$MODE" in
   "") ensure_cluster; ensure_database; apply_migrations; ensure_logins ;;
-  --verify) ensure_cluster; verify ;;
+  --verify) if all_role_urls_local; then ensure_cluster; fi; exec python3 "$ME_DIR/scripts/apply_migrations.py" --verify ;;
   --seed) ensure_cluster; python3 "$ME_DIR/scripts/seed.py" ;;
   *) echo "usage: $0 [--verify|--seed]" >&2; exit 2 ;;
 esac

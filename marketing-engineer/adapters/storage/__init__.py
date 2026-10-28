@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from adapters.env import choose_backend, dev_root, not_built
+from adapters.env import choose_backend, dev_root
 
 
 class Storage(Protocol):
@@ -13,8 +13,9 @@ class Storage(Protocol):
 
 def get_storage() -> Storage:
     from adapters.storage.local import LocalStorage
+    from adapters.storage.supabase import SupabaseStorage
 
     return choose_backend("STORAGE_BACKEND", {
         "local": lambda: LocalStorage(dev_root() / "storage"),
-        "supabase": not_built("STORAGE_BACKEND", "supabase", "T13"),
+        "supabase": SupabaseStorage.from_env,
     })

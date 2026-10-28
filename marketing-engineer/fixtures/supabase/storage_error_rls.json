@@ -1,0 +1,7 @@
+{
+  "_shape": "ASSUMED SHAPE from https://pypi.org/project/storage3/2.33.0/, read 2026-10-28; replace with a recorded response at go-live",
+  "_source": "storage3/_sync/file_api.py _request: a non-2xx body is {statusCode, error, message} (StorageApiError). The client does not pin which HTTP status carries an RLS refusal (400 or 403); the adapter reports both.",
+  "statusCode": "403",
+  "error": "Unauthorized",
+  "message": "new row violates row-level security policy"
+}

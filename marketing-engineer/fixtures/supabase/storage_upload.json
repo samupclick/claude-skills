@@ -1,0 +1,6 @@
+{
+  "_shape": "ASSUMED SHAPE from https://pypi.org/project/storage3/2.33.0/, read 2026-10-28; replace with a recorded response at go-live",
+  "_source": "storage3/_sync/file_api.py _upload_or_update: POST {SUPABASE_URL}/storage/v1/object/{bucket}/{path}, multipart field 'file' (filename, bytes, content type) plus form field cacheControl, header x-upsert; the response is UploadData {Id, Key} with Key = '<bucket>/<path>'. The test server echoes the uploaded key into Key.",
+  "Id": "0b7c2f8e-0000-4000-8000-0000000000a1",
+  "Key": "creatives/creatives/upclicklabs/batch-001/00000000-0000-4000-8000-000000000001/1080x1080.png"
+}

@@ -1,0 +1,15 @@
+{
+  "_shape": "ASSUMED SHAPE from https://pypi.org/project/supabase-auth/2.33.0/, read 2026-10-28; replace with a recorded response at go-live",
+  "_source": "supabase_auth/_sync/gotrue_client.py _refresh_access_token: POST {SUPABASE_URL}/auth/v1/token?grant_type=refresh_token, JSON {refresh_token}; the same Session shape as the password grant.",
+  "access_token": "fixture-access-token-2",
+  "token_type": "bearer",
+  "expires_in": 3600,
+  "expires_at": 1793188800,
+  "refresh_token": "fixture-refresh-token-2",
+  "user": {
+    "id": "6f0c1a52-0000-4000-8000-00000000f100",
+    "aud": "authenticated",
+    "role": "authenticated",
+    "email": "storage-writer@example.invalid"
+  }
+}
