@@ -43,7 +43,9 @@ SUDO=""; [[ "$(id -u)" == "0" ]] || SUDO="sudo"
 ensure_cluster() {
   if ! dpkg -s "postgresql-${PG_VERSION}-pgvector" >/dev/null 2>&1; then
     echo "dev_db: installing postgresql-${PG_VERSION}-pgvector"
-    $SUDO apt-get install -y -q "postgresql-${PG_VERSION}-pgvector" >/dev/null
+    # A fresh container can have an empty apt index; refresh it once when the package is not found.
+    $SUDO apt-get install -y -q "postgresql-${PG_VERSION}-pgvector" >/dev/null 2>&1 \
+      || { $SUDO apt-get update -qq >/dev/null && $SUDO apt-get install -y -q "postgresql-${PG_VERSION}-pgvector" >/dev/null; }
   fi
   local status; status="$(pg_lsclusters -h | awk -v v="$PG_VERSION" -v c="$CLUSTER" '$1==v && $2==c {print $4}')"
   case "$status" in

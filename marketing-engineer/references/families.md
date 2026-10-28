@@ -28,7 +28,7 @@ Families are the fixed attribution keys (`families.name`). Variants are free tex
 
 ## Angles (`kind = angle`)
 
-`pain_led`, `outcome_led`, `proof_led`, `contrarian`, `identity`
+`pain_led`, `outcome_led`, `proof_led`, `contrarian_led`, `identity_led`
 
 ## DTC seed list — PLACEHOLDER, Sam to confirm or replace
 

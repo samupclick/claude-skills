@@ -62,16 +62,17 @@ def test_seed_is_idempotent_and_writes_a_runs_row(warehouse_env):
                               " (select count(*) from offers), (select count(*) from icps)").fetchone()
         runs_before = conn.execute("select count(*) from runs where worker='seed'").fetchone()[0]
     second = seed()
-    assert second.returncode == 1 and "contrarian" in second.stderr and "identity" in second.stderr
+    assert second.returncode == 0, second.stderr
     with psycopg.connect(admin) as conn:
         assert conn.execute("select (select count(*) from families), (select count(*) from clients),"
                             " (select count(*) from offers), (select count(*) from icps)").fetchone() == counts
         assert conn.execute("select count(*) from runs where worker='seed'").fetchone()[0] == runs_before + 1
         last = conn.execute("select status, finished_at is not null, client_id is not null, error from runs"
                             " where worker='seed' order by started_at desc limit 1").fetchone()
-        assert last[:3] == ("failed", True, True) and "FamilyNameConflict" in last[3]
-        expected = {n for n, _ in seed_module.parse_families((ME_DIR / "references" / "families.md").read_text())}
-        expected -= set(seed_module.name_conflicts(seed_module.parse_families((ME_DIR / "references" / "families.md").read_text())))
+        assert last[:3] == ("ok", True, True) and last[3] is None
+        families = seed_module.parse_families((ME_DIR / "references" / "families.md").read_text())
+        assert seed_module.name_conflicts(families) == {}
+        expected = {n for n, _ in families}
         assert expected <= {r[0] for r in conn.execute("select name from families").fetchall()}
         assert conn.execute("select config->>'_status' from clients where slug='upclicklabs'").fetchone()[0].startswith("DRAFT")
         assert conn.execute("select o.promise from offers o join clients c on c.id=o.client_id where c.slug='upclicklabs'"
