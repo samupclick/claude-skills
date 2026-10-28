@@ -1,0 +1,17 @@
+{
+  "_shape": "ASSUMED SHAPE from https://ai.google.dev/gemini-api/docs/troubleshooting (Google API error envelope {error: {code, message, status, details[]}}; a bad key is 400 INVALID_ARGUMENT with ErrorInfo reason API_KEY_INVALID), read 2026-10-28; the page was not opened from the build session, so the shape comes from search-result summaries and prior knowledge of Google API errors; replace with a recorded response at go-live",
+  "request": "POST https://generativelanguage.googleapis.com/v1beta/models/gemini-nano-banana-2.1:generateContent",
+  "status": 400,
+  "headers": {"content-type": "application/json; charset=UTF-8"},
+  "body": {
+    "error": {
+      "code": 400,
+      "message": "API key not valid. Please pass a valid API key.",
+      "status": "INVALID_ARGUMENT",
+      "details": [
+        {"@type": "type.googleapis.com/google.rpc.ErrorInfo", "reason": "API_KEY_INVALID", "domain": "googleapis.com",
+         "metadata": {"service": "generativelanguage.googleapis.com"}}
+      ]
+    }
+  }
+}

@@ -56,7 +56,8 @@ def main() -> None:
     for brand in BRANDS:
         payload = {
             "_shape": "ASSUMED shape of a scrapecreators Meta Ad Library company-ads response; replace with a real "
-                      "response (real-001.json, go-live step 4) and fix adapters/inspo/fixture.py::normalise if it differs",
+                      "response (real-001.json, go-live step 4) and fix the shape functions in "
+                      "adapters/inspo/scrapecreators.py (page_rows, normalise) if it differs",
             "brand": brand,
             "searchResults": [ad(brand, n) for n in range(1, 7)],
             "cursor": None,

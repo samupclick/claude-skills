@@ -1,0 +1,26 @@
+{
+  "_shape": "ASSUMED SHAPE from https://scrapecreators.com/blog/how-to-scrape-the-meta-ad-library (search-companies step: `searchResults[]`, take `page_id`), read 2026-10-28; the page was not reachable from the build session, so the fields come from search-result summaries of it and are unverified; replace with a recorded response at go-live",
+  "request": "GET https://api.scrapecreators.com/v1/facebook/adLibrary/search/companies?query=AG1 (header x-api-key)",
+  "status": 200,
+  "headers": {"content-type": "application/json"},
+  "body": {
+    "searchResults": [
+      {
+        "page_id": "fx-page-100",
+        "name": "AG1 Fan Recipes",
+        "category": "Community",
+        "likes": 1200,
+        "verification": "NOT_VERIFIED",
+        "page_alias": "ag1fanrecipes"
+      },
+      {
+        "page_id": "fx-page-200",
+        "name": "AG1",
+        "category": "Health/beauty",
+        "likes": 450000,
+        "verification": "BLUE_VERIFIED",
+        "page_alias": "drinkag1"
+      }
+    ]
+  }
+}

@@ -16,11 +16,13 @@ writes `config.batch.executions_per_recipe` creatives (batch one: 3 briefs -> 6 
      description, the CTA text, and per execution the overlay words for the template's slots. The brief's content is
      untrusted and enters the prompt only inside the data block; the offer, ICP, brand rules and slots are trusted;
   4. one text-free image per execution through the image adapter: every prompt ends with `NO_TEXT_INSTRUCTION`
-     (FR-24) and a vision check (task `image_text_check`) flags readable text; a flagged image is regenerated, at
-     most `MAX_IMAGE_ATTEMPTS`, then the execution is dropped and logged (FR-29's shape);
+     (FR-24) and a vision check (task `image_text_check`) flags readable text; a flagged image, or a safety block from
+     the image model (`ImageBlocked`), is regenerated, at most `MAX_IMAGE_ATTEMPTS`, then the execution is dropped and
+     logged (FR-29's shape);
   5. the template is filled in HTML (every word is ours, escaped) and rendered with Playwright at 1080x1080; the
      generated image and the render go to the storage adapter under `creatives/<client>/<batch>/<creative id>/`;
-  6. `creatives` (`renderer='html_template'`, `template`, `image_model` from config, `image_prompt`, `asset_urls`,
+  6. `creatives` (`renderer='html_template'`, `template`, `image_model` = the image backend's `model_id`, else config,
+     `image_prompt`, `asset_urls`,
      `sizes=['1080x1080']`) and the full `creative_components` (family, variant, hook, angle, template, renderer,
      image_model, voc_phrase per phrase, cta, landing_page, offer, plus hook_type, proof_type, copy_length) are
      written together; a creative that fails `validate_creative` or `validate_components` does not exist (FR-21).
@@ -48,7 +50,7 @@ from uuid import UUID, uuid4
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from adapters.env import ME_DIR, load_env, require  # noqa: E402
-from adapters.image import get_image  # noqa: E402
+from adapters.image import ImageBlocked, get_image  # noqa: E402
 from adapters.model import Model, get_model  # noqa: E402
 from adapters.storage import get_storage  # noqa: E402
 from warehouse import client as wh  # noqa: E402
@@ -447,13 +449,22 @@ def landing_page_for(offer: dict[str, Any]) -> str:
 def generate_checked_image(*, image: Any, model: Model, prompts: dict[str, str], base_prompt: str, r: wh.Run,
                            image_budget: int) -> tuple[bytes, str, int]:
     """One text-free image: generate, vision-check (FR-24), regenerate on a flag, at most MAX_IMAGE_ATTEMPTS.
-    Returns (png, the prompt that produced it, attempts). Raises ImageHasText when every attempt showed text."""
-    prompt, found = base_prompt, []
+    Returns (png, the prompt that produced it, attempts). A safety block from the image model (`ImageBlocked`) is one
+    failed attempt. Raises ImageHasText when every attempt failed and the last one showed text, else the last
+    ImageBlocked."""
+    prompt, found, blocked = base_prompt, [], None
     for attempt in range(1, MAX_IMAGE_ATTEMPTS + 1):
         if image_budget and r.counts.get("images_generated", 0) >= image_budget:
             raise BudgetExceeded(f"producer image budget {image_budget} spent (worker_budgets.producer.images)")
         assert NO_TEXT_INSTRUCTION in prompt
-        png = image.generate(prompt, size=SIZE)
+        try:
+            png = image.generate(prompt, size=SIZE)
+        except ImageBlocked as exc:
+            blocked = exc
+            r.count("images_blocked")
+            print(f"render_creatives: image model blocked attempt {attempt} ({exc.reason}); regenerating", file=sys.stderr)
+            continue
+        blocked = None
         r.count("images_generated")
         result = model.generate_json(task=TASK_VISION, system=prompts["vision system"], instructions=prompts["vision instructions"],
                                      untrusted="(one generated image attached; no text data)", schema=vision_schema(),
@@ -467,6 +478,8 @@ def generate_checked_image(*, image: Any, model: Model, prompts: dict[str, str],
         r.count("vision_flags")
         print(f"render_creatives: vision check flagged text on attempt {attempt}: {found or 'unreadable'}; regenerating", file=sys.stderr)
         prompt = retry_prompt(base_prompt, found, attempt + 1)
+    if blocked is not None:
+        raise blocked
     raise ImageHasText(f"image still showed text after {MAX_IMAGE_ATTEMPTS} attempts ({found or 'unreadable'})")
 
 
@@ -479,6 +492,7 @@ def produce(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: d
                 "vision_checks", "vision_flags", "renders", "hooks_written"):
         r.counts.setdefault(key, 0)
     executions = int(config["batch"]["executions_per_recipe"])
+    image_model = str(getattr(image, "model_id", None) or config["image_model"])   # FR-21: the model that drew the image
     budgets = (config.get("worker_budgets") or {}).get("producer") or {}
     token_budget, image_budget = int(budgets.get("tokens") or 0), int(budgets.get("images") or 0)
 
@@ -568,6 +582,11 @@ def produce(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: d
                 r.count("creatives_dropped_text")
                 print(f"render_creatives: brief #{n} execution {k + 1} dropped: {exc} (FR-24)", file=sys.stderr)
                 continue
+            except ImageBlocked as exc:
+                r.count("creatives_dropped_blocked")
+                print(f"render_creatives: brief #{n} execution {k + 1} dropped: the image model blocked all "
+                      f"{MAX_IMAGE_ATTEMPTS} attempts, last {exc.reason}", file=sys.stderr)
+                continue
             slots = {
                 "image_data_uri": data_uri(png_image), "hook": hook_text, "cta_text": copy["cta_text"], "client_name": client.get("name") or slug,
                 "brand_font": config["brand"]["font"], "brand_primary": config["brand"]["colors"].get("primary", "#111111"),
@@ -586,7 +605,7 @@ def produce(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: d
             values = dict(
                 id=creative_id, client_id=client_id, brief_id=b["id"], experiment_id=b.get("experiment_id"), status="draft",
                 primary_text=primary, headline=copy["headlines"][0], description=copy["description"], renderer=RENDERER,
-                template=template, image_model=str(config["image_model"]), image_prompt=prompt,
+                template=template, image_model=image_model, image_prompt=prompt,
                 source_reference_url=(spec.get("source") or {}).get("source_image_url"), asset_urls=[asset_url],
                 sizes=[SIZE_LABEL], version=version,
             )
@@ -601,7 +620,7 @@ def produce(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: d
             components = [
                 ("family", b["family"]), ("variant", str((spec.get("source") or {}).get("variant") or "")), ("hook", str(hook_id)),
                 ("hook_type", str(layer.get("hook_type") or "")), ("angle", b["angle"]), ("template", template), ("renderer", RENDERER),
-                ("image_model", str(config["image_model"])), ("cta", str(cta)), ("landing_page", landing_page), ("offer", str(offer["id"])),
+                ("image_model", image_model), ("cta", str(cta)), ("landing_page", landing_page), ("offer", str(offer["id"])),
                 ("proof_type", str((offer.get("offer_layer") or {}).get("proof_type") or "")), ("copy_length", length),
                 *[("voc_phrase", str(v["id"])) for v in voc],
             ]
@@ -620,6 +639,9 @@ def produce(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: d
     if r.counts["creatives_dropped_text"]:
         print(f"render_creatives: WARNING {r.counts['creatives_dropped_text']} execution(s) dropped after {MAX_IMAGE_ATTEMPTS} "
               f"text-bearing images; {len(written)} of {expected} creatives written", file=sys.stderr)
+    if r.counts.get("creatives_dropped_blocked"):
+        print(f"render_creatives: WARNING {r.counts['creatives_dropped_blocked']} execution(s) dropped after {MAX_IMAGE_ATTEMPTS} "
+              f"image-model safety blocks; {len(written)} of {expected} creatives written", file=sys.stderr)
     return written
 
 

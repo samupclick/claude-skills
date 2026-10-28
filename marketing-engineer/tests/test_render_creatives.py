@@ -382,3 +382,46 @@ def test_reupload_pushes_every_asset_through_the_current_storage_backend(produce
         assert path.is_relative_to(new_root / "storage" / "creatives") and path.name == "1080x1080.png" and Image.open(path).size == (1080, 1080)
     run = producer_runs(producer_env)[-1]
     assert run["status"] == "ok" and run["counts"]["assets_reuploaded"] == 6
+
+
+class StubImage:
+    """A live-style image backend: declares its model and raises ImageBlocked on the calls `blocked(n)` picks."""
+    model_id = "stub-image-model"
+
+    def __init__(self, blocked):
+        self.blocked, self.calls = blocked, 0
+
+    def generate(self, prompt, *, size=(1080, 1080)):
+        from adapters.image import ImageBlocked
+        from adapters.image.placeholder import render_placeholder
+        self.calls += 1
+        if self.blocked(self.calls):
+            raise ImageBlocked("IMAGE_SAFETY", stage="output")
+        return render_placeholder(prompt, size=size)
+
+
+def test_a_blocked_image_is_a_failed_attempt_and_the_execution_drops_after_three(producer_env, monkeypatch, capsys):
+    pick()
+    stub = StubImage(lambda n: True)
+    monkeypatch.setattr(rc, "get_image", lambda: stub)
+    assert rc.main([]) == 0, "a safety block is a failed attempt, not a crashed batch"
+    err = capsys.readouterr().err
+    assert "blocked" in err and "IMAGE_SAFETY" in err and "0 of 6 creatives written" in err
+    assert q(producer_env, "select count(*) n from creatives")[0]["n"] == 0
+    run = producer_runs(producer_env)[-1]
+    assert run["status"] == "ok" and stub.calls == 18
+    assert run["counts"]["images_blocked"] == 18 and run["counts"]["creatives_dropped_blocked"] == 6
+    assert run["counts"]["images_generated"] == 0 and run["counts"]["vision_checks"] == 0
+
+
+def test_a_block_then_a_clean_image_ships_and_records_the_model_the_backend_used(producer_env, monkeypatch):
+    pick()
+    monkeypatch.setattr(rc, "get_image", lambda: StubImage(lambda n: n % 2 == 1))
+    assert rc.main([]) == 0
+    creatives = q(producer_env, "select id, image_model from creatives")
+    assert len(creatives) == 6 and {c["image_model"] for c in creatives} == {"stub-image-model"}
+    for c in creatives:
+        comp = q(producer_env, "select component_ref from creative_components where creative_id = %s and component_type = 'image_model'", c["id"])
+        assert comp == [{"component_ref": "stub-image-model"}], "FR-21: the component names the model that drew the image"
+    run = producer_runs(producer_env)[-1]
+    assert run["counts"]["images_blocked"] == 6 and run["counts"]["images_generated"] == 6 and run["counts"]["image_attempts_total"] == 12
