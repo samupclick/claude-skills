@@ -4,6 +4,7 @@ Turnstile is `pass`. Covers FR-32 to FR-35 and DR-4."""
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
 import shutil
@@ -13,14 +14,16 @@ import sys
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
+import httpx
 import psycopg
 import pytest
 from psycopg.errors import InsufficientPrivilege
 
-from adapters.capi import get_capi
+from adapters.capi import CapiError, get_capi
 from adapters.turnstile import get_turnstile
 from funnel import quiz
 from funnel.app import Deps, RateLimiter, Request, handle
@@ -227,6 +230,38 @@ def test_answers_are_whitelisted_and_disposable_emails_rejected(deps):
     assert handle(Request("GET", "/quiz/config", query={"client": "nobody"}), deps).status == 400
 
 
+def test_a_capi_failure_is_logged_and_the_prospect_still_gets_through(deps, admin, logs, monkeypatch):
+    """Meta being down must not cost the lead: the RPC has committed, the route answers 200 with the event_id (the
+    browser pixel still fires with it), and the failure is one log line naming the event, never the contact."""
+    class Down:
+        def send(self, **event):
+            raise CapiError("Meta CAPI error code 190 (OAuthException) for x: Invalid OAuth access token (fbtrace_id T1)", code=190)
+    monkeypatch.setattr(deps, "capi", Down())
+    r1 = start(deps)
+    assert r1.status == 200 and r1.body["event_id"] == f"{r1.body['lead_id']}:QuizStart"
+    r2 = complete(deps, r1.body["lead_id"])
+    assert r2.status == 200 and r2.body["event_id"] and r2.body["qualified"] is True
+    assert lead_row(admin, r1.body["lead_id"])["stage"] == "completed"
+    failed = [l for l in logs if l["event"] == "capi_failed"]
+    assert [l["event_name"] for l in failed] == ["QuizStart", "QuizComplete"]
+    assert failed[0]["code"] == 190 and "190" in failed[0]["error"] and not any(l["event"] == "capi_sent" for l in logs)
+    assert "example.com" not in json.dumps(logs).lower()
+
+    class Broken:
+        def send(self, **event):
+            raise RuntimeError("person@example.com leaked into an exception")
+    monkeypatch.setattr(deps, "capi", Broken())
+    assert start(deps).status == 200
+    assert logs[-1]["event"] == "capi_failed" and logs[-1]["error"] == "RuntimeError" and "example.com" not in json.dumps(logs[-1])
+
+
+def test_config_says_whether_server_events_go_to_the_test_tab(deps, monkeypatch):
+    assert handle(Request("GET", "/quiz/config", query={"client": "upclicklabs"}), deps).body["capi_test_mode"] is False
+    monkeypatch.setattr(deps, "test_event_code", "TEST123")
+    body = handle(Request("GET", "/quiz/config", query={"client": "upclicklabs"}), deps).body
+    assert body["capi_test_mode"] is True and "TEST123" not in json.dumps(body)
+
+
 def test_turnstile_failure_and_rate_limit(deps, monkeypatch):
     class Reject:
         def verify(self, token, remote_ip=None):
@@ -294,9 +329,20 @@ def free_port() -> int:
 @pytest.fixture
 def runner(db_env, dev_root, monkeypatch):
     """funnel/server.py in a subprocess on a free port, pointed at the test database and a scratch DEV_ROOT."""
+    yield from spawn_runner(monkeypatch)
+
+
+@pytest.fixture
+def runner_with_turnstile(db_env, dev_root, monkeypatch):
+    """The runner with a Turnstile site key configured (Cloudflare's public always-pass test key), so the page renders
+    widgets; the server side stays TURNSTILE_BACKEND=pass."""
+    yield from spawn_runner(monkeypatch, TURNSTILE_SITE_KEY="1x00000000000000000000AA")
+
+
+def spawn_runner(monkeypatch, **extra):
     port = free_port()
     env = {**os.environ, "FUNNEL_HOST": f"http://localhost:{port}", "CAL_WEBHOOK_SECRET": SECRET,
-           "CAPI_BACKEND": "fake", "TURNSTILE_BACKEND": "pass", "RATE_LIMIT_PER_MINUTE": "1000"}
+           "CAPI_BACKEND": "fake", "TURNSTILE_BACKEND": "pass", "RATE_LIMIT_PER_MINUTE": "1000", **extra}
     monkeypatch.setenv("FUNNEL_HOST", env["FUNNEL_HOST"])
     monkeypatch.setenv("CAL_WEBHOOK_SECRET", SECRET)
     proc = subprocess.Popen([sys.executable, str(ME_DIR / "funnel" / "server.py")], cwd=ME_DIR, env=env,
@@ -346,6 +392,122 @@ def test_test_events_script_fails_closed_without_a_runner(db_env, dev_root, monk
     assert r["status"] == "failed" and "listening" in r["error"] and r["finished_at"]
 
 
+def last_run(admin):
+    return admin.execute("select * from runs where worker = 'test_events' order by started_at desc limit 1").fetchone()
+
+
+def test_events_live_refuses_without_meta_test_event_code(db_env, dev_root, admin, monkeypatch):
+    monkeypatch.setenv("FUNNEL_HOST", f"http://localhost:{free_port()}")
+    monkeypatch.setenv("CAL_WEBHOOK_SECRET", SECRET)
+    res = subprocess.run([sys.executable, str(ME_DIR / "scripts" / "test_events.py"), "--live"], cwd=ME_DIR,
+                         capture_output=True, text=True, env={**os.environ, "META_TEST_EVENT_CODE": "", "CAPI_BACKEND": "fake"})
+    assert res.returncode == 1 and "META_TEST_EVENT_CODE" in res.stderr
+    r = last_run(admin)
+    assert r["status"] == "failed" and "META_TEST_EVENT_CODE" in r["error"] and r["finished_at"]
+    assert not (dev_root / "capi.jsonl").exists()
+
+
+def test_events_without_live_refuses_a_live_capi_backend(db_env, dev_root, admin, monkeypatch):
+    monkeypatch.setenv("FUNNEL_HOST", f"http://localhost:{free_port()}")
+    monkeypatch.setenv("CAL_WEBHOOK_SECRET", SECRET)
+    res = subprocess.run([sys.executable, str(ME_DIR / "scripts" / "test_events.py")], cwd=ME_DIR,
+                         capture_output=True, text=True, env={**os.environ, "CAPI_BACKEND": "live"})
+    assert res.returncode == 1 and "--live" in res.stderr and "META_TEST_EVENT_CODE" in res.stderr
+    assert last_run(admin)["status"] == "failed"
+
+
+def load_test_events():
+    spec = importlib.util.spec_from_file_location("test_events_script", ME_DIR / "scripts" / "test_events.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_events_live_sends_the_three_events_with_the_test_code(db_env, dev_root, admin, monkeypatch, capsys):
+    """--live with no funnel listening: the script starts the runner in-process on CAPI_BACKEND=live (graph.facebook.com
+    is an httpx.MockTransport serving fixtures/capi) and reports what Meta acknowledged and what Events Manager shows."""
+    from adapters.capi.live import LiveCapi
+    sent = []
+
+    def graph(request):
+        form = {k: v[0] for k, v in urllib.parse.parse_qs(request.content.decode()).items()}
+        sent.append({"path": request.url.path, "test_event_code": form.get("test_event_code"), **json.loads(form["data"])[0]})
+        raw = json.loads((ME_DIR / "fixtures" / "capi" / "events_received.json").read_text())
+        return httpx.Response(200, json={k: v for k, v in raw.items() if not k.startswith("_")})
+
+    real_from_env = LiveCapi.from_env.__func__
+    monkeypatch.setattr(LiveCapi, "from_env", classmethod(lambda cls, **kw: real_from_env(cls, transport=httpx.MockTransport(graph), **kw)))
+    for k, v in {"FUNNEL_HOST": f"http://localhost:{free_port()}", "CAL_WEBHOOK_SECRET": SECRET, "CAPI_BACKEND": "fake",
+                 "TURNSTILE_BACKEND": "pass", "RATE_LIMIT_PER_MINUTE": "1000", "META_TEST_EVENT_CODE": "TEST123",
+                 "META_PIXEL_ID": "123456789012345", "META_CAPI_TOKEN": "dummy-capi-token"}.items():
+        monkeypatch.setenv(k, v)
+    assert load_test_events().main(["--live"]) == 0
+    out = capsys.readouterr().out
+    assert os.environ["CAPI_BACKEND"] == "live"
+    assert sorted(e["event_name"] for e in sent) == ["QuizComplete", "QuizStart", "Schedule"]
+    assert {e["test_event_code"] for e in sent} == {"TEST123"} and {e["path"] for e in sent} == {"/v24.0/123456789012345/events"}
+    lead = sent[0]["event_id"].split(":")[0]
+    assert {e["event_id"] for e in sent} == {f"{lead}:QuizStart", f"{lead}:QuizComplete", f"{lead}:Schedule"}
+    assert out.count("events_received=1") == 3 and "AbCdEfGhIjKlMnOp123" in out
+    assert "Events Manager" in out and "Test events" in out and "123456789012345" in out and "TEST123" not in out
+    assert "dummy-capi-token" not in out
+    r = last_run(admin)
+    assert r["status"] == "ok" and r["counts"]["capi_accepted"] == 3 and r["counts"]["prospects"] == 2
+    assert not (dev_root / "capi.jsonl").exists()
+
+
+def test_events_live_against_a_running_funnel_needs_its_test_mode(runner, db_env, dev_root, admin):
+    """A funnel the script did not start (a deployed preview): it asks /quiz/config whether that funnel has a test
+    event code and sends nothing when it does not."""
+    res = subprocess.run([sys.executable, str(ME_DIR / "scripts" / "test_events.py"), "--live", "--no-serve"], cwd=ME_DIR,
+                         capture_output=True, text=True, env={**os.environ, "META_TEST_EVENT_CODE": "TEST123"})
+    assert res.returncode == 1 and "capi_test_mode" in res.stderr
+    assert last_run(admin)["status"] == "failed" and not (dev_root / "capi.jsonl").exists()
+
+
+def test_events_sends_vercels_protection_bypass_header_only_when_set(monkeypatch):
+    """Vercel protects preview URLs by default; Protection Bypass for Automation takes the project's secret in the
+    x-vercel-protection-bypass header."""
+    mod = load_test_events()
+    seen = []
+
+    class Reply:
+        status = 200
+
+        def read(self):
+            return b"{}"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    monkeypatch.setattr(mod.urllib.request, "urlopen", lambda req, timeout: (seen.append({k.lower(): v for k, v in req.header_items()}), Reply())[1])
+    monkeypatch.setenv("VERCEL_AUTOMATION_BYPASS_SECRET", "bypass-123")
+    mod._call("https://funnel-git-branch.vercel.app", "GET", "/quiz/config")
+    monkeypatch.delenv("VERCEL_AUTOMATION_BYPASS_SECRET")
+    mod._call("https://funnel-git-branch.vercel.app", "GET", "/quiz/config")
+    assert seen[0]["x-vercel-protection-bypass"] == "bypass-123" and "x-vercel-protection-bypass" not in seen[1]
+
+
+@pytest.fixture
+def runner_in_test_mode(db_env, dev_root, monkeypatch):
+    yield from spawn_runner(monkeypatch, META_TEST_EVENT_CODE="TEST123")
+
+
+def test_events_live_against_a_funnel_in_test_mode_reports_what_to_check(runner_in_test_mode, dev_root, admin):
+    res = subprocess.run([sys.executable, str(ME_DIR / "scripts" / "test_events.py"), "--live", "--no-serve"], cwd=ME_DIR,
+                         capture_output=True, text=True, env={**os.environ, "META_TEST_EVENT_CODE": "TEST123"})
+    assert res.returncode == 0, res.stdout + res.stderr
+    assert "Events Manager" in res.stdout and "QuizStart" in res.stdout and "Schedule" in res.stdout
+    assert "cannot see Meta's replies" in res.stdout
+    events = [json.loads(l) for l in (dev_root / "capi.jsonl").read_text().splitlines()]
+    assert {e["test_event_code"] for e in events} == {"TEST123"} and len(events) == 3
+    assert last_run(admin)["status"] == "ok"
+
+
 def _node_playwright() -> str | None:
     node = shutil.which("node")
     if not node:
@@ -379,3 +541,18 @@ def test_browser_walks_the_quiz_without_a_pixel_before_consent(runner, admin, de
     assert row["consent"]["tracking"] is True and row["fbclid_hash"] == hashlib.sha256(b"IwARbrowser").hexdigest()
     events = [json.loads(l) for l in (dev_root / "capi.jsonl").read_text().splitlines() if out["lead_id"] in l]
     assert sorted(e["event_name"] for e in events) == ["QuizComplete", "QuizStart", "Schedule"]
+
+
+@pytest.mark.skipif(_node_playwright() is None, reason="node playwright not installed")
+def test_browser_sends_a_fresh_turnstile_token_with_every_post(runner_with_turnstile):
+    """Turnstile tokens are single-use (siteverify answers timeout-or-duplicate on a second check), so /quiz/start and
+    /quiz each carry their own widget's token, and a POST that failed is retried with a new one. api.js is a local stub."""
+    env = {**os.environ, "NODE_PATH": _node_playwright(), "PLAYWRIGHT_BROWSERS_PATH": os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")}
+    res = subprocess.run(["node", str(ME_DIR / "tests" / "browser_turnstile.mjs"), runner_with_turnstile + "/quiz"],
+                         capture_output=True, text=True, env=env, timeout=120)
+    assert res.returncode == 0, res.stdout + res.stderr
+    out = json.loads(res.stdout.strip().splitlines()[-1])
+    assert [p["path"] for p in out["posts"]] == ["/quiz/start", "/quiz", "/quiz"]
+    tokens = [p["token"] for p in out["posts"]]
+    assert all(t and t.startswith("stub-") for t in tokens) and len(set(tokens)) == 3, tokens
+    assert out["contact_widget"] is True and out["external"] == []

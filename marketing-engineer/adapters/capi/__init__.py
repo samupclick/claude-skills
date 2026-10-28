@@ -1,10 +1,19 @@
-"""Meta Conversions API. CAPI_BACKEND=fake|live. `send(...)` per event, `event_id` for pixel dedup."""
+"""Meta Conversions API. CAPI_BACKEND=fake|live. `send(...)` per event, `event_id` for pixel dedup. FR-33, DR-4."""
 from __future__ import annotations
 
 import hashlib
 from typing import Any, Protocol
 
-from adapters.env import choose_backend, dev_root, not_built
+from adapters.env import choose_backend, dev_root
+
+
+class CapiError(RuntimeError):
+    """A server event was not accepted. Names Meta's code and fbtrace_id, never a token or a user_data value."""
+
+    def __init__(self, message: str, *, code: int | None = None, fbtrace_id: str | None = None):
+        super().__init__(message)
+        self.code = code
+        self.fbtrace_id = fbtrace_id
 
 
 class Capi(Protocol):
@@ -19,9 +28,14 @@ def hash_user_field(value: str) -> str:
 
 
 def get_capi() -> Capi:
-    from adapters.capi.fake import FakeCapi
+    def fake() -> Capi:
+        from adapters.capi.fake import FakeCapi
 
-    return choose_backend("CAPI_BACKEND", {
-        "fake": lambda: FakeCapi(dev_root() / "capi.jsonl"),
-        "live": not_built("CAPI_BACKEND", "live", "T13"),
-    })
+        return FakeCapi(dev_root() / "capi.jsonl")
+
+    def live() -> Capi:
+        from adapters.capi.live import LiveCapi
+
+        return LiveCapi.from_env()
+
+    return choose_backend("CAPI_BACKEND", {"fake": fake, "live": live})

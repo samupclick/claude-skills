@@ -10,7 +10,7 @@ Rules enforced here: consent before any CAPI call (FR-33); Turnstile + per-IP ra
 the raw fbclid is hashed before it reaches the RPC and only ever sent in-flight to CAPI as `fbc` (DR-4);
 a forged webhook is rejected with 401 and logged (FR-34); the `app` role is the only warehouse identity
 here and it reaches tables through the 0004 RPCs only. Logs never carry PII: lead ids, never emails.
-funnel/server.py runs this locally on FUNNEL_HOST; T13 ports it to the go-upclicklabs functions.
+funnel/server.py runs this locally on FUNNEL_HOST; on Vercel, api/funnel.py runs it through funnel/wsgi.py.
 """
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import psycopg  # noqa: E402
 from psycopg.types.json import Jsonb  # noqa: E402
 
-from adapters.capi import Capi, get_capi, hash_user_field  # noqa: E402
+from adapters.capi import Capi, CapiError, get_capi, hash_user_field  # noqa: E402
 from adapters.env import load_env  # noqa: E402
 from adapters.turnstile import Turnstile, get_turnstile  # noqa: E402
 from funnel import quiz  # noqa: E402
@@ -201,6 +201,7 @@ def get_config(req: Request, deps: Deps) -> Response:
         "questions": questions,
         "pixel_id": deps.pixel_id,
         "turnstile_site_key": deps.turnstile_site_key,
+        "capi_test_mode": bool(deps.test_event_code),
     })
 
 
@@ -317,7 +318,9 @@ def post_cal_webhook(req: Request, deps: Deps) -> Response:
 
 def _send_event(deps: Deps, req: Request, name: str, eid: str, lead_id: str, *, fbclid: str | None = None,
                 email: str | None = None, action_source: str = "website", custom: dict[str, Any] | None = None) -> None:
-    """Server-side event with the shared event_id. Called only after the consent check by the route."""
+    """Server-side event with the shared event_id. Called only after the consent check by the route. The RPC has
+    committed by now, so a CAPI failure is a `capi_failed` log line, never a failed request: the prospect still gets
+    the calendar and the pixel still fires with the same event_id."""
     now = int(deps.now())
     user_data: dict[str, Any] = {"external_id": [hash_user_field(lead_id)]}
     if action_source == "website":
@@ -330,11 +333,18 @@ def _send_event(deps: Deps, req: Request, name: str, eid: str, lead_id: str, *, 
     if email:
         user_data["em"] = [hash_user_field(email)]
     host = urlsplit(deps.funnel_host)
-    deps.capi.send(
-        event_name=name, event_id=eid, event_time=now,
-        event_source_url=f"{host.scheme}://{host.netloc}/quiz",
-        action_source=action_source, user_data=user_data,
-        custom_data={k: (str(v) if v is not None else None) for k, v in (custom or {}).items() if v is not None},
-        test_event_code=deps.test_event_code,
-    )
-    deps.log("capi_sent", event_name=name, event_id=eid)
+    try:
+        res = deps.capi.send(
+            event_name=name, event_id=eid, event_time=now,
+            event_source_url=f"{host.scheme}://{host.netloc}/quiz",
+            action_source=action_source, user_data=user_data,
+            custom_data={k: (str(v) if v is not None else None) for k, v in (custom or {}).items() if v is not None},
+            test_event_code=deps.test_event_code,
+        )
+    except CapiError as exc:
+        deps.log("capi_failed", event_name=name, event_id=eid, code=exc.code, fbtrace_id=exc.fbtrace_id, error=str(exc))
+        return
+    except Exception as exc:  # an unexpected failure's message may carry anything; log its type only
+        deps.log("capi_failed", event_name=name, event_id=eid, code=None, fbtrace_id=None, error=type(exc).__name__)
+        return
+    deps.log("capi_sent", event_name=name, event_id=eid, fbtrace_id=(res or {}).get("fbtrace_id"))

@@ -1,0 +1,10 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ads-pixel/events.md (error 190 Invalid OAuth 2.0 Access Token) and the Graph API error object (message, type, code, error_subcode, fbtrace_id) in https://developers.facebook.com/documentation/ads-commerce/marketing-api/error-reference.md, read 2026-10-28; replace with a recorded response at go-live",
+  "_status": 400,
+  "error": {
+    "message": "Invalid OAuth access token - Cannot parse access token",
+    "type": "OAuthException",
+    "code": 190,
+    "fbtrace_id": "QrStUvWxYz0123456"
+  }
+}
