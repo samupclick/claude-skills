@@ -1,0 +1,4 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/bidding/guides/adset-budget-sharing.md (campaign create returns { id: numeric string }) and https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-account/adsets.md, read 2026-10-28; replace with a recorded response at go-live. POST /act_<id>/campaigns | adsets | adcreatives | ads",
+  "id": "120200000000000010"
+}

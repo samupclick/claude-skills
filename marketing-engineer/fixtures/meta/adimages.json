@@ -1,0 +1,12 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-account/adimages.md (Creating, bytes: Map { string: Map { string: Struct { hash, url, ... } } }), read 2026-10-28; replace with a recorded response at go-live. POST /act_<id>/adimages with bytes=<base64>",
+  "images": {
+    "bytes": {
+      "hash": "0f3b5c1e9a7d4c2b8e6f1a0d3c5b7e9f",
+      "url": "https://scontent.example.invalid/v/t45.1600-4/temporary.png",
+      "height": 1080,
+      "width": 1080,
+      "name": "ucl-new_recipes-b1-cr1.png"
+    }
+  }
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""`pull insights` (T10): the performance loop. SKILL.md §3, §4 rules 2 and 10, §7; PRD FR-2, FR-3, FR-38 to FR-41.
+"""`pull insights` (T10): the performance loop. SKILL.md §3, §4 rules 2 and 10, §7; PRD FR-2, FR-3, FR-37, FR-38 to FR-41.
 
     python3 scripts/meta_insights.py [--client upclicklabs] [--today YYYY-MM-DD] [--days 7]
     python3 scripts/meta_insights.py --learning "text"        # stop point D: Sam's first learnings row by hand
@@ -11,6 +11,12 @@ One invocation, as `worker_rw`, reads only through the Meta adapter and writes e
      and `ad_metrics_latest` shows the newest (FR-38); the same (ad, day, fetched_on) is never written twice;
   2. account-level spend today into `account_spend_hourly` (one row per run; the routine runs hourly) for the
      executor's observational brake (FR-47);
+  2a. review status (FR-37): every ad read gets `ad_entities.review_status` / `review_feedback` from Meta's
+     `effective_status` and `ad_review_feedback` (0014 grant); `runs.counts.review.disapproved` lists the ads Meta
+     disapproves now, and an ad counts as a disapproval when the loop first saw it disapproved within 7 days. When
+     that count reaches `clients.config.disapproval_pause_threshold`, one proposed `set_pause_flag` carries the ads
+     as evidence (Sam applies it as `sam_admin`); a missing key is a warning, never a default. An ad Meta cannot
+     read is reported and skipped; a throttle stops the sync, not the pull;
   3. the active lever per campaign (FR-2, FR-3): the static chain cost per link click → quiz-start rate →
      quiz-complete rate → booking rate → cost per booked call (hook rate first only for video families), walked
      top-down from campaign-level `ad_metrics_latest` plus warehouse-verified leads, stopping at the first lever
@@ -45,7 +51,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from adapters.env import load_env  # noqa: E402
-from adapters.meta import MetaAds, get_meta  # noqa: E402
+from adapters.meta import REVIEW_STATUSES, MetaAds, MetaApiError, MetaThrottled, get_meta, review_status  # noqa: E402
 from warehouse import client as wh  # noqa: E402
 from warehouse.client import Jsonb  # noqa: E402
 
@@ -63,6 +69,8 @@ CPL_MIN_CLICKS = 100                                              # FR-40
 DEFAULT_SAMPLE_CLICKS = 100                                       # DECISIONS C7: conversion-stage sample (clicks)
 LEARNING_COMPONENTS = ("family", "variant", "hook_type", "angle", "template", "renderer", "image_model", "cta", "copy_length", "proof_type")
 REQUIRED_CONFIG = (("targets", "ctr_floor"), ("targets", "kill_impressions"), ("floors",))
+REVIEW_WINDOW_DAYS = 7                                            # FR-37: N disapprovals in 7 days
+DISAPPROVAL_RULE = "disapprovals_7d"
 TRUTHY = ("1", "true", "yes", "on")
 
 
@@ -245,7 +253,7 @@ def paused(client: dict[str, Any]) -> bool:
 
 
 ADS_SQL = """
-select a.id, a.ad_id, a.campaign_id, a.creative_id, a.adset_id, a.adset_daily_budget, a.status
+select a.id, a.ad_id, a.campaign_id, a.creative_id, a.adset_id, a.adset_daily_budget, a.status, a.review_status, a.review_feedback
   from ad_entities a
  where a.client_id = %s and a.platform = 'meta' and a.ad_id not like 'pending:%%'
  order by a.created_at, a.id;
@@ -307,6 +315,18 @@ select cc.component_type, cc.component_ref, c.id as creative_id,
  order by cc.component_type, cc.component_ref, c.id;
 """
 
+DISAPPROVED_SEEN_SQL = """
+select x.ad_id, min(r.started_at) as first_seen
+  from runs r cross join lateral jsonb_array_elements_text(
+         case when jsonb_typeof(r.counts->'review'->'disapproved') = 'array' then r.counts->'review'->'disapproved' else '[]'::jsonb end) x(ad_id)
+ where r.client_id = %s and r.worker = 'loop' and r.id <> %s
+ group by x.ad_id;
+"""
+
+OPEN_PAUSE_SQL = """
+select 1 from actions where client_id = %s and action_type = 'set_pause_flag' and rule = %s and status in ('proposed', 'approved') limit 1;
+"""
+
 SAMPLE_REACHED_SQL = """
 select count(*) as n from (
   select c.id from creatives c join ad_entities a on a.creative_id = c.id join ad_metrics_latest m on m.ad_entity_id = a.id
@@ -362,6 +382,88 @@ def pull_spend(conn: wh.Connection, r: wh.Run, meta: MetaAds, *, client_id: Any,
     conn.commit()
     r.counts["spend_today"] = str(spend)
     return spend
+
+
+def sync_reviews(conn: wh.Connection, r: wh.Run, meta: MetaAds, *, client_id: Any) -> dict[str, Any]:
+    """FR-37: review status of every ad the pull reads, mirrored from Meta (never from what we asked for). The fake
+    answers `review_status` itself; otherwise it is derived from `effective_status` / `ad_review_feedback`, and an
+    answer silent on review keeps the warehouse value."""
+    ads = conn.execute(ADS_SQL, (client_id,)).fetchall()
+    review: dict[str, Any] = {"read": 0, "changed": 0, "status": {}, "disapproved": [], "errors": {}}
+    r.counts["review"] = review
+    warnings = r.counts.setdefault("warnings", [])
+    for i, ad in enumerate(ads):
+        r.api_calls = (r.api_calls or 0) + 1
+        try:
+            obj = meta.get("ad", ad["ad_id"])
+        except MetaThrottled:
+            warnings.append(f"review sync stopped: Meta throttled after {i} of {len(ads)} ads")
+            break
+        except MetaApiError as exc:
+            review["errors"][ad["ad_id"]] = str(exc)[:300]
+            warnings.append(f"review sync could not read ad {ad['ad_id']}: {str(exc)[:200]}")
+            continue
+        status = obj.get("review_status")
+        if status not in REVIEW_STATUSES:
+            status = review_status(obj.get("effective_status"), obj.get("ad_review_feedback"))
+        status = status or ad["review_status"]
+        feedback = obj["ad_review_feedback"] if isinstance(obj.get("ad_review_feedback"), dict) else ad["review_feedback"]
+        if (status, feedback) != (ad["review_status"], ad["review_feedback"]):
+            conn.execute("update ad_entities set review_status = %s, review_feedback = %s where id = %s",
+                         (status, Jsonb(feedback if feedback is not None else {}), ad["id"]))
+            review["changed"] += 1
+        review["read"] += 1
+        review["status"][status or "UNKNOWN"] = review["status"].get(status or "UNKNOWN", 0) + 1
+        if status == "DISAPPROVED":
+            review["disapproved"].append(ad["ad_id"])
+    conn.commit()
+    review["disapproved"].sort()
+    return review
+
+
+def disapproval_brake(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: dict[str, Any], review: dict[str, Any],
+                      now: datetime) -> dict[str, Any] | None:
+    """FR-37: ads first seen disapproved by the loop within REVIEW_WINDOW_DAYS, counted against
+    `disapproval_pause_threshold`; at the threshold one proposed `set_pause_flag` (Sam-only to approve and apply)."""
+    seen = {row["ad_id"]: row["first_seen"] for row in conn.execute(DISAPPROVED_SEEN_SQL, (client["id"], r.id)).fetchall()}
+    for ad_id in review["disapproved"]:
+        seen.setdefault(ad_id, now)
+    recent = sorted(a for a, first in seen.items() if first >= now - timedelta(days=REVIEW_WINDOW_DAYS))
+    review["disapproved_7d"] = len(recent)
+    threshold = config.get("disapproval_pause_threshold")
+    review["threshold"] = threshold
+    warnings = r.counts.setdefault("warnings", [])
+    if threshold is None:
+        warnings.append(f"config disapproval_pause_threshold is missing: {len(recent)} disapproval(s) in {REVIEW_WINDOW_DAYS} days, "
+                        "the FR-37 brake is not evaluated")
+        return None
+    try:
+        limit = int(threshold)
+    except (TypeError, ValueError):
+        warnings.append(f"config disapproval_pause_threshold is not a whole number ({threshold!r}): the FR-37 brake is not evaluated")
+        return None
+    if len(recent) < limit:
+        return None
+    if conn.execute(OPEN_PAUSE_SQL, (client["id"], DISAPPROVAL_RULE)).fetchone():
+        r.count("disapproval_brake_open")
+        return None
+    key = f"brake:{DISAPPROVAL_RULE}:{client['id']}:{evidence_hash(*recent)}"
+    if conn.execute("select 1 from actions where proposal_key = %s", (key,)).fetchone():
+        r.count("disapproval_brake_seen")
+        return None
+    rows = {x["ad_id"]: x for x in conn.execute("select id, ad_id, review_status, review_feedback from ad_entities where client_id = %s and ad_id = any(%s)",
+                                                (client["id"], recent)).fetchall()}
+    evidence = {"disapproved_7d": len(recent), "threshold": limit, "window_days": REVIEW_WINDOW_DAYS, "observed_at": now.isoformat(),
+                "ads": [{"ad_id": a, "ad_entity_id": str(rows[a]["id"]) if a in rows else None, "first_seen": seen[a].isoformat(),
+                         "review_status": rows[a]["review_status"] if a in rows else None,
+                         "review_feedback": rows[a]["review_feedback"] if a in rows else None} for a in recent]}
+    reason = f"{len(recent)} ads disapproved by Meta in the last {REVIEW_WINDOW_DAYS} days (threshold {limit})"
+    action = wh.insert_actions(conn, client_id=client["id"], action_type="set_pause_flag", target_type="client", target_id=str(client["id"]),
+                               rule=DISAPPROVAL_RULE, proposal={"paused": True, "reason": reason}, proposal_key=key, evidence=evidence)
+    conn.commit()
+    r.count("disapproval_brake_proposed")
+    print(f"brake: proposed set_pause_flag ({DISAPPROVAL_RULE}: {reason}) [{str(action['id'])[:8]}]; Sam approves and applies it as sam_admin")
+    return action
 
 
 def update_levers(conn: wh.Connection, r: wh.Run, *, client_id: Any, config: dict[str, Any]) -> list[dict[str, Any]]:
@@ -546,6 +648,8 @@ def pull(conn: wh.Connection, r: wh.Run, meta: MetaAds, *, client: dict[str, Any
     window = {"since": since.isoformat(), "until": until.isoformat(), "fetched_on": today.isoformat()}
     pull_metrics(conn, r, meta, client_id=client["id"], since=since, until=until, fetched_on=today)
     pull_spend(conn, r, meta, client_id=client["id"], today=today)
+    review = sync_reviews(conn, r, meta, client_id=client["id"])
+    disapproval_brake(conn, r, client=client, config=config, review=review, now=datetime.now(timezone.utc))
     levers = update_levers(conn, r, client_id=client["id"], config=config)
     proposals = propose_kill_scale(conn, r, client=client, config=config, window=window)
     report_cpl_target(conn, r, client_id=client["id"], config=config)
