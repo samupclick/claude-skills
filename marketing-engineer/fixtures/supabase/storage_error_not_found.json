@@ -1,0 +1,7 @@
+{
+  "_shape": "ASSUMED SHAPE from https://pypi.org/project/storage3/2.33.0/, read 2026-10-28; replace with a recorded response at go-live",
+  "_source": "storage3/_sync/file_api.py _request and exists(): a missing object surfaces as HTTP 400 or 404 with the {statusCode, error, message} body.",
+  "statusCode": "404",
+  "error": "not_found",
+  "message": "Object not found"
+}

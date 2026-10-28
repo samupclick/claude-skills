@@ -5,6 +5,10 @@ the owning entity's JSONB column and are listed here, never added as ad-hoc colu
 
 ## Migrations (apply in order; `scripts/dev_db.sh` applies every numbered file once)
 
+Bookkeeping: `dev_migrations` (public, local cluster only, `scripts/dev_db.sh`); `ops.schema_migrations` (`name`, `checksum`
+sha256 of the file, `baselined`, `applied_at`, `applied_by`) on any target `scripts/apply_migrations.py` has run against,
+Supabase included. `ops` is tooling, not warehouse schema: no role but the migrating one has a grant on it.
+
 | File | Purpose |
 |------|---------|
 | `schema.sql` (0001) | Tables, views, marts, RLS scaffold |
@@ -81,6 +85,7 @@ the owning entity's JSONB column and are listed here, never added as ad-hoc colu
 | `actions.evidence` | `requested_by`, `channel`, `paused_before`, `pipeline_paused_env` | `scripts/pause.py` | `set_pause_flag` proposed at Sam's request (rule `sam_request`) |
 | `runs.counts` | `since`, `now` (ISO strings), `waiting`, `taken`, `campaigns`, `learnings`, `warnings`, `brake_proposed`, `sent` | `scripts/checkin.py` | one check-in: the window it reported on, the size of each of the five parts, brakes proposed, `sent` 0 on `--dry-run`. The next check-in's window opens at the previous `ok` check-in's `started_at` |
 | `runs.counts` | `proposed`, `duplicate` | `scripts/pause.py` | one pause / resume request |
+| `runs.counts` | `pending` (int), `applied`, `baselined`, `checksum_mismatch`, `roles_updated` (lists of file / role names), `data_api_revoked`, `storage_writer_policies`, `dry_run` (0/1) | `scripts/apply_migrations.py` (worker `migrate`) | one go-live apply: files run now, files recorded by `--baseline` without running, applied files whose sha256 changed since, roles whose LOGIN / password was set; `data_api_revoked = 1` on a Supabase target |
 | `actions.proposal` | `icp_id` | `retire_family` proposer (T10+) | optional: scopes the retirement to one ICP; `plan_batch.py` treats an applied `retire_family` without it as retired for every ICP of the client (FR-7 guard) |
 
 | `offers.offer_layer` | `offer_mechanic`, `proof_type`, `cta_mechanic` | `scripts/seed.py` from `config/clients/<slug>.json` (`offer.offer_layer`) | fixed per offer (DECISIONS C3 amendment); copied verbatim into `briefs.spec.offer_layer` by the planner and read by the producer for the `cta` component |
@@ -108,7 +113,9 @@ same number on every ad row of the set.
 ## Storage keys (T5)
 
 Rendered creatives live under `creatives/<client slug>/<experiment name>/<creative id>/<size>.png` in the storage
-adapter (`.dev/storage/` locally, the `creatives` bucket on Supabase); `creatives.asset_urls` holds the rendered
+adapter (`.dev/storage/` locally, the `creatives` bucket on Supabase, where a URL is the public object URL
+`<SUPABASE_URL>/storage/v1/object/public/<bucket>/<key>`: it ends in the key, so the sibling objects below are found by
+replacing the file name, and Meta fetches it without credentials); `creatives.asset_urls` holds the rendered
 asset(s), `creatives.sizes` the matching sizes (`1080x1080` only in phase 0). The text-free generated image sits
 beside the render as `image.png` under the same key (for the fidelity check and the image-to-image renderer of batch
 two), and the filled template as `1080x1080.html` (every rendered word, read by the gate's `verbatim`, `policy` and `brand`
