@@ -3,6 +3,7 @@ FR-16 (threshold event), FR-17 (4x proposals, selections), FR-18 (translation di
 FR-20 (deterministic ranker). Runs against the throwaway warehouse (`db_env`), never a mock; model on the fixture backend."""
 import importlib.util
 import json
+import re
 import uuid
 from datetime import date
 from pathlib import Path
@@ -295,14 +296,92 @@ def test_same_inputs_same_order_and_the_default_pick(planner_env, capsys):
     sel = q(planner_env, "select * from selections")[0]
     assert sel["selected_by"] == "ranker_default" and "default taken" in sel["reason"] and "20 minutes" in sel["reason"]
     by_n = {int(b["spec"]["proposal_number"]): b["id"] for b in q(planner_env, "select * from briefs")}
-    assert set(sel["chosen"]) == {by_n[1], by_n[2], by_n[3]}, "the default is the ranker's top three"
+    # the ranker's top three are #1, #2, #3, but #2 is stat_card with no weekend template: the default takes the
+    # top three producible proposals instead and says which it skipped
+    assert set(sel["chosen"]) == {by_n[1], by_n[3], by_n[6]}, "the default is the ranker's top three with a template"
+    assert "#2 stat_card" in sel["reason"] and "#4 us_vs_them" in sel["reason"] and "#5 ugly_ad" in sel["reason"]
     assert "default taken" in capsys.readouterr().out
+    assert planner_runs(planner_env)[-1]["counts"]["skipped_no_template"] == [2, 4, 5]
     # FR-20: batch two from the same patterns ranks them in the same order
     assert pb.main(["--today", TODAY.isoformat()]) == 0
     second = q(planner_env, "select source_pattern_id, family, spec->>'hook_line' hook from briefs b join experiments e on e.id = b.experiment_id "
                             "where e.name = 'batch-002' order by (spec->>'proposal_number')::int")
     assert len(first) == len(second) == 12
     assert [(r["source_pattern_id"], r["family"]) for r in first] == [(r["source_pattern_id"], r["family"]) for r in second]
+
+
+def test_template_for_follows_the_producers_rule():
+    spec_rc = importlib.util.spec_from_file_location("render_creatives_for_planner", ME_DIR / "scripts" / "render_creatives.py")
+    rc = importlib.util.module_from_spec(spec_rc)
+    spec_rc.loader.exec_module(rc)
+    templates = rc.available_templates()
+    for family in ("job_photo_bubble", "screenshot_ad", "stat_card", "ugly_ad", "testimonial_card", "press_quote"):
+        try:
+            expected = rc.template_for_family(family, templates)
+        except rc.NoTemplate:
+            expected = None
+        assert pb.template_for(family) == expected, family
+    assert pb.template_for("screenshot_ad") == "screenshot-ad" and pb.template_for("stat_card") is None
+
+
+def test_picks_table_marks_template_less_rows_and_names_the_default(planner_env, capsys):
+    assert pb.main(["--today", TODAY.isoformat()]) == 0
+    out = capsys.readouterr().out
+    rows = {int(line.split()[0]): line for line in out.splitlines() if re.match(r"^\d+\s{2}", line)}
+    assert len(rows) == 12
+    for n in (1, 3, 6, 8, 11):
+        assert "screenshot-ad" in rows[n] and "NONE" not in rows[n], rows[n]
+    for n in (2, 4, 5, 7, 9, 10, 12):
+        assert rows[n].rstrip().endswith("NONE"), rows[n]
+    assert "template NONE: no weekend template" in out and "`produce` refuses" in out
+    assert "the ranker's top 3 with a template (#1, #3, #6)" in out
+
+
+def test_explicit_pick_of_a_template_less_family_is_recorded_and_warned(planner_env, capsys):
+    """Sam's explicit pick stands (selections are training data, FR-17); `produce` refuses it with its own message
+    (tests/test_render_creatives.py). The planner says so at pick time."""
+    assert pb.main(["--today", TODAY.isoformat()]) == 0
+    capsys.readouterr()
+    assert pb.main(["--select", "1, 2, 3"]) == 0
+    err = capsys.readouterr().err
+    assert "pick #2" in err and "stat_card" in err and "stat-card.html" in err and "`produce` will refuse" in err
+    assert planner_runs(planner_env)[-1]["counts"]["picked_no_template"] == [2]
+    assert len(q(planner_env, "select * from selections")[0]["chosen"]) == 3
+
+
+def test_default_refuses_when_fewer_proposals_than_recipes_have_a_template(planner_env, capsys):
+    assert pb.main(["--today", TODAY.isoformat()]) == 0
+    with psycopg.connect(planner_env["WAREHOUSE_URL_ADMIN"], autocommit=True) as admin:
+        admin.execute("update briefs set family = 'stat_card' where (spec->>'proposal_number')::int in (6, 8, 11)")
+    capsys.readouterr()
+    assert pb.main(["--select", "default"]) == 2
+    err = capsys.readouterr().err
+    assert "only 2 of 12 proposals have a weekend template (#1, #3)" in err
+    assert q(planner_env, "select count(*) n from selections")[0]["n"] == 0
+    assert planner_runs(planner_env)[-1]["status"] == "failed"
+
+
+def test_plan_batch_retranslates_marked_briefs_before_planning(planner_env, capsys):
+    """FR-29 planner route without the flag: a brief the producer marked after a coherence failure is re-translated
+    first (and committed), then the normal FR-16 planning runs. tests/test_retry_loop.py covers the full loop."""
+    assert pb.main(["--today", TODAY.isoformat()]) == 0
+    assert pb.main(["--select", "default"]) == 0
+    with psycopg.connect(planner_env["WAREHOUSE_URL_ADMIN"], autocommit=True) as admin:
+        admin.execute("""update briefs set spec = spec || '{"retranslate": {"creative_ids": [], "attempt": 1, "requested_by": "producer"}}'
+                          where (spec->>'proposal_number')::int = 3""")
+    capsys.readouterr()
+    assert pb.main(["--today", TODAY.isoformat()]) == 0
+    out = capsys.readouterr().out
+    assert "brief #3 of batch-001 re-translated" in out and "batch-002 (capacity 6): 12 proposals" in out
+    run = planner_runs(planner_env)[-1]
+    assert run["counts"]["retranslated"] == 1 and run["counts"]["batch_requested"] == 1 and run["api_calls"] == 13
+    assert any(s.startswith("briefs_marked_for_retranslation:") for s in run["counts"]["queries"])
+    old, new = q(planner_env, "select b.* from briefs b join experiments e on e.id = b.experiment_id where e.name = 'batch-001' "
+                              "and (b.spec->>'proposal_number')::int = 3 order by b.created_at")
+    assert old["spec"]["superseded_by"] == str(new["id"]) and new["spec"]["recipe_brief_id"] == str(old["id"]) and new["spec"]["chosen"] is True
+    assert q(planner_env, "select count(*) n from briefs where spec->>'recipe_brief_id' is not null")[0]["n"] == 1
+    assert pb.main(["--today", TODAY.isoformat()]) == 0      # done once: a superseded brief is never re-translated again
+    assert planner_runs(planner_env)[-1]["counts"]["retranslated"] == 0
 
 
 def test_no_batch_is_requested_while_in_flight_creatives_fill_capacity(planner_env, capsys):

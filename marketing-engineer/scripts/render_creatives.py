@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""`produce` (T5): the creative producer. SKILL.md §3, §4 rules 4, 5, 7; PRD FR-21 to FR-25; ARCHITECTURE §4.
+"""`produce` (T5): the creative producer. SKILL.md §3, §4 rules 4, 5, 6, 7; PRD FR-21 to FR-25, FR-29; ARCHITECTURE §4.
 
     python3 scripts/render_creatives.py [--client upclicklabs] [--experiment batch-001] [--rerender]
     python3 scripts/render_creatives.py --reupload        # go-live step 2: push every asset through the current storage backend
@@ -10,7 +10,8 @@ writes `config.batch.executions_per_recipe` creatives (batch one: 3 briefs -> 6 
   1. opens a `runs` row (worker `producer`), prints "where are we", refuses when paused or when an action is `applying`;
   2. refuses the whole batch before rendering anything when a chosen brief is in a family without an HTML template
      (`assets/creative-templates/<family with dashes>.html`) or in a testimonial / quote family without an applied
-     `quote_release` (FR-23); a brief that already has its creatives is skipped unless `--rerender`;
+     `quote_release` (FR-23); a brief that already has creatives is not rendered again unless `--rerender`, which
+     archives them and writes the next version (never a fourth);
   3. copy through the model adapter (task `write_copy`, prompts in `references/prompts/producer.md`, rules in
      `references/direct-response-copy.md`): primary text at three lengths, five headlines, ten hook lines, a
      description, the CTA text, and per execution the overlay words for the template's slots. The brief's content is
@@ -28,6 +29,20 @@ writes `config.batch.executions_per_recipe` creatives (batch one: 3 briefs -> 6 
 An execution is one rendering of the recipe: executions differ only in hook line (the first uses the brief's own,
 the second a hook from the bank the copy task wrote, stored as its own `hooks` row) and in the image; the format
 layer, copy length, CTA and landing page are identical. Worker role only; no side effect anywhere (SKILL.md §4 rule 1).
+
+FR-29 retry loop, automatic on every `produce` (no flag): a creative the gate scored and failed (its latest agent
+`gate_scores` row has `passed = false`) is the gate's request to the producer, so a re-run of `produce` consumes the
+feedback object instead of waiting for a command. Facts failures need no taste decision, the attempt cap and the
+worker budgets bound the cost, and `produce` stays idempotent: a recipe with nothing failed is skipped as before.
+  - route `producer`: one successor at `version + 1` from the recipe's newest brief, written through task
+    `revise_copy` with the failed checks' names and our guidance (`REVISION_GUIDANCE`) in the instructions and the
+    gate's issue strings, the failed words and the hooks in use only inside the data block; a failed `likeness`
+    adds a fixed constraint to the image prompt. The failed creative is archived once the successor exists, and
+    the brief's `spec.retries` records the step;
+  - route `planner` (`coherence`): the brief is marked (`spec.retranslate`) for `plan_batch.py` and the creative
+    waits, still gated; once a re-translation exists (`spec.recipe_brief_id` names the chosen brief) the successor
+    is rendered from it; a refused re-translation drops the creative;
+  - a failure at version 3 is dropped from the batch, archived and logged: attempt 4 is impossible.
 """
 from __future__ import annotations
 
@@ -39,8 +54,9 @@ import json
 import os
 import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 from uuid import UUID, uuid4
@@ -52,9 +68,11 @@ from adapters.image import get_image  # noqa: E402
 from adapters.model import Model, get_model  # noqa: E402
 from adapters.storage import get_storage  # noqa: E402
 from warehouse import client as wh  # noqa: E402
+from warehouse.client import Jsonb  # noqa: E402
 
 WORKER = "producer"
 TASK_COPY = "write_copy"
+TASK_REVISE = "revise_copy"                                                    # FR-29: one execution rewritten against the gate's feedback
 TASK_VISION = "image_text_check"
 PROMPTS = ME_DIR / "references" / "prompts" / "producer.md"
 COPY_RULES = ME_DIR / "references" / "direct-response-copy.md"
@@ -79,6 +97,19 @@ COPY_LENGTHS = ("short", "medium", "long")
 FALLBACK_CHROMIUM = Path("/opt/pw-browsers/chromium")                          # the container's pre-installed browser
 REQUIRED_CONFIG = (("targets", "ctr_floor"), ("targets", "kill_impressions"), ("daily_cap",), ("currency",),
                    ("renderer",), ("image_model",), ("batch", "executions_per_recipe"), ("brand", "colors"), ("brand", "font"))
+GATE_CHECKS = ("policy", "brand", "likeness", "testimonial", "coherence", "components", "landing", "verbatim")   # scripts/gate.py HARD_CHECKS
+PLANNER_ROUTE = "planner"                                                      # the gate routes `coherence` here (FR-29)
+REVISION_GUIDANCE = {                                                          # what a retry changes per failed check (ours, trusted)
+    "policy": "rewrite every flagged word; no personal attributes, no results claims, no shouting",
+    "brand": "remove every price, income and client-name word; the brand hard blocks are absolute",
+    "likeness": "the image is generated again: no identifiable real person, no logo or brand mark",
+    "testimonial": "no quote, no attribution, no testimonial framing of any kind",
+    "coherence": "the recipe was translated again for this offer; write to the new translation",
+    "components": "every FR-21 component is written again by the producer",
+    "landing": "the landing page, CTA and offer components come from the offer",
+    "verbatim": "paraphrase every customer phrase; never reuse one word for word",
+}
+LIKENESS_INSTRUCTION = "No identifiable real person, no celebrity likeness, no logo or brand mark."
 
 
 class ProducerRefused(RuntimeError):
@@ -337,12 +368,58 @@ def producer_instructions(base: str, *, offer: dict[str, Any], icp: dict[str, An
     return "\n".join(lines)
 
 
+def revision_criteria(feedback: dict[str, Any] | None) -> list[str]:
+    """The failed hard checks a gate feedback object names, in the gate's order. Only known names come back: they are
+    the one part of the object the trusted instructions may repeat; everything else in it stays in the data block."""
+    named = {str(f.get("criterion")) for f in ((feedback or {}).get("failures") or []) if isinstance(f, dict)}
+    return [c for c in GATE_CHECKS if c in named]
+
+
+def revision_instructions(base: str, criteria: list[str], *, attempt: int) -> str:
+    """The trusted half of a retry's copy prompt (FR-29): the prompt file's revision instructions, the attempt, and our own
+    guidance for each failed check by name. The gate's issue strings are untrusted and never appear here."""
+    lines = [base, "", f"This is attempt {attempt} of {MAX_ATTEMPTS}. The gate failed the previous attempt on these hard checks; fix every one:"]
+    lines += [f"- {c}: {REVISION_GUIDANCE[c]}" for c in criteria if c in REVISION_GUIDANCE]
+    return "\n".join(lines)
+
+
+def untrusted_revision_text(brief: dict[str, Any], hook_text: str, voc: list[dict[str, Any]], *, previous: dict[str, Any],
+                            feedback: dict[str, Any] | None, hooks_in_use: set[str]) -> str:
+    """The brief, the failed attempt's words and the gate's findings as data (SKILL.md §4 rule 7): issue strings quote
+    rendered words, customer phrases and model output, so they enter the prompt only inside the data block."""
+    payload = json.loads(untrusted_brief_text(brief, hook_text, voc))
+    payload["previous_attempt"] = {"version": previous.get("version"), "hook_line": previous.get("hook_text"),
+                                   "primary_text": previous.get("primary_text"), "headline": previous.get("headline"),
+                                   "description": previous.get("description")}
+    payload["gate_feedback"] = [{"criterion": f.get("criterion"), "issues": f.get("issues")}
+                                for f in ((feedback or {}).get("failures") or []) if isinstance(f, dict)]
+    payload["hook_lines_in_use"] = sorted(hooks_in_use)
+    return json.dumps(payload, ensure_ascii=False, indent=1, default=str)
+
+
+def successor_hook(revised: str, bank: list[str], in_use: set[str]) -> str:
+    """The retry's hook line: the revision's own, else the first of its bank that no live creative of the recipe uses
+    (executions of a recipe differ in hook line)."""
+    for line in (revised, *bank):
+        line = str(line or "").strip()
+        if line and line not in in_use:
+            return line
+    raise CreativeInvalid("every hook line of the revision is already used by a live creative of this recipe")
+
+
+def constrained_prompt(base: str, criteria: list[str]) -> str:
+    """A retry's image prompt: a failed `likeness` check adds our fixed constraint; the no-text instruction stays last."""
+    if "likeness" not in criteria:
+        return base
+    return base.replace(NO_TEXT_INSTRUCTION, f"{LIKENESS_INSTRUCTION} {NO_TEXT_INSTRUCTION}")
+
+
 def load_prompts(path: Path = PROMPTS) -> dict[str, str]:
-    """`## System`, `## Instructions`, `## Vision system`, `## Vision instructions` -> lower-cased keys."""
+    """`## System`, `## Instructions`, `## Revision instructions`, `## Vision system`, `## Vision instructions` -> lower-cased keys."""
     text = path.read_text()
     sections = re.split(r"^## ([\w ]+?)\s*$", text, flags=re.M)
     found = {sections[i].strip().lower(): sections[i + 1].strip() for i in range(1, len(sections) - 1, 2)}
-    for key in ("system", "instructions", "vision system", "vision instructions"):
+    for key in ("system", "instructions", "revision instructions", "vision system", "vision instructions"):
         if key not in found:
             raise RuntimeError(f"{path} needs a '## {key.title()}' section")
     return found
@@ -425,7 +502,19 @@ select b.*, h.text as hook_text from briefs b left join hooks h on h.id = b.hook
  where b.id = any(%s::uuid[]) order by (b.spec->>'proposal_number')::int, b.created_at;
 """
 VOC_SQL = "select id, phrase, category, visibility, trust_tier from voc_phrases where id = any(%s::uuid[]) order by id;"
-EXISTING_SQL = "select id, version from creatives where brief_id = %s and status <> 'archived' order by version desc, created_at;"
+LINEAGE_SQL = """
+select b.*, h.text as hook_text from briefs b left join hooks h on h.id = b.hook_id
+ where b.id = %s or b.spec->>'recipe_brief_id' = %s::text order by b.created_at, b.id;
+"""
+LINEAGE_CREATIVES_SQL = """
+select c.*, h.text as hook_text, g.id as gate_score_id, g.passed as gate_passed, g.feedback as gate_feedback
+  from creatives c
+  left join creative_components cc on cc.creative_id = c.id and cc.component_type = 'hook'
+  left join hooks h on h.id::text = cc.component_ref
+  left join lateral (select s.id, s.passed, s.feedback from gate_scores s where s.creative_id = c.id and s.scored_by = 'agent'
+                      order by s.attempt desc, s.created_at desc limit 1) g on true
+ where c.brief_id = any(%s::uuid[]) order by c.version, c.created_at, c.id;
+"""
 QUOTE_RELEASE_SQL = """
 select 1 from actions where client_id = %s and action_type = 'quote_release' and status = 'applied'
    and (target_id = %s or proposal->>'brief_id' = %s) limit 1;
@@ -470,17 +559,37 @@ def generate_checked_image(*, image: Any, model: Model, prompts: dict[str, str],
     raise ImageHasText(f"image still showed text after {MAX_IMAGE_ATTEMPTS} attempts ({found or 'unreadable'})")
 
 
+class Batch(NamedTuple):
+    """What every render of one `produce` run shares: the client, the backends, the offer, the prompts and budgets."""
+    client: dict[str, Any]
+    config: dict[str, Any]
+    model: Model
+    image: Any
+    storage: Any
+    renderer: PlaywrightRenderer
+    prompts: dict[str, str]
+    rules: str
+    offer: dict[str, Any]
+    icp: dict[str, Any] | None
+    landing_page: str
+    cta: str
+    experiment: str
+    executions: int
+    token_budget: int
+    image_budget: int
+    template_dir: Path
+
+
 def produce(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: dict[str, Any], model: Model, image: Any,
             storage: Any, renderer: PlaywrightRenderer, experiment_name: str | None = None, rerender: bool = False,
             template_dir: Path = TEMPLATE_DIR) -> list[dict[str, Any]]:
-    """Render every chosen brief of the latest selection into `executions_per_recipe` creatives. Returns the rows written."""
+    """Render every chosen brief of the latest selection into `executions_per_recipe` creatives, and retry the recipes'
+    gate-failed creatives (FR-29). Returns the rows written."""
     client_id = client["id"]
     for key in ("briefs_chosen", "briefs_skipped_existing", "creatives_written", "creatives_dropped_text", "images_generated",
                 "vision_checks", "vision_flags", "renders", "hooks_written"):
         r.counts.setdefault(key, 0)
-    executions = int(config["batch"]["executions_per_recipe"])
     budgets = (config.get("worker_budgets") or {}).get("producer") or {}
-    token_budget, image_budget = int(budgets.get("tokens") or 0), int(budgets.get("images") or 0)
 
     sel = conn.execute(SELECTION_SQL, (client_id, experiment_name, experiment_name)).fetchone()
     if sel is None:
@@ -502,120 +611,62 @@ def produce(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: d
     if not cta:
         raise ConfigMissing("offers.offer_layer.cta_mechanic is empty; the cta component cannot be set")
 
-    # Refuse the whole batch before any render: FR-23 quote families, then a family without a template.
+    # A chosen brief's recipe is the brief plus its re-translations (plan_batch.py, FR-29 planner route); the newest is
+    # rendered. Refuse the whole batch before any render: FR-23 quote families, then a family without a template.
     templates = available_templates(template_dir)
-    plan: list[tuple[dict[str, Any], str]] = []
+    plan: list[tuple[dict[str, Any], list[dict[str, Any]], str]] = []
     for b in briefs:
         n = (b.get("spec") or {}).get("proposal_number")
-        if b["family"] in QUOTE_FAMILIES:
-            released = conn.execute(QUOTE_RELEASE_SQL, (client_id, str(b["id"]), str(b["id"]))).fetchone()
+        lineage = conn.execute(LINEAGE_SQL, (b["id"], str(b["id"]))).fetchall()
+        head = lineage[-1]
+        if head["family"] in QUOTE_FAMILIES:
+            released = any(conn.execute(QUOTE_RELEASE_SQL, (client_id, str(x["id"]), str(x["id"]))).fetchone() for x in (b, head))
             if not released:
-                raise QuoteBlocked(f"brief #{n} is in family {b['family']!r}: testimonial / quote families are blocked without an "
+                raise QuoteBlocked(f"brief #{n} is in family {head['family']!r}: testimonial / quote families are blocked without an "
                                    f"applied quote_release action (FR-23)")
         try:
-            plan.append((b, template_for_family(b["family"], templates)))
+            plan.append((head, lineage, template_for_family(head["family"], templates)))
         except NoTemplate as exc:
             raise NoTemplate(f"brief #{n}: {exc}") from exc
-        if not b.get("hook_text"):
+        if not head.get("hook_text"):
             raise CreativeInvalid(f"brief #{n} has no hook (hooks row missing); the planner writes one per brief")
-    r.counts["templates"] = sorted({t for _, t in plan})
+    r.counts["templates"] = sorted({t for _, _, t in plan})
 
-    prompts = load_prompts()
-    rules = COPY_RULES.read_text()
-    slug = client["slug"]
+    batch = Batch(client=client, config=config, model=model, image=image, storage=storage, renderer=renderer, prompts=load_prompts(),
+                  rules=COPY_RULES.read_text(), offer=offer, icp=icp, landing_page=landing_page, cta=str(cta),
+                  experiment=sel["experiment_name"], executions=int(config["batch"]["executions_per_recipe"]),
+                  token_budget=int(budgets.get("tokens") or 0), image_budget=int(budgets.get("images") or 0), template_dir=template_dir)
     written: list[dict[str, Any]] = []
-    for b, template in plan:
-        n = (b.get("spec") or {}).get("proposal_number")
-        spec = b.get("spec") or {}
-        existing = conn.execute(EXISTING_SQL, (b["id"],)).fetchall()
-        version = 1
-        if existing and not rerender:
-            print(f"render_creatives: brief #{n} already has {len(existing)} creative(s); skipped (use --rerender to replace)")
-            r.count("briefs_skipped_existing")
-            continue
-        if existing:
-            version = int(existing[0]["version"]) + 1
-            if version > MAX_ATTEMPTS:
-                raise ProducerRefused(f"brief #{n} is at attempt {existing[0]['version']} of {MAX_ATTEMPTS}; attempt {version} is "
-                                      f"impossible (FR-29): the creative is dropped from the batch, pick another brief")
-            conn.execute("update creatives set status = 'archived' where brief_id = %s and status <> 'archived'", (b["id"],))
-            r.count("creatives_archived", len(existing))
-        voc = conn.execute(VOC_SQL, (list(b.get("voc_phrase_ids") or []),)).fetchall() if b.get("voc_phrase_ids") else []
-        layer = spec.get("format_layer") or {}
-        instructions = producer_instructions(prompts["instructions"], offer=offer, icp=icp, config=config, template=template,
-                                             executions=executions, landing_page=landing_page, rules=rules)
-        if token_budget and (r.tokens_used or 0) > token_budget:
-            raise BudgetExceeded(f"producer token budget {token_budget} spent before brief #{n}")
-        result = model.generate_json(task=TASK_COPY, system=prompts["system"], instructions=instructions,
-                                     untrusted=untrusted_brief_text(b, b["hook_text"], voc), schema=copy_schema(executions),
-                                     max_tokens=6000)
-        r.api_calls = (r.api_calls or 0) + 1
-        r.tokens_used = (r.tokens_used or 0) + result.tokens_used
-        copy = result.output
-        primary, length = copy_for_length(copy["primary_text"], str(layer.get("copy_length") or ""))
-        hook_lines_used: set[str] = set()
-        for k, ex in enumerate(copy["executions"]):
-            hook_text = b["hook_text"] if k == 0 else str(ex["hook_line"]).strip()
-            if hook_text in hook_lines_used:
-                raise CreativeInvalid(f"brief #{n}: executions must differ in hook line; {hook_text!r} repeats")
-            hook_lines_used.add(hook_text)
-            overlay = validate_overlay(template, dict(ex["overlay"]))
-            base_prompt = image_prompt(str(spec.get("imagery_subject") or b.get("visual_spec") or ""), str(ex["imagery_variation"]))
-            try:
-                png_image, prompt, attempts = generate_checked_image(image=image, model=model, prompts=prompts, base_prompt=base_prompt,
-                                                                     r=r, image_budget=image_budget)
-            except ImageHasText as exc:
-                r.count("creatives_dropped_text")
-                print(f"render_creatives: brief #{n} execution {k + 1} dropped: {exc} (FR-24)", file=sys.stderr)
+    expected = 0
+    for head, lineage, template in plan:
+        n = (head.get("spec") or {}).get("proposal_number")
+        creatives = conn.execute(LINEAGE_CREATIVES_SQL, ([x["id"] for x in lineage],)).fetchall()
+        alive = [c for c in creatives if c["status"] != "archived"]
+        voc = conn.execute(VOC_SQL, (list(head.get("voc_phrase_ids") or []),)).fetchall() if head.get("voc_phrase_ids") else []
+        if creatives and not rerender:
+            failed = [c for c in alive if c["status"] == "gated" and c["gate_passed"] is False]
+            if not failed:
+                print(f"render_creatives: brief #{n} already has {len(alive)} live creative(s) and none failed the gate; skipped "
+                      f"(use --rerender to replace)")
+                r.count("briefs_skipped_existing")
                 continue
-            slots = {
-                "image_data_uri": data_uri(png_image), "hook": hook_text, "cta_text": copy["cta_text"], "client_name": client.get("name") or slug,
-                "brand_font": config["brand"]["font"], "brand_primary": config["brand"]["colors"].get("primary", "#111111"),
-                "brand_accent": config["brand"]["colors"].get("accent", "#3B82F6"), "brand_bg": config["brand"]["colors"].get("bg", "#FFFFFF"),
-                "bubble_text": overlay.get("bubble_text"), "caption": overlay.get("caption"),
-                "app": overlay.get("app"), "title": overlay.get("title"), "lines_html": lines_html(overlay.get("lines") or []),
-            }
-            page_html = render_template(template, slots, template_dir)
-            rendered = renderer.render(page_html)
-            r.count("renders")
-            creative_id = uuid4()
-            key = f"creatives/{slug}/{sel['experiment_name']}/{creative_id}"
-            storage.put(png_image, f"{key}/image.png")
-            storage.put(page_html.encode("utf-8"), f"{key}/{SIZE_LABEL}.html")     # every rendered word, for the gate (T6)
-            asset_url = storage.put(rendered, f"{key}/{SIZE_LABEL}.png")
-            values = dict(
-                id=creative_id, client_id=client_id, brief_id=b["id"], experiment_id=b.get("experiment_id"), status="draft",
-                primary_text=primary, headline=copy["headlines"][0], description=copy["description"], renderer=RENDERER,
-                template=template, image_model=str(config["image_model"]), image_prompt=prompt,
-                source_reference_url=(spec.get("source") or {}).get("source_image_url"), asset_urls=[asset_url],
-                sizes=[SIZE_LABEL], version=version,
-            )
-            validate_creative(values, rendered)
-            if k == 0:
-                hook_id = b["hook_id"]
-            else:
-                hook = wh.insert_hooks(conn, client_id=client_id, text=hook_text, hook_type=layer.get("hook_type"),
-                                       pattern_id=b.get("source_pattern_id"), trust_tier="owned")
-                hook_id = hook["id"]
-                r.count("hooks_written")
-            components = [
-                ("family", b["family"]), ("variant", str((spec.get("source") or {}).get("variant") or "")), ("hook", str(hook_id)),
-                ("hook_type", str(layer.get("hook_type") or "")), ("angle", b["angle"]), ("template", template), ("renderer", RENDERER),
-                ("image_model", str(config["image_model"])), ("cta", str(cta)), ("landing_page", landing_page), ("offer", str(offer["id"])),
-                ("proof_type", str((offer.get("offer_layer") or {}).get("proof_type") or "")), ("copy_length", length),
-                *[("voc_phrase", str(v["id"])) for v in voc],
-            ]
-            components = [(t, ref) for t, ref in components if ref or t in REQUIRED_COMPONENTS]
-            validate_components(components, voc_phrase_ids=[v["id"] for v in voc])
-            row = wh.insert_creatives(conn, **values)
-            for t, ref in components:
-                wh.insert_creative_components(conn, creative_id=row["id"], component_type=t, component_ref=ref)
-            row.update(proposal_number=n, hook_text=hook_text, execution=k + 1, image_attempts=attempts, components=len(components))
-            written.append(row)
-            r.count("creatives_written")
-            r.counts["image_attempts_total"] = r.counts.get("image_attempts_total", 0) + attempts
-    expected = (len(plan) - r.counts["briefs_skipped_existing"]) * executions
-    if written or r.counts["briefs_skipped_existing"]:
+            rows, wanted = retry_failed(conn, r, batch, head=head, template=template, failed=failed, alive=alive, voc=voc)
+            written += rows
+            expected += wanted
+            continue
+        version = 1
+        if creatives:
+            current = max(int(c["version"]) for c in (alive or creatives))
+            version = current + 1
+            if version > MAX_ATTEMPTS:
+                raise ProducerRefused(f"brief #{n} is at attempt {current} of {MAX_ATTEMPTS}; attempt {version} is "
+                                      f"impossible (FR-29): the creative is dropped from the batch, pick another brief")
+            if alive:
+                conn.execute("update creatives set status = 'archived' where id = any(%s::uuid[])", ([c["id"] for c in alive],))
+                r.count("creatives_archived", len(alive))
+        written += render_recipe(conn, r, batch, brief=head, template=template, version=version, voc=voc)
+        expected += batch.executions
+    if written or r.counts["briefs_skipped_existing"] or any(r.counts.get(k) for k in ("retries_waiting_retranslation", "retries_exhausted")):
         print(format_creatives(sel["experiment_name"], written))
     if r.counts["creatives_dropped_text"]:
         print(f"render_creatives: WARNING {r.counts['creatives_dropped_text']} execution(s) dropped after {MAX_IMAGE_ATTEMPTS} "
@@ -623,10 +674,179 @@ def produce(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: d
     return written
 
 
+def generate_copy(r: wh.Run, batch: Batch, *, task: str, instructions: str, untrusted: str, executions: int, before: str) -> dict[str, Any]:
+    """One copy call through the model adapter under the producer's token budget; the brief's words are `untrusted`."""
+    if batch.token_budget and (r.tokens_used or 0) > batch.token_budget:
+        raise BudgetExceeded(f"producer token budget {batch.token_budget} spent before {before}")
+    result = batch.model.generate_json(task=task, system=batch.prompts["system"], instructions=instructions, untrusted=untrusted,
+                                       schema=copy_schema(executions), max_tokens=6000)
+    r.api_calls = (r.api_calls or 0) + 1
+    r.tokens_used = (r.tokens_used or 0) + result.tokens_used
+    return result.output
+
+
+def render_recipe(conn: wh.Connection, r: wh.Run, batch: Batch, *, brief: dict[str, Any], template: str, version: int,
+                  voc: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Every execution of one brief at `version`: the first carries the brief's own hook, the others a hook of their own."""
+    n = (brief.get("spec") or {}).get("proposal_number")
+    instructions = producer_instructions(batch.prompts["instructions"], offer=batch.offer, icp=batch.icp, config=batch.config,
+                                         template=template, executions=batch.executions, landing_page=batch.landing_page, rules=batch.rules)
+    copy = generate_copy(r, batch, task=TASK_COPY, instructions=instructions, untrusted=untrusted_brief_text(brief, brief["hook_text"], voc),
+                         executions=batch.executions, before=f"brief #{n}")
+    hook_lines_used: set[str] = set()
+    rows = []
+    for k, ex in enumerate(copy["executions"]):
+        hook_text = brief["hook_text"] if k == 0 else str(ex["hook_line"]).strip()
+        if hook_text in hook_lines_used:
+            raise CreativeInvalid(f"brief #{n}: executions must differ in hook line; {hook_text!r} repeats")
+        hook_lines_used.add(hook_text)
+        row = render_execution(conn, r, batch, brief=brief, template=template, version=version, copy=copy, execution=ex,
+                               hook_text=hook_text, hook_id=brief["hook_id"] if k == 0 else None, voc=voc, label=str(k + 1))
+        if row is not None:
+            rows.append(row)
+    return rows
+
+
+def render_execution(conn: wh.Connection, r: wh.Run, batch: Batch, *, brief: dict[str, Any], template: str, version: int,
+                     copy: dict[str, Any], execution: dict[str, Any], hook_text: str, hook_id: Any, voc: list[dict[str, Any]],
+                     label: str, criteria: list[str] = ()) -> dict[str, Any] | None:
+    """One creative: a checked text-free image, the filled template rendered at 1080x1080, the assets stored, and the
+    `creatives` row with its full `creative_components` (FR-21 to FR-25). `hook_id=None` writes the hook as its own
+    `hooks` row. Returns None when the image kept showing text (FR-24: the execution is dropped and logged)."""
+    client, config, slug = batch.client, batch.config, batch.client["slug"]
+    spec = brief.get("spec") or {}
+    n = spec.get("proposal_number")
+    layer = spec.get("format_layer") or {}
+    primary, length = copy_for_length(copy["primary_text"], str(layer.get("copy_length") or ""))
+    overlay = validate_overlay(template, dict(execution["overlay"]))
+    base_prompt = constrained_prompt(image_prompt(str(spec.get("imagery_subject") or brief.get("visual_spec") or ""),
+                                                  str(execution["imagery_variation"])), list(criteria))
+    try:
+        png_image, prompt, attempts = generate_checked_image(image=batch.image, model=batch.model, prompts=batch.prompts,
+                                                             base_prompt=base_prompt, r=r, image_budget=batch.image_budget)
+    except ImageHasText as exc:
+        r.count("creatives_dropped_text")
+        print(f"render_creatives: brief #{n} execution {label} dropped: {exc} (FR-24)", file=sys.stderr)
+        return None
+    slots = {
+        "image_data_uri": data_uri(png_image), "hook": hook_text, "cta_text": copy["cta_text"], "client_name": client.get("name") or slug,
+        "brand_font": config["brand"]["font"], "brand_primary": config["brand"]["colors"].get("primary", "#111111"),
+        "brand_accent": config["brand"]["colors"].get("accent", "#3B82F6"), "brand_bg": config["brand"]["colors"].get("bg", "#FFFFFF"),
+        "bubble_text": overlay.get("bubble_text"), "caption": overlay.get("caption"),
+        "app": overlay.get("app"), "title": overlay.get("title"), "lines_html": lines_html(overlay.get("lines") or []),
+    }
+    page_html = render_template(template, slots, batch.template_dir)
+    rendered = batch.renderer.render(page_html)
+    r.count("renders")
+    creative_id = uuid4()
+    key = f"creatives/{slug}/{batch.experiment}/{creative_id}"
+    batch.storage.put(png_image, f"{key}/image.png")
+    batch.storage.put(page_html.encode("utf-8"), f"{key}/{SIZE_LABEL}.html")     # every rendered word, for the gate (T6)
+    asset_url = batch.storage.put(rendered, f"{key}/{SIZE_LABEL}.png")
+    values = dict(
+        id=creative_id, client_id=client["id"], brief_id=brief["id"], experiment_id=brief.get("experiment_id"), status="draft",
+        primary_text=primary, headline=copy["headlines"][0], description=copy["description"], renderer=RENDERER,
+        template=template, image_model=str(config["image_model"]), image_prompt=prompt,
+        source_reference_url=(spec.get("source") or {}).get("source_image_url"), asset_urls=[asset_url],
+        sizes=[SIZE_LABEL], version=version,
+    )
+    validate_creative(values, rendered)
+    if hook_id is None:
+        hook = wh.insert_hooks(conn, client_id=client["id"], text=hook_text, hook_type=layer.get("hook_type"),
+                               pattern_id=brief.get("source_pattern_id"), trust_tier="owned")
+        hook_id = hook["id"]
+        r.count("hooks_written")
+    components = [
+        ("family", brief["family"]), ("variant", str((spec.get("source") or {}).get("variant") or "")), ("hook", str(hook_id)),
+        ("hook_type", str(layer.get("hook_type") or "")), ("angle", brief["angle"]), ("template", template), ("renderer", RENDERER),
+        ("image_model", str(config["image_model"])), ("cta", batch.cta), ("landing_page", batch.landing_page), ("offer", str(batch.offer["id"])),
+        ("proof_type", str((batch.offer.get("offer_layer") or {}).get("proof_type") or "")), ("copy_length", length),
+        *[("voc_phrase", str(v["id"])) for v in voc],
+    ]
+    components = [(t, ref) for t, ref in components if ref or t in REQUIRED_COMPONENTS]
+    validate_components(components, voc_phrase_ids=[v["id"] for v in voc])
+    row = wh.insert_creatives(conn, **values)
+    for t, ref in components:
+        wh.insert_creative_components(conn, creative_id=row["id"], component_type=t, component_ref=ref)
+    row.update(proposal_number=n, hook_text=hook_text, execution=label, image_attempts=attempts, components=len(components))
+    r.count("creatives_written")
+    r.counts["image_attempts_total"] = r.counts.get("image_attempts_total", 0) + attempts
+    return row
+
+
+def retry_failed(conn: wh.Connection, r: wh.Run, batch: Batch, *, head: dict[str, Any], template: str, failed: list[dict[str, Any]],
+                 alive: list[dict[str, Any]], voc: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    """FR-29 for one recipe: each creative whose latest agent gate row failed gets one successor at the next version,
+    written from the recipe's newest brief with the gate's feedback object as its constraint, and is archived once the
+    successor exists. A failure routed to the planner (coherence) marks the brief for re-translation instead
+    (`briefs.spec.retranslate`, read by `plan_batch.py`) until a re-translation exists. A failure at the last attempt is
+    dropped from the batch and logged: attempt MAX_ATTEMPTS + 1 is impossible. Returns (rows written, retries wanted)."""
+    n = (head.get("spec") or {}).get("proposal_number")
+    rows: list[dict[str, Any]] = []
+    wanted = 0
+    for f in failed:
+        feedback = f.get("gate_feedback") or {}
+        criteria = revision_criteria(feedback)
+        named = ", ".join(criteria) or "its hard checks"
+        label = f"creative {str(f['id'])[:8]} (attempt {f['version']})"
+        if int(f["version"]) >= MAX_ATTEMPTS:
+            conn.execute("update creatives set status = 'archived' where id = %s", (f["id"],))
+            r.count("retries_exhausted")
+            print(f"render_creatives: brief #{n} {label} failed the gate on {named} at attempt {f['version']} of {MAX_ATTEMPTS}: "
+                  f"dropped from the batch and archived; attempt {int(f['version']) + 1} is impossible (FR-29)", file=sys.stderr)
+            continue
+        if feedback.get("route") == PLANNER_ROUTE and f["brief_id"] == head["id"]:
+            mark = dict((head.get("spec") or {}).get("retranslate") or {})
+            if mark.get("refused"):
+                conn.execute("update creatives set status = 'archived' where id = %s", (f["id"],))
+                r.count("retranslation_refused_dropped")
+                print(f"render_creatives: brief #{n} {label}: the planner refused to re-translate the brief ({mark['refused']}); "
+                      f"dropped from the batch and archived (FR-29)", file=sys.stderr)
+                continue
+            if str(f["id"]) not in (mark.get("creative_ids") or []):
+                mark.update(requested_by=WORKER, requested_at=mark.get("requested_at") or datetime.now(timezone.utc).isoformat(),
+                            creative_ids=[*(mark.get("creative_ids") or []), str(f["id"])],
+                            gate_score_ids=[*(mark.get("gate_score_ids") or []), str(f["gate_score_id"])],
+                            attempt=max(int(mark.get("attempt") or 0), int(f["version"])))
+                conn.execute("update briefs set spec = coalesce(spec, '{}'::jsonb) || %s where id = %s", (Jsonb({"retranslate": mark}), head["id"]))
+                head["spec"] = {**(head.get("spec") or {}), "retranslate": mark}
+                r.count("retranslate_marked")
+            r.count("retries_waiting_retranslation")
+            print(f"render_creatives: brief #{n} {label} failed {named}; the gate routes it to the planner: brief marked for "
+                  f"re-translation. Run `plan batch --retranslate` (scripts/plan_batch.py), then `produce` renders attempt {int(f['version']) + 1}")
+            continue
+        wanted += 1
+        version = int(f["version"]) + 1
+        in_use = {str(c["hook_text"]) for c in alive if c["id"] != f["id"] and c.get("hook_text")}
+        instructions = producer_instructions(revision_instructions(batch.prompts["revision instructions"], criteria, attempt=version),
+                                             offer=batch.offer, icp=batch.icp, config=batch.config, template=template, executions=1,
+                                             landing_page=batch.landing_page, rules=batch.rules)
+        untrusted = untrusted_revision_text(head, head["hook_text"], voc, previous=f, feedback=feedback, hooks_in_use=in_use)
+        copy = generate_copy(r, batch, task=TASK_REVISE, instructions=instructions, untrusted=untrusted, executions=1,
+                             before=f"the retry of brief #{n}")
+        ex = copy["executions"][0]
+        hook_text = successor_hook(str(ex["hook_line"]), list(copy["hook_lines"]), in_use)
+        row = render_execution(conn, r, batch, brief=head, template=template, version=version, copy=copy, execution=ex,
+                               hook_text=hook_text, hook_id=head["hook_id"] if hook_text == head["hook_text"] else None, voc=voc,
+                               label=f"retry {str(f['id'])[:8]}", criteria=criteria)
+        if row is None:
+            continue
+        conn.execute("update creatives set status = 'archived' where id = %s", (f["id"],))
+        record = {"from": str(f["id"]), "to": str(row["id"]), "attempt": version, "route": feedback.get("route") or "producer",
+                  "gate_score_id": str(f["gate_score_id"]), "criteria": criteria}
+        conn.execute("update briefs set spec = jsonb_set(coalesce(spec, '{}'::jsonb), '{retries}', coalesce(spec->'retries', '[]'::jsonb) || %s)"
+                     " where id = %s", (Jsonb([record]), head["id"]))
+        r.count("retries_rendered")
+        alive.append({**row, "hook_text": hook_text})
+        rows.append(row)
+        print(f"render_creatives: brief #{n} {label} failed {named}; attempt {version} rendered with the gate's feedback as its constraint")
+    return rows, wanted
+
+
 def format_creatives(experiment: str, rows: list[dict[str, Any]]) -> str:
-    table = [("#", "brief", "family / template", "exec", "hook line", "components", "asset")]
+    table = [("#", "brief", "family / template", "exec", "v", "hook line", "components", "asset")]
     for i, c in enumerate(rows, start=1):
-        table.append((str(i), f"#{c.get('proposal_number')}", f"{c.get('template')}", str(c.get("execution")),
+        table.append((str(i), f"#{c.get('proposal_number')}", f"{c.get('template')}", str(c.get("execution")), str(c.get("version")),
                       (c.get("hook_text") or "")[:60], str(c.get("components")), (c.get("asset_urls") or [""])[0]))
     widths = [min(max(len(r[i]) for r in table), 100) for i in range(len(table[0]))]
     lines = [f"\n{experiment}: {len(rows)} creative(s) rendered ({RENDERER}, {SIZE_LABEL})"]

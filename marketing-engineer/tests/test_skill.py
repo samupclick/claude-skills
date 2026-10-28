@@ -45,7 +45,9 @@ def test_run_mode_table_names_scripts_that_exist_or_says_not_built():
         else:
             for p in paths:
                 assert (ME_DIR / p).exists(), f"SKILL.md §3 points at missing {p}: {row}"
-    assert len(seen_not_built) == 2 and any("monday_memo.py" in r for r in seen_not_built) and any("onboard.py" in r for r in seen_not_built)
+    assert len(seen_not_built) == 1 and any("onboard.py" in r for r in seen_not_built)
+    memo = next(row for row in rows if row.startswith("| `monday memo`"))
+    assert "`scripts/monday_memo.py`" in memo and "not built" not in memo
 
 
 def test_repo_layout_lists_only_files_that_exist():
@@ -55,7 +57,7 @@ def test_repo_layout_lists_only_files_that_exist():
     for name in names:
         assert list(ME_DIR.rglob(name)), f"SKILL.md §9 lists {name}, which does not exist under marketing-engineer/"
     assert (ME_DIR.parent / ".claude" / "hooks" / "session-start.sh").exists()
-    for absent in ("monday_memo.py", "onboard.py", "meta-launch-playbook.md"):
+    for absent in ("onboard.py", "meta-launch-playbook.md"):
         assert absent not in names
 
 
@@ -63,7 +65,7 @@ WORKER_PROMPTS = {
     "pull_inspo": ("intel.md", ("system", "instructions")),
     "pull_voc": ("language.md", ("system", "instructions")),
     "plan_batch": ("planner.md", ("system", "instructions")),
-    "render_creatives": ("producer.md", ("system", "instructions", "vision system", "vision instructions")),
+    "render_creatives": ("producer.md", ("system", "instructions", "revision instructions", "vision system", "vision instructions")),
     "gate": ("gate.md", ("checks system", "checks instructions", "vision system", "vision instructions", "rubric system", "rubric instructions")),
 }
 
@@ -81,6 +83,7 @@ def test_every_worker_prompt_loads_from_references_prompts():
         text = path.read_text()
         for key in keys:
             assert re.search(rf"^## {re.escape(key)}\s*$", text, flags=re.M | re.I), f"{filename} lacks a '## {key.capitalize()}' heading"
+    assert load_script("plan_batch").load_retranslation_prompt().strip(), "planner.md lacks a '## Retranslation' section"
     inspo = load_script("pull_inspo")
     system, instructions = inspo.load_prompts()
     assert inspo.DECOMPOSE_SYSTEM == system and inspo.DECOMPOSE_INSTRUCTIONS == instructions

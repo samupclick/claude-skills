@@ -1,0 +1,34 @@
+Monday memo — memo-golden — 2026-09-14 07:00 UTC (window since 2026-09-07 07:00 UTC)
+
+1. Learnings promoted / refuted (2)
+   - supported (client) — screenshot-ad beats stat-card on link CTR — template=screenshot-ad, effect 0.00400, sample 6400, posterior 0.950 — promoted 2026-09-10 06:00 UTC
+   - refuted (client) — pain_led angle misses (notes [url removed] — angle=pain_led, effect 0.00100, sample 2100, posterior 0.400 — refuted 2026-09-12 06:00 UTC
+   - 1 learning(s) still proposed: `supported` needs a replication or an ablation (FR-41)
+
+2. Taste vs market (6)
+   - approved batch-001 #1 screenshot_ad/screenshot-ad v1 [43000015]: link CTR 1.25% over 2400 impressions, above the 1.00% floor — agent shadow approve (3.80)
+   - approved batch-001 #1 screenshot_ad/screenshot-ad v1 [43000016]: link CTR 0.71% over 2100 impressions, below the 1.00% floor — agent shadow reject (3.10)
+   - approved batch-001 #3 screenshot_ad/screenshot-ad v1 [43000017]: link CTR 1.22% over 2050 impressions, above the 1.00% floor — agent shadow approve (3.80)
+   - approved batch-001 #3 screenshot_ad/screenshot-ad v1 [43000018]: sub-sample (800 of 2000 impressions): grades nothing yet (link CTR 1.50% so far) — agent shadow approve (3.80)
+   - at sample size: 3 of 5 approved; the market agrees with Sam's approval on 2 (at or above the CTR floor) and not on 1
+   - 1 approved creative(s) have no delivery yet
+   - 1 rejected by Sam never ran: the market cannot grade a rejection until it is re-run or ablated (DECISIONS C5)
+   - agent shadow verdict agreed with Sam on 5 of 6 (the rubric stays shadow until it is promoted)
+
+3. Variant -> family promotion proposals (1)
+   - propose `notes-app checklist` (family screenshot_ad) as a family: 3 creatives at sample size [43000015, 43000016, 43000017]; link CTR 1.07% over 6550 impressions vs no other variant of screenshot_ad at sample size to compare
+   - approve or reject in chat; the executor applies no `promote_variant` in phase 0, so an approved promotion is a references/families.md change Sam makes
+
+4. JSONB keys due for column promotion (3)
+   - 3 key(s) in 3 column(s) are read by a second worker or a mart: each is due for a real column through a numbered migration (DR-3); static scan of scripts/, warehouse/, funnel/ against warehouse/schema-notes.md
+   - briefs.spec.proposal_number — read by alpha, beta, view plain_view (4 place(s)); written by alpha
+   - clients.config.targets — read by alpha, beta, mart mart_floor (3 place(s)); written by seed
+   - runs.counts.proposals — read by beta (1 place(s)); written by alpha
+
+5. Next batch's proposals (4)
+   - batch-002 waits for picks: 4 proposals (capacity 6)
+   - #1 screenshot_ad / variant 1 — when a prospect asks an AI who does this, is it you? — outcome_led — AG1 (3) — template screenshot-ad
+   - #2 stat_card / variant 2 — one number your last agency never reported — outcome_led — Ridge (2) — template NONE
+   - #3 screenshot_ad / variant 3 — see [url removed] for the answer — outcome_led — HexClad (1) — template screenshot-ad
+   - #4 screenshot_ad / variant 4 — three names, none of them yours — outcome_led — Dr. Squatch (0) — template screenshot-ad
+   - reply `my picks: n, n, n` with exactly 3 numbers; default after 20 minutes: #1, #3, #4
