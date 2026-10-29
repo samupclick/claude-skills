@@ -43,6 +43,11 @@ source tarball (the bottle targets 17/18 only), starts the cluster with `pg_ctl`
 password fails as on Debian and Supabase, and turns on TLS with a self-signed certificate (Debian's snakeoil
 equivalent) so `sslmode=require` URLs connect.
 
+Live credentials on the Mac come from the login keychain, never `.env`: `source scripts/env_from_keychain.sh [VAR ...]`
+exports the named variables (all mapped ones by default) and prints names only. The Meta write token loads only with
+`--with-meta-write`, in a subshell around `scripts/apply_actions.py`. The script's header has the mapping and the
+`security add-generic-password -s marketing-engineer -a <VAR> -w` line for adding a missing credential.
+
 `.env` is git-ignored and holds the dev passwords inside the `WAREHOUSE_URL_*` strings. Dev backends keep
 their state under `DEV_ROOT` (default `.dev/`, git-ignored): `storage/`, `meta/account.json`,
 `capi.jsonl`, `outbox/*.eml`. Workers get a backend with `from adapters.meta import get_meta` (likewise
