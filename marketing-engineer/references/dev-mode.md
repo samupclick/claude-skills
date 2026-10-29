@@ -33,6 +33,16 @@ scripts/dev_db.sh --seed                 # families + upclicklabs client/offer/i
 python3 -m pytest                        # tests run against the local warehouse, never a mock
 ```
 
+macOS (Sam's Mac, no sudo): `brew install python@3.13 postgresql@16`, then at the **repo root** (a venv inside
+`marketing-engineer/` trips the tests that scan its source tree)
+`/opt/homebrew/opt/python@3.13/bin/python3.13 -m venv .venv && . .venv/bin/activate`,
+`pip install -r marketing-engineer/requirements.txt` and `python3 -m playwright install chromium` (leave `CHROMIUM_PATH`
+unset). `scripts/dev_db.sh` then takes its macOS path: it builds pgvector into the `postgresql@16` keg from Homebrew's
+source tarball (the bottle targets 17/18 only), starts the cluster with `pg_ctl` (no launchd service), creates the
+`postgres` superuser role, moves Homebrew's `trust` TCP lines in `pg_hba.conf` to `scram-sha-256` so a wrong role
+password fails as on Debian and Supabase, and turns on TLS with a self-signed certificate (Debian's snakeoil
+equivalent) so `sslmode=require` URLs connect.
+
 `.env` is git-ignored and holds the dev passwords inside the `WAREHOUSE_URL_*` strings. Dev backends keep
 their state under `DEV_ROOT` (default `.dev/`, git-ignored): `storage/`, `meta/account.json`,
 `capi.jsonl`, `outbox/*.eml`. Workers get a backend with `from adapters.meta import get_meta` (likewise

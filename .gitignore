@@ -4,3 +4,5 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+# local Python virtualenv (macOS: Homebrew python@3.13)
+.venv/
