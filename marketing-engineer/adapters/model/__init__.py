@@ -17,6 +17,7 @@ import jsonschema
 from adapters.env import ME_DIR, choose_backend
 
 DEFAULT_FIXTURE_DIR = ME_DIR / "fixtures" / "model"
+DEFAULT_MODEL_ID = "claude-opus-5-5"
 
 
 class ModelOutputInvalid(ValueError):
@@ -76,7 +77,7 @@ def get_model() -> Model:
     from adapters.model.fixture import FixtureModel
 
     return choose_backend("MODEL_BACKEND", {
-        "claude": lambda: ClaudeModel(model_id=os.environ.get("MODEL_ID") or "claude-opus-5-5",
+        "claude": lambda: ClaudeModel(model_id=os.environ.get("MODEL_ID") or DEFAULT_MODEL_ID,
                                       effort=os.environ.get("MODEL_EFFORT") or "high"),
         "fixture": lambda: FixtureModel(os.environ.get("MODEL_FIXTURE_DIR") or DEFAULT_FIXTURE_DIR),
     })

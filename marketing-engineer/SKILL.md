@@ -189,6 +189,8 @@ marketing-engineer/
 ├── scripts/dev_db.sh · apply_migrations.py · seed.py · pull_inspo.py · pull_voc.py · plan_batch.py
 │   render_creatives.py · gate.py · meta_launch.py · decide.py · apply_actions.py · meta_insights.py · checkin.py
 │   monday_memo.py · pause.py · routines.py · test_events.py
+│   env_from_keychain.sh (Sam's Mac: keychain → environment, names only) · preflight.py (one read-only call per
+│   credential, names and status → references/credentials-status.md)
 ├── funnel/ (quiz page, /quiz and /cal-webhook app, local server on 8788, wsgi.py for Vercel; README.md has the deploy steps)
 ├── api/funnel.py · api/requirements.txt (the Vercel function; deployed from this repo, Root Directory marketing-engineer)
 ├── fixtures/ad_library · voc · model · checkin · monday · scrapecreators · reddit · gemini · supabase · meta · capi
