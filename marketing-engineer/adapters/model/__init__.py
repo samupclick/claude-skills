@@ -32,6 +32,7 @@ class ModelResult:
     output: dict[str, Any]
     tokens_used: int
     backend: str
+    model: str | None = None   # the model that served the answer (a refusal fallback can differ from MODEL_ID)
 
 
 class Model(Protocol):
@@ -75,6 +76,7 @@ def get_model() -> Model:
     from adapters.model.fixture import FixtureModel
 
     return choose_backend("MODEL_BACKEND", {
-        "claude": lambda: ClaudeModel(model_id=os.environ.get("MODEL_ID") or "claude-opus-5"),
+        "claude": lambda: ClaudeModel(model_id=os.environ.get("MODEL_ID") or "claude-opus-5-5",
+                                      effort=os.environ.get("MODEL_EFFORT") or "high"),
         "fixture": lambda: FixtureModel(os.environ.get("MODEL_FIXTURE_DIR") or DEFAULT_FIXTURE_DIR),
     })

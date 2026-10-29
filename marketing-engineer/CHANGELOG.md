@@ -6,6 +6,24 @@ every migration applied. One commit per ticket; the tracker is `.scratch/marketi
 The design documents did not change during the build; where the build found them disagreeing, the schema won
 and the deviation is recorded in the ticket's comments and below.
 
+## Local hand-off on Sam's Mac — 2026-10-29 (branch `claude/sleepy-brahmagupta-jng3kp`)
+
+Following `references/handoff-local.md`:
+
+- **macOS dev harness** (`8edf135`): `scripts/dev_db.sh` takes a Homebrew `postgresql@16` path (pgvector built into
+  the keg from Homebrew's source tarball, `postgres` superuser role, `scram-sha-256` on TCP, self-signed TLS); the
+  venv lives at the repo root. The suite runs green on the Mac.
+- **Keychain → environment** (`9bc9513`): `scripts/env_from_keychain.sh` maps each variable to a keychain
+  service/account and prints names only; the Meta write token needs `--with-meta-write`. Anthropic and Gemini come
+  from the live `aeo-pipeline-v3` items; every other credential is expected at `marketing-engineer/<VAR>`.
+- **Model adapter for Opus 5 / 5.5**: thinking is always on and counts against `max_tokens`, so the callers' small
+  limits (gate 1500 / 500 / 800, the image check 512, VOC 2048) would have truncated every real call. The caller's
+  `max_tokens` is now the answer budget and the request adds headroom (`max(caller + 12000, 16000)`, at most 20000,
+  non-streaming); `output_config.effort` comes from `MODEL_EFFORT` (default `high`; Opus 5.5 defaults to `medium`);
+  default `MODEL_ID` is `claude-opus-5-5`; refusals opt into the server-side fallback (`fallbacks="default"`, beta
+  `server-side-fallback-2026-07-01`) and the answer is read after the last `fallback` block. `ModelResult.model`
+  records the model that served it. FR-49, NFR-4.
+
 ## Phase 0 completion — 2026-10-28 (branch `claude/sleepy-brahmagupta-jng3kp`)
 
 Wave 0 (`476b985`): Sam renamed the clashing angles to `contrarian_led` / `identity_led`, so `scripts/seed.py`
