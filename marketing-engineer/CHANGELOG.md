@@ -23,6 +23,12 @@ Following `references/handoff-local.md`:
   default `MODEL_ID` is `claude-opus-5-5`; refusals opt into the server-side fallback (`fallbacks="default"`, beta
   `server-side-fallback-2026-07-01`) and the answer is read after the last `fallback` block. `ModelResult.model`
   records the model that served it. FR-49, NFR-4.
+- **Preflight** (`2be5e74`): `scripts/preflight.py` proves each set credential with one read-only call and writes
+  names and status only to `references/credentials-status.md`. On 2026-10-29 only Anthropic and Gemini were set,
+  and both were ok.
+- **Live-run blockers**: `references/live-run-blockers.md` lists Sam's remaining items, checked against the repo,
+  preflight and DNS. `go.upclicklabs.com` does not resolve yet. The routines are printed, not registered; cloud or
+  local `launchd` is Sam's call.
 
 ## Phase 0 completion — 2026-10-28 (branch `claude/sleepy-brahmagupta-jng3kp`)
 
