@@ -180,7 +180,7 @@ marketing-engineer/
 ├── references/families.md · references/dev-mode.md · references/orchestrate-kickoff.md
 │   references/direct-response-copy.md · references/creative-rubric.md
 │   references/prompts/intel.md · language.md · planner.md · producer.md · gate.md
-├── assets/creative-templates/job-photo-bubble.html · screenshot-ad.html
+├── assets/creative-templates/job-photo-bubble.html · screenshot-ad.html · product-photo-caption.html
 ├── adapters/<service>/ (storage, meta, capi, inspo, voc, image, model, email, turnstile; one backend per env var)
 │   adapters/env.py · backoff.py (shared bounded HTTP retry) · graph.py (Meta Graph host and META_API_VERSION)
 ├── warehouse/schema.sql (0001) · 0002_roles.sql · 0003_phase0_grants.sql · 0004_quiz_rpc.sql

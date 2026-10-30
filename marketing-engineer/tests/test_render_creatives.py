@@ -15,6 +15,7 @@ import psycopg
 import pytest
 from PIL import Image
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 
 from adapters.model import build_user
 from adapters.model.fixture import FixtureModel
@@ -425,3 +426,83 @@ def test_a_block_then_a_clean_image_ships_and_records_the_model_the_backend_used
         assert comp == [{"component_ref": "stub-image-model"}], "FR-21: the component names the model that drew the image"
     run = producer_runs(producer_env)[-1]
     assert run["counts"]["images_blocked"] == 6 and run["counts"]["images_generated"] == 6 and run["counts"]["image_attempts_total"] == 12
+
+
+# ---------- image references (Circadian: real photos as ground truth, Jacob's method) ----------
+
+def _photo(path, colour, fmt):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (16, 12), colour).save(path, format=fmt)
+    return path.read_bytes()
+
+
+def _ref_config(tmp_path):
+    scene_a = _photo(tmp_path / "scenes" / "a.jpg", (200, 180, 160), "JPEG")
+    scene_b = _photo(tmp_path / "scenes" / "b.jpg", (150, 160, 170), "JPEG")
+    hulls = _photo(tmp_path / "fills" / "hulls.png", (90, 60, 30), "PNG")
+    scene_use = "as ground truth for the scene. Preserve the exact wall colour, furniture and lighting."
+    hull_use = "as ground truth for the fill texture. Match colour and shape exactly."
+    cfg = {"image_references": {"dir": str(tmp_path), "sets": [
+        [{"file": "scenes/a.jpg", "use": scene_use}, {"file": "fills/hulls.png", "use": hull_use}],
+        [{"file": "scenes/b.jpg", "use": scene_use}, {"file": "fills/hulls.png", "use": hull_use}]]}}
+    return cfg, (scene_a, scene_b, hulls)
+
+
+def test_image_references_load_in_order_and_name_each_image_in_the_prompt(tmp_path):
+    cfg, (scene_a, _, hulls) = _ref_config(tmp_path)
+    sets = rc.load_image_references(cfg)
+    assert [[ref.file for ref in s] for s in sets] == [["scenes/a.jpg", "fills/hulls.png"], ["scenes/b.jpg", "fills/hulls.png"]]
+    assert [ref.data for ref in sets[0]] == [scene_a, hulls]
+    lines = rc.reference_prompt(sets[0])
+    assert lines.startswith("Use [Image 1] (scenes/a.jpg) as ground truth for the scene.")
+    assert "Use [Image 2] (fills/hulls.png) as ground truth for the fill texture." in lines
+    assert rc.load_image_references({}) == []
+
+
+def test_image_references_refuse_a_missing_file_a_non_photo_an_escape_and_too_many(tmp_path):
+    cfg, _ = _ref_config(tmp_path)
+    with pytest.raises(rc.ConfigMissing, match="scenes/nope.jpg"):
+        rc.load_image_references({"image_references": {**cfg["image_references"], "sets": [[{"file": "scenes/nope.jpg", "use": "x"}]]}})
+    (tmp_path / "notes.txt").write_text("not a photo")
+    with pytest.raises(rc.ConfigMissing, match="notes.txt.*PNG nor JPEG"):
+        rc.load_image_references({"image_references": {**cfg["image_references"], "sets": [[{"file": "notes.txt", "use": "x"}]]}})
+    with pytest.raises(rc.ConfigMissing, match="outside"):
+        rc.load_image_references({"image_references": {"dir": str(tmp_path / "scenes"), "sets": [[{"file": "../fills/hulls.png", "use": "x"}]]}})
+    with pytest.raises(rc.ConfigMissing, match="at most 6"):
+        rc.load_image_references({"image_references": {**cfg["image_references"], "sets": [[{"file": "scenes/a.jpg", "use": "x"}] * 7]}})
+
+
+class RecordingImage:
+    """A live-style backend that takes references and records each call."""
+    model_id = "recording-image-model"
+
+    def __init__(self):
+        self.calls = []
+
+    def generate(self, prompt, *, size=(1080, 1080), references=()):
+        from adapters.image.placeholder import render_placeholder
+        self.calls.append((prompt, list(references)))
+        return render_placeholder(prompt, size=size)
+
+
+def test_produce_sends_each_execution_the_next_reference_set_and_records_it_in_the_prompt(producer_env, monkeypatch, tmp_path):
+    cfg, (scene_a, scene_b, hulls) = _ref_config(tmp_path)
+    original = q(producer_env, "select config from clients where slug = 'upclicklabs'")[0]["config"]
+    with psycopg.connect(producer_env["WAREHOUSE_URL_ADMIN"], autocommit=True) as admin:
+        admin.execute("update clients set config = config || %s where slug = 'upclicklabs'", (Jsonb(cfg),))
+    try:
+        pick()
+        image = RecordingImage()
+        monkeypatch.setattr(rc, "get_image", lambda: image)
+        assert rc.main([]) == 0
+        assert len(image.calls) == 6
+        assert [refs for _, refs in image.calls] == [[scene_a, hulls], [scene_b, hulls]] * 3, "the sets rotate, in order"
+        prompts = [row["image_prompt"] for row in q(producer_env, "select image_prompt from creatives")]
+        assert len(prompts) == 6
+        for p in prompts:
+            assert p.startswith("Use [Image 1] (scenes/") and "Use [Image 2] (fills/hulls.png)" in p
+            assert p.endswith(rc.NO_TEXT_INSTRUCTION), "FR-24: the no-text instruction stays last"
+        assert producer_runs(producer_env)[-1]["counts"]["reference_images_sent"] == 12
+    finally:
+        with psycopg.connect(producer_env["WAREHOUSE_URL_ADMIN"], autocommit=True) as admin:
+            admin.execute("update clients set config = %s where slug = 'upclicklabs'", (Jsonb(original),))

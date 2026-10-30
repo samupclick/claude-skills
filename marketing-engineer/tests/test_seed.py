@@ -13,7 +13,7 @@ def test_parse_families_reads_all_three_kinds_from_the_draft():
     kinds = {k for _, k in fams}
     assert kinds == {"format", "hook_type", "angle"}
     assert ("job_photo_bubble", "format") in fams and ("number", "hook_type") in fams and ("pain_led", "angle") in fams
-    assert len([f for f in fams if f[1] == "format"]) == 15
+    assert len([f for f in fams if f[1] == "format"]) == 16
 
 
 def test_name_conflicts_reports_names_used_for_two_kinds():

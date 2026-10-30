@@ -22,5 +22,5 @@ def render_placeholder(label: str, *, size: tuple[int, int] = (1080, 1080)) -> b
 
 
 class PlaceholderImage:
-    def generate(self, prompt: str, *, size: tuple[int, int] = (1080, 1080)) -> bytes:
-        return render_placeholder(prompt, size=size)
+    def generate(self, prompt: str, *, size: tuple[int, int] = (1080, 1080), references=()) -> bytes:
+        return render_placeholder(prompt, size=size)   # references are ignored: the placeholder draws the prompt only

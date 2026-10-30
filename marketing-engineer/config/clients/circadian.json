@@ -1,6 +1,11 @@
 {
-  "_status": "DRAFT for a creative-only test batch (hand-off Step 6, 2026-10-30). Nothing here launches on Meta: UpClick designs, Circadian publishes, and UpClick never creates, owns or publishes on Circadian's Meta assets, so there is deliberately no `campaign` or `trust` block. Product facts come only from Jacob's fact file, version 2026-10-27 (ucl-brain clients/circadian-rest/inputs/jacob-2026-10-27/OFFICIAL_FACT_FILE_OCTOBER_2026.md); the PDP Copy Master and Insider Knowledge Bank were retired on 2026-10-28. Colours and font read from circadianrest.com's theme on 2026-10-30. Waiting on Sam: the product (Buckwheat Pillow is a placeholder pick), inspo seed brands, customer-language sources, templates and imagery. daily_cap and cpm_estimate are guesses that give capacity 6 for one batch of 6.",
-  "client": { "name": "Circadian", "slug": "circadian", "site": "https://circadianrest.com", "industry": "dtc_bedding" },
+  "_status": "DRAFT for a creative-only test batch (hand-off Step 6, 2026-10-30). Nothing here launches on Meta: UpClick designs, Circadian publishes, and UpClick never creates, owns or publishes on Circadian's Meta assets, so there is deliberately no `campaign` or `trust` block. Product facts come only from Jacob's fact file, version 2026-10-27 (ucl-brain clients/circadian-rest/inputs/jacob-2026-10-27/OFFICIAL_FACT_FILE_OCTOBER_2026.md); the PDP Copy Master and Insider Knowledge Bank were retired on 2026-10-28. Colours and font read from circadianrest.com's theme on 2026-10-30. Sam, 2026-10-31: Buckwheat Pillow; the product_photo_caption template; Gemini images with Jacob's reference photos as ground truth (image_references; the photos stay in the vault, never git; no tag or logo reference, since images are text-free, FR-24); inspo from the fact file's main rivals once SCRAPECREATORS_API_KEY is in the keychain. Customer-language sources: none yet (voc-seed is empty). daily_cap and cpm_estimate are guesses that give capacity 6 for one batch of 6.",
+  "client": {
+    "name": "Circadian",
+    "slug": "circadian",
+    "site": "https://circadianrest.com",
+    "industry": "dtc_bedding"
+  },
   "currency": "USD",
   "daily_cap": 35,
   "offer": {
@@ -20,27 +25,90 @@
     "landing_url": "https://circadianrest.com/products/buckwheat-pillow",
     "funnel_host": null,
     "calendar_url": null,
-    "offer_layer": { "offer_mechanic": "product_purchase", "proof_type": "material_and_process", "cta_mechanic": "shop_now" }
+    "offer_layer": {
+      "offer_mechanic": "product_purchase",
+      "proof_type": "material_and_process",
+      "cta_mechanic": "shop_now"
+    }
   },
   "icp": {
     "label": "US sleepers with neck pain or who sleep hot, buying natural materials",
     "role": "side, back or combination sleeper",
     "company_type": "household (DTC)",
     "industry": "dtc_bedding",
-    "geo": ["US"],
+    "geo": [
+      "US"
+    ],
     "size_band": null,
-    "pains": ["neck pain", "sleeping hot", "pillows that go flat"],
-    "outcomes": ["neck held in line all night", "a cool pillow", "a height you set yourself that stays"]
+    "pains": [
+      "neck pain",
+      "sleeping hot",
+      "pillows that go flat"
+    ],
+    "outcomes": [
+      "neck held in line all night",
+      "a cool pillow",
+      "a height you set yourself that stays"
+    ]
   },
-  "targets": { "ctr_floor": 0.01, "kill_impressions": 2000, "cpl_target": null },
-  "floors": { "cost_per_link_click": 1.5 },
+  "targets": {
+    "ctr_floor": 0.01,
+    "kill_impressions": 2000,
+    "cpl_target": null
+  },
+  "floors": {
+    "cost_per_link_click": 1.5
+  },
   "cpm_estimate": 20,
-  "batch": { "recipes": 3, "executions_per_recipe": 2, "proposals_multiplier": 4 },
+  "batch": {
+    "recipes": 3,
+    "executions_per_recipe": 2,
+    "proposals_multiplier": 4
+  },
   "renderer": "html_template",
-  "image_model": "placeholder",
+  "image_model": "gemini-nano-banana-2.1",
+  "image_references": {
+    "dir": "/Users/Sam/Documents/ucl-brain/clients/circadian-rest/jacob-source-material/Circadian-Voice-and-Image-Kit-2026-08-21/3 - Image generation/circadian-image-generation/references",
+    "sets": [
+      [
+        {
+          "file": "scenes/michael-verheyden-belgium-22.jpg",
+          "use": "as ground truth for the scene. Preserve the exact wall colour, furniture, materials and lighting. Place one buckwheat pillow where a cushion would sit: an organic cotton twill cover with a zipper on the short end, with no tag, label, logo or text on it."
+        },
+        {
+          "file": "fills/buckwheat_real_9605.jpg",
+          "use": "as ground truth for the buckwheat hulls wherever fill is visible. Match their colour, shape and size exactly; do not invent hulls."
+        }
+      ],
+      [
+        {
+          "file": "scenes/michael-verheyden-belgium-25.jpg",
+          "use": "as ground truth for the scene. Preserve the exact wall colour, furniture, materials and lighting. Place one buckwheat pillow where a cushion would sit: an organic cotton twill cover with a zipper on the short end, with no tag, label, logo or text on it."
+        },
+        {
+          "file": "fills/buckwheat_real_9605.jpg",
+          "use": "as ground truth for the buckwheat hulls wherever fill is visible. Match their colour, shape and size exactly; do not invent hulls."
+        }
+      ],
+      [
+        {
+          "file": "scenes/michael-verheyden-belgium-26.jpg",
+          "use": "as ground truth for the scene. Preserve the exact wall colour, furniture, materials and lighting. Place one buckwheat pillow where a cushion would sit: an organic cotton twill cover with a zipper on the short end, with no tag, label, logo or text on it."
+        },
+        {
+          "file": "fills/buckwheat_real_9605.jpg",
+          "use": "as ground truth for the buckwheat hulls wherever fill is visible. Match their colour, shape and size exactly; do not invent hulls."
+        }
+      ]
+    ]
+  },
   "families_ref": "references/families.md",
   "brand": {
-    "colors": { "primary": "#1A1A1A", "accent": "#000000", "bg": "#EEF1EA" },
+    "colors": {
+      "primary": "#1A1A1A",
+      "accent": "#000000",
+      "bg": "#EEF1EA"
+    },
     "font": "Inter",
     "hard_blocks": [
       "no pricing: no dollar amounts outside the product pages (Jacob's voice kit)",
@@ -55,12 +123,58 @@
       "no em dashes"
     ],
     "banned_terms": [
-      "White Lotus", "Circadian Rest", "Talalay", "organic latex", "natural latex", "organic kapok", "Natural Kapok",
-      "Shredded Latex", "proprietary", "knife edge", "piped", "side by side", "buy two", "nothing is made offshore",
-      "nothing is planted", "OEKO-TEX", "FSC", "cures", "treats", "prevents", "for life", "—"
+      "White Lotus",
+      "Circadian Rest",
+      "Talalay",
+      "organic latex",
+      "natural latex",
+      "organic kapok",
+      "Natural Kapok",
+      "Shredded Latex",
+      "proprietary",
+      "knife edge",
+      "piped",
+      "side by side",
+      "buy two",
+      "nothing is made offshore",
+      "nothing is planted",
+      "OEKO-TEX",
+      "FSC",
+      "cures",
+      "treats",
+      "prevents",
+      "for life",
+      "—"
     ]
   },
-  "worker_budgets": { "intel": { "api_calls": 50 }, "planner": { "tokens": 400000 }, "producer": { "tokens": 400000, "images": 20 }, "gate": { "tokens": 200000 } },
-  "voc": { "seed_dir": "config/clients/circadian/voc-seed", "vault_path": null, "public_sources": [] },
-  "inspo": { "dtc_seed": [], "category_seed": [] }
+  "worker_budgets": {
+    "intel": {
+      "api_calls": 50
+    },
+    "planner": {
+      "tokens": 400000
+    },
+    "producer": {
+      "tokens": 400000,
+      "images": 20
+    },
+    "gate": {
+      "tokens": 200000
+    }
+  },
+  "voc": {
+    "seed_dir": "config/clients/circadian/voc-seed",
+    "vault_path": null,
+    "public_sources": []
+  },
+  "inspo": {
+    "dtc_seed": [
+      "Hullo",
+      "Avocado",
+      "Coyuchi",
+      "Naturepedic",
+      "Turmerry"
+    ],
+    "category_seed": []
+  }
 }

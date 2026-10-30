@@ -8,6 +8,10 @@ as the current Nano Banana line (2026-10-06; read through search summaries on 20
 generation). No image for a content reason raises `ImageBlocked`; an HTTP failure raises `GeminiError`, naming
 GEMINI_API_KEY for a key problem, never its value. The response shape is ASSUMED (fixtures/gemini/README.md):
 `block_reason`, `image_part` and `answer_text` are the only functions that know it.
+
+`references` (PNG or JPEG bytes, at most `MAX_REFERENCES`) go first as inline image parts, in order, then the prompt
+text, which names them `[Image 1]`, `[Image 2]`... (Jacob Katz's Circadian method: real photos as ground truth for the
+scene and the fill). The request part shape `inline_data` / `mime_type` is ASSUMED from Google's REST examples.
 """
 from __future__ import annotations
 
@@ -18,14 +22,15 @@ import math
 import os
 import re
 import time
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 import httpx
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from adapters import backoff
 from adapters.env import UnknownBackend, require
-from adapters.image import ImageBlocked
+from adapters.image import MAX_REFERENCES, ImageBlocked
+from adapters.model import image_media_type
 
 API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 DEFAULT_MODEL = "gemini-nano-banana-2.1"
@@ -99,6 +104,15 @@ def fit_png(data: bytes, size: tuple[int, int]) -> bytes:
     return buf.getvalue()
 
 
+def reference_parts(references: Sequence[bytes]) -> list[dict[str, Any]]:
+    """The reference photos as inline image parts, in order. Anything but PNG or JPEG, or more than MAX_REFERENCES,
+    is refused before a request is made."""
+    if len(references) > MAX_REFERENCES:
+        raise ValueError(f"{len(references)} reference images; send at most {MAX_REFERENCES}")
+    return [{"inline_data": {"mime_type": image_media_type(data), "data": base64.b64encode(data).decode()}}
+            for data in references]
+
+
 class GeminiImage:
     def __init__(self, api_key: str, *, model_id: str = DEFAULT_MODEL, transport: httpx.BaseTransport | None = None,
                  base_url: str = API_BASE, sleep: Callable[[float], None] = time.sleep, timeout: float = 180.0,
@@ -117,9 +131,9 @@ class GeminiImage:
         key = require("producer", "GEMINI_API_KEY")["GEMINI_API_KEY"]
         return cls(key, model_id=os.environ.get("IMAGE_MODEL") or DEFAULT_MODEL)
 
-    def generate(self, prompt: str, *, size: tuple[int, int] = (1080, 1080)) -> bytes:
+    def generate(self, prompt: str, *, size: tuple[int, int] = (1080, 1080), references: Sequence[bytes] = ()) -> bytes:
         body = {
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "contents": [{"role": "user", "parts": [*reference_parts(references), {"text": prompt}]}],
             "generationConfig": {"responseModalities": ["TEXT", "IMAGE"], "imageConfig": {"aspectRatio": aspect_ratio(size)}},
         }
 

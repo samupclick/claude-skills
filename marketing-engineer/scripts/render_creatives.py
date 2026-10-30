@@ -52,6 +52,7 @@ import argparse
 import base64
 import html
 import io
+import itertools
 import json
 import os
 import re
@@ -66,8 +67,8 @@ from uuid import UUID, uuid4
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from adapters.env import ME_DIR, load_env, require  # noqa: E402
-from adapters.image import ImageBlocked, get_image  # noqa: E402
-from adapters.model import Model, get_model  # noqa: E402
+from adapters.image import MAX_REFERENCES, ImageBlocked, get_image  # noqa: E402
+from adapters.model import Model, get_model, image_media_type  # noqa: E402
 from adapters.storage import get_storage  # noqa: E402
 from warehouse import client as wh  # noqa: E402
 from warehouse.client import Jsonb  # noqa: E402
@@ -92,6 +93,7 @@ COMPONENT_TYPES = REQUIRED_COMPONENTS + EXTRA_COMPONENTS                      # 
 TEMPLATE_SLOTS: dict[str, tuple[str, ...]] = {                                 # overlay words the copy task must supply
     "job-photo-bubble": ("bubble_text", "caption"),
     "screenshot-ad": ("app", "title", "lines"),
+    "product-photo-caption": ("caption",),
 }
 SCREENSHOT_APPS = ("notes", "imessage", "email")
 QUOTE_FAMILIES = ("testimonial_card", "press_quote")                           # FR-23: blocked without quote_release
@@ -165,6 +167,54 @@ def template_for_family(family: str, templates: dict[str, Path]) -> str:
                          f"templates available: {', '.join(sorted(templates)) or 'none'}. Pick a brief in a family with "
                          f"a template or add the template (references/families.md, weekend template column)")
     return name
+
+
+class Reference(NamedTuple):
+    """One reference photo: its file under `image_references.dir`, what the image model takes from it, its bytes."""
+    file: str
+    use: str
+    data: bytes
+
+
+def load_image_references(config: dict[str, Any]) -> list[list[Reference]]:
+    """`clients.config.image_references` as reference sets, in order: `{"dir": ..., "sets": [[{"file", "use"}, ...], ...]}`.
+    Each execution takes the next set (produce rotates them). The photos stay where they are (a client's own library, never
+    git). A missing file, a file that is not PNG or JPEG, a path outside `dir` or more than MAX_REFERENCES in a set refuses
+    the batch before any render. No `image_references`: no sets, and the image model gets the prompt alone."""
+    cfg = config.get("image_references") or {}
+    if not cfg:
+        return []
+    root = Path(str(cfg.get("dir") or "")).expanduser()
+    sets: list[list[Reference]] = []
+    for i, items in enumerate(cfg.get("sets") or [], 1):
+        if len(items) > MAX_REFERENCES:
+            raise ConfigMissing(f"image_references set {i} has {len(items)} photos; at most {MAX_REFERENCES}")
+        refs = []
+        for item in items:
+            file, use = str(item.get("file") or ""), str(item.get("use") or "").strip()
+            path = (root / file).resolve()
+            if not path.is_relative_to(root.resolve()):
+                raise ConfigMissing(f"image_references file {file!r} is outside {root}")
+            if not path.is_file():
+                raise ConfigMissing(f"image_references file {file!r} not found under {root}")
+            data = path.read_bytes()
+            try:
+                image_media_type(data)
+            except ValueError as exc:
+                raise ConfigMissing(f"image_references file {file!r}: {exc}") from exc
+            if not use:
+                raise ConfigMissing(f"image_references file {file!r} says nothing about what to take from it (`use`)")
+            refs.append(Reference(file, use, data))
+        if refs:
+            sets.append(refs)
+    return sets
+
+
+def reference_prompt(refs: list[Reference]) -> str:
+    """The lines that name each reference photo and its job, in the order the photos are sent (Jacob Katz's protocol:
+    "Use [Image 1] as ground truth for the scene..."). They go before the image prompt, so the no-text instruction stays
+    last (FR-24)."""
+    return " ".join(f"Use [Image {i}] ({ref.file}) {ref.use}" for i, ref in enumerate(refs, 1))
 
 
 def image_prompt(subject: str, variation: str = "") -> str:
@@ -351,6 +401,8 @@ def producer_instructions(base: str, *, offer: dict[str, Any], icp: dict[str, An
     layer = offer.get("offer_layer") or {}
     slots = {
         "job-photo-bubble": "bubble_text (the hook as spoken in the bubble, <= 120 chars), caption (one line under the photo, <= 140 chars)",
+        "product-photo-caption": "caption (the one line set under the product photo, <= 140 chars: the hook or what the product does "
+                                 "for the buyer; the photo shows the product, so never describe the scene)",
         "screenshot-ad": "app (notes | imessage | email), title (the window title, <= 60 chars), lines (2 to 5 lines of the fake UI, <= 90 chars each; "
                          "for imessage alternate the buyer and us, ours last; for email the first line is the highlighted subject)",
     }.get(template) or ", ".join(TEMPLATE_SLOTS.get(template, ()))
@@ -550,7 +602,7 @@ def landing_page_for(offer: dict[str, Any]) -> str:
 # ---------- the batch ----------
 
 def generate_checked_image(*, image: Any, model: Model, prompts: dict[str, str], base_prompt: str, r: wh.Run,
-                           image_budget: int) -> tuple[bytes, str, int]:
+                           image_budget: int, references: list[bytes] = ()) -> tuple[bytes, str, int]:
     """One text-free image: generate, vision-check (FR-24), regenerate on a flag, at most MAX_IMAGE_ATTEMPTS.
     Returns (png, the prompt that produced it, attempts). A safety block from the image model (`ImageBlocked`) is one
     failed attempt. Raises ImageHasText when every attempt failed and the last one showed text, else the last
@@ -561,7 +613,8 @@ def generate_checked_image(*, image: Any, model: Model, prompts: dict[str, str],
             raise BudgetExceeded(f"producer image budget {image_budget} spent (worker_budgets.producer.images)")
         assert NO_TEXT_INSTRUCTION in prompt
         try:
-            png = image.generate(prompt, size=SIZE)
+            png = image.generate(prompt, size=SIZE, **({"references": list(references)} if references else {}))
+            r.count("reference_images_sent", len(references))
         except ImageBlocked as exc:
             blocked = exc
             r.count("images_blocked")
@@ -606,6 +659,7 @@ class Batch(NamedTuple):
     image_budget: int
     template_dir: Path
     image_model: str      # FR-21: the model that drew the image (the backend's `model_id`, else config)
+    reference_cycle: Any = None   # the client's image reference sets, next one per execution (load_image_references)
 
 
 def produce(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: dict[str, Any], model: Model, image: Any,
@@ -659,12 +713,15 @@ def produce(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: d
         if not head.get("hook_text"):
             raise CreativeInvalid(f"brief #{n} has no hook (hooks row missing); the planner writes one per brief")
     r.counts["templates"] = sorted({t for _, _, t in plan})
+    reference_sets = load_image_references(config)
+    r.counts["reference_sets"] = len(reference_sets)
 
     batch = Batch(client=client, config=config, model=model, image=image, storage=storage, renderer=renderer, prompts=load_prompts(),
                   rules=COPY_RULES.read_text(), offer=offer, icp=icp, landing_page=landing_page, cta=str(cta),
                   experiment=sel["experiment_name"], executions=int(config["batch"]["executions_per_recipe"]),
                   token_budget=int(budgets.get("tokens") or 0), image_budget=int(budgets.get("images") or 0), template_dir=template_dir,
-                  image_model=str(getattr(image, "model_id", None) or config["image_model"]))
+                  image_model=str(getattr(image, "model_id", None) or config["image_model"]),
+                  reference_cycle=itertools.cycle(reference_sets) if reference_sets else None)
     written: list[dict[str, Any]] = []
     expected = 0
     for head, lineage, template in plan:
@@ -754,9 +811,13 @@ def render_execution(conn: wh.Connection, r: wh.Run, batch: Batch, *, brief: dic
     overlay = validate_overlay(template, dict(execution["overlay"]))
     base_prompt = constrained_prompt(image_prompt(str(spec.get("imagery_subject") or brief.get("visual_spec") or ""),
                                                   str(execution["imagery_variation"])), list(criteria))
+    refs = next(batch.reference_cycle) if batch.reference_cycle is not None else []
+    if refs:
+        base_prompt = f"{reference_prompt(refs)} {base_prompt}"
     try:
         png_image, prompt, attempts = generate_checked_image(image=batch.image, model=batch.model, prompts=batch.prompts,
-                                                             base_prompt=base_prompt, r=r, image_budget=batch.image_budget)
+                                                             base_prompt=base_prompt, r=r, image_budget=batch.image_budget,
+                                                             references=[ref.data for ref in refs])
     except ImageHasText as exc:
         r.count("creatives_dropped_text")
         print(f"render_creatives: brief #{n} execution {label} dropped: {exc} (FR-24)", file=sys.stderr)

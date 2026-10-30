@@ -42,6 +42,20 @@ Following `references/handoff-local.md`:
     or `trust` block, so nothing can launch from it; inspo seeds, customer-language sources, templates and imagery
     wait on Sam.
   - Not touched, launch-side only: `meta_insights.py` still assumes booked calls and the quiz floors.
+- **Sam's Step 6 answers, 2026-10-31**:
+  - Product: the Buckwheat Pillow.
+  - Template: `product_photo_caption`, the product in a real room with one line of copy under the photo. It is a new
+    format row in `references/families.md` and `assets/creative-templates/product-photo-caption.html`, with one
+    `caption` slot.
+  - Imagery: Gemini with Jacob's reference photos as ground truth.
+    - `generate()` takes `references` (PNG or JPEG, at most 6), sent first as inline image parts. The request shape
+      `inline_data` / `mime_type` is ASSUMED.
+    - `clients.config.image_references` names the photo sets. Each execution takes the next set, and the
+      "Use [Image n] (file) ..." lines go before the image prompt, so the no-text instruction stays last and
+      `creatives.image_prompt` records the files.
+    - The photos stay in Sam's vault. There is no tag or logo reference, because images are text-free (FR-24).
+  - Inspo: Hullo, Avocado, Coyuchi, Naturepedic and Turmerry, the fact file's main rivals. This waits on
+    `SCRAPECREATORS_API_KEY`.
 
 ## Phase 0 completion — 2026-10-28 (branch `claude/sleepy-brahmagupta-jng3kp`)
 

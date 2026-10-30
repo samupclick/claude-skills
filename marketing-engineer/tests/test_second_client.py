@@ -7,6 +7,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 ME_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -152,3 +154,52 @@ def test_circadian_seeds_next_to_upclicklabs(db_env, capsys):
                 for table in ("runs", "offers", "icps"):
                     conn.execute(f"delete from {table} where client_id = %s", cid)
                 conn.execute("delete from clients where id = %s", cid)
+
+
+# ---------- product_photo_caption: the product in a real room, one line of copy (Sam, 2026-10-31) ----------
+
+def _slots(**over):
+    base = {"image_data_uri": "data:image/png;base64,AA==", "hook": "h", "cta_text": "Shop the pillow", "client_name": "Circadian",
+            "brand_font": "Inter", "brand_primary": "#1A1A1A", "brand_accent": "#000000", "brand_bg": "#EEF1EA",
+            "bubble_text": None, "caption": "c", "app": None, "title": None, "lines_html": ""}
+    return {**base, **over}
+
+
+def test_product_photo_caption_is_a_format_family_with_its_template():
+    fams = seed.parse_families((ME_DIR / "references" / "families.md").read_text())
+    assert ("product_photo_caption", "format") in fams
+    templates = rc.available_templates()
+    assert rc.template_for_family("product_photo_caption", templates) == "product-photo-caption"
+    assert pb.template_for("product_photo_caption") == "product-photo-caption"
+    assert rc.TEMPLATE_SLOTS["product-photo-caption"] == ("caption",)
+
+
+def test_product_photo_caption_renders_our_caption_escaped_and_refuses_it_missing():
+    out = rc.render_template("product-photo-caption", _slots(caption="Hulls that hold <your> neck & stay put"))
+    assert "Hulls that hold &lt;your&gt; neck &amp; stay put" in out and "{{" not in out
+    assert "Circadian" in out and "Shop the pillow" in out and "#EEF1EA" in out
+    with pytest.raises(rc.CreativeInvalid, match="caption"):
+        rc.render_template("product-photo-caption", _slots(caption=None))
+    assert rc.validate_overlay("product-photo-caption", {"caption": "x"}) == {"caption": "x"}
+    with pytest.raises(rc.CreativeInvalid, match="caption"):
+        rc.validate_overlay("product-photo-caption", {"bubble_text": "x"})
+
+
+def test_the_producer_is_told_the_product_photo_caption_slot():
+    text = rc.producer_instructions("BASE", offer=SHOP_OFFER, icp=None, config=SHOP_CONFIG, template="product-photo-caption",
+                                    executions=2, landing_page=PRODUCT, rules="RULES")
+    assert "Template: product-photo-caption. Overlay slots: caption (" in text
+
+
+def test_circadian_reference_photos_are_real_photos_from_jacobs_library():
+    cfg = _circadian()
+    refs = cfg["image_references"]
+    files = [item["file"] for s in refs["sets"] for item in s]
+    assert all(not f.rsplit("/", 1)[-1].startswith("_") for f in files), "no moodboards or drafts: never an AI image as a reference"
+    assert all(any(f.startswith("scenes/") for f in (i["file"] for i in s)) for s in refs["sets"]), "every image is scene-locked"
+    assert all(any(f.startswith("fills/buckwheat_real_") for f in (i["file"] for i in s)) for s in refs["sets"])
+    assert not any("tag" in f or "logo" in f for f in files), "images are text-free (FR-24): no tag or logo reference"
+    if not Path(refs["dir"]).is_dir():
+        pytest.skip("Jacob's reference library is on Sam's Mac only")
+    sets = rc.load_image_references(cfg)
+    assert len(sets) == 3 and all(len(s) == 2 for s in sets)

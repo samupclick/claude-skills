@@ -159,3 +159,31 @@ def test_model_id_lands_in_the_request_path():
     google = Google(respond("generate-content"))
     gen(google, model="gemini-3-pro-image").generate(PROMPT)
     assert google.requests[0].url.path == "/v1beta/models/gemini-3-pro-image:generateContent"
+
+
+# ---------- reference photos (Circadian: Jacob's method, real photos as ground truth) ----------
+
+def test_reference_photos_go_first_as_inline_images_then_the_prompt_text():
+    google = Google(respond("generate-content"))
+    scene, hulls = picture((64, 48), (200, 180, 160), "JPEG"), picture((32, 32), (90, 60, 30), "PNG")
+    gen(google).generate(PROMPT, size=(1080, 1080), references=[scene, hulls])
+    parts = json.loads(google.requests[0].content)["contents"][0]["parts"]
+    assert [list(p) for p in parts] == [["inline_data"], ["inline_data"], ["text"]]
+    assert parts[0]["inline_data"] == {"mime_type": "image/jpeg", "data": base64.b64encode(scene).decode()}
+    assert parts[1]["inline_data"] == {"mime_type": "image/png", "data": base64.b64encode(hulls).decode()}
+    assert parts[2]["text"] == PROMPT and parts[2]["text"].endswith(rc.NO_TEXT_INSTRUCTION), "the instruction still comes last"
+
+
+def test_a_reference_that_is_not_png_or_jpeg_or_too_many_is_refused_before_any_call():
+    google = Google(respond("generate-content"))
+    with pytest.raises(ValueError, match="PNG nor JPEG"):
+        gen(google).generate(PROMPT, references=[b"GIF89a not a photo"])
+    with pytest.raises(ValueError, match="at most 6"):
+        gen(google).generate(PROMPT, references=[picture((8, 8), FINAL)] * 7)
+    assert google.requests == []
+
+
+def test_the_placeholder_accepts_and_ignores_references():
+    from adapters.image.placeholder import PlaceholderImage
+    png = PlaceholderImage().generate(PROMPT, size=(64, 64), references=[picture((8, 8), FINAL)])
+    assert Image.open(io.BytesIO(png)).size == (64, 64)
