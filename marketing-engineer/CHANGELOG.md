@@ -54,8 +54,21 @@ Following `references/handoff-local.md`:
       "Use [Image n] (file) ..." lines go before the image prompt, so the no-text instruction stays last and
       `creatives.image_prompt` records the files.
     - The photos stay in Sam's vault. There is no tag or logo reference, because images are text-free (FR-24).
-  - Inspo: Hullo, Avocado, Coyuchi, Naturepedic and Turmerry, the fact file's main rivals. This waits on
-    `SCRAPECREATORS_API_KEY`.
+  - Inspo: Hullo, Avocado, Coyuchi, Naturepedic and Turmerry, the fact file's main rivals.
+- **Apify for the Ad Library pull (Sam, 2026-10-31; DECISIONS.md "Inspo vendor: Apify")**:
+  - `adapters/inspo/apify.py` (`INSPO_BACKEND=apify`) runs Apify's own actor `apify/facebook-ads-scraper` on each
+    brand's page from `clients.config.inspo.pages`, polls the run, reads its dataset and normalises it to the same ad
+    dict.
+  - Each run is capped in ads (`maxItems`) and in dollars (`maxTotalChargeUsd`, 1 USD); a run that does not end is
+    aborted. The token travels only in the Bearer header, never to the CDN.
+  - The CDN download and date parsing moved to `adapters/inspo/shared.py`; scrapecreators keeps its errors and
+    messages.
+  - `fetch_ads` takes an optional `page`, which the other backends ignore. `pull_inspo.py --per-brand N` caps the ads,
+    and so the model calls, per brand (default 50).
+  - `APIFY_TOKEN` is mapped to the keychain item `aeo-discovery-pipeline/apify`. Preflight checks it with
+    `GET /v2/users/me`; on 2026-10-31 it was ok, plan STARTER.
+  - Circadian's pages are the ones each rival's own website links to. The Apify fixtures are an ASSUMED SHAPE from
+    the actor's README until the first real run is saved.
 
 ## Phase 0 completion — 2026-10-28 (branch `claude/sleepy-brahmagupta-jng3kp`)
 

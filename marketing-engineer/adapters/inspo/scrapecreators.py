@@ -8,26 +8,21 @@ in the shape functions below, which the fixture backend shares, so a different r
 """
 from __future__ import annotations
 
-import io
 import time
 from collections import Counter
-from datetime import datetime, timezone
 from typing import Any, Callable
 
 import httpx
-from PIL import Image, UnidentifiedImageError
 
 from adapters import backoff
 from adapters.env import require
+from adapters.inspo.shared import (IMAGE_HOSTS, USER_AGENT, CdnError, fetch_cdn_image, is_cdn_url,  # noqa: F401
+                                   iso_date, to_png, url_host)
 
 API_BASE = "https://api.scrapecreators.com"
 SEARCH_COMPANIES = "/v1/facebook/adLibrary/search/companies"
 COMPANY_ADS = "/v1/facebook/adLibrary/company/ads"
-IMAGE_HOSTS = ("fbcdn.net", "fbsbx.com", "facebook.com", "cdninstagram.com")
 MAX_PAGES = 10
-MAX_REDIRECTS = 3
-MAX_IMAGE_BYTES = 20 * 1024 * 1024
-USER_AGENT = "upclicklabs-marketing-engineer/0.1 (intel worker; read-only)"
 
 
 class ScrapeCreatorsError(RuntimeError):
@@ -94,45 +89,7 @@ def normalise(row: dict[str, Any], brand: str, source: str = "scrapecreators") -
     }
 
 
-def iso_date(value: Any) -> str | None:
-    """Unix seconds (or milliseconds), a digit string, or an ISO date/datetime -> YYYY-MM-DD."""
-    if value is None or value == "":
-        return None
-    if isinstance(value, str) and value.strip().isdigit():
-        value = int(value)
-    if isinstance(value, (int, float)):
-        seconds = value / 1000 if value > 1e11 else value
-        return datetime.fromtimestamp(seconds, tz=timezone.utc).date().isoformat()
-    return str(value)[:10]
-
-
 # ---------- the backend ----------
-
-def url_host(url: str) -> tuple[str, str]:
-    """(scheme, host) of `url`, both empty when it does not parse as an absolute URL."""
-    try:
-        parsed = httpx.URL(url)
-    except (httpx.InvalidURL, TypeError):
-        return "", ""
-    return parsed.scheme, (parsed.host or "").lower()
-
-
-def is_cdn_url(url: str) -> bool:
-    scheme, host = url_host(url)
-    return scheme == "https" and any(host == h or host.endswith("." + h) for h in IMAGE_HOSTS)
-
-
-def to_png(data: bytes) -> bytes:
-    try:
-        with Image.open(io.BytesIO(data)) as img:
-            img.load()
-            out = img.convert("RGBA" if img.mode in ("RGBA", "LA", "P") else "RGB")
-    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
-        raise ScrapeCreatorsError("the ad CDN answer is not an image") from exc
-    buf = io.BytesIO()
-    out.save(buf, format="PNG")
-    return buf.getvalue()
-
 
 class ScrapeCreatorsAdLibrary:
     def __init__(self, api_key: str, *, transport: httpx.BaseTransport | None = None, base_url: str = API_BASE,
@@ -155,8 +112,8 @@ class ScrapeCreatorsAdLibrary:
                 "search_companies": self.calls["search_companies"], "company_ads": self.calls["company_ads"],
                 "image_fetches": self.calls["image_fetches"]}
 
-    def fetch_ads(self, brand: str, limit: int = 50) -> list[dict[str, Any]]:
-        page_id = self._page_id(brand)
+    def fetch_ads(self, brand: str, limit: int = 50, *, page: str | None = None) -> list[dict[str, Any]]:
+        page_id = self._page_id(brand)   # `page` (clients.config.inspo.pages) is for apify; scrapecreators searches
         rows: dict[str, dict[str, Any]] = {}
         cursor: str | None = None
         cursors: set[str] = set()
@@ -174,25 +131,10 @@ class ScrapeCreatorsAdLibrary:
 
     def fetch_image(self, url: str) -> bytes:
         self.calls["image_fetches"] += 1
-        current = url
-        for _ in range(MAX_REDIRECTS + 1):
-            if not is_cdn_url(current):
-                raise ScrapeCreatorsError(f"snapshot image is not https on an ad CDN host (host {url_host(current)[1]!r}; "
-                                          f"allowed {', '.join(IMAGE_HOSTS)})")
-            try:
-                response = backoff.send(self._cdn, "GET", current, attempts=self._attempts, sleep=self._sleep)
-            except httpx.TransportError as exc:
-                raise ScrapeCreatorsError(f"ad CDN unreachable: {type(exc).__name__}") from exc
-            if not response.is_redirect:
-                break
-            current = str(httpx.URL(current).join(response.headers.get("location", "")))
-        else:
-            raise ScrapeCreatorsError(f"ad CDN redirected more than {MAX_REDIRECTS} times")
-        if response.status_code != 200:
-            raise ScrapeCreatorsError(f"ad CDN answered HTTP {response.status_code} for a snapshot image")
-        if len(response.content) > MAX_IMAGE_BYTES:
-            raise ScrapeCreatorsError(f"snapshot image is larger than {MAX_IMAGE_BYTES} bytes")
-        return to_png(response.content)
+        try:
+            return fetch_cdn_image(self._cdn, url, attempts=self._attempts, sleep=self._sleep)
+        except CdnError as exc:
+            raise ScrapeCreatorsError(str(exc)) from exc
 
     def close(self) -> None:
         self._api.close()

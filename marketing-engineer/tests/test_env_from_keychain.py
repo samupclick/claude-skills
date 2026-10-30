@@ -20,7 +20,7 @@ def stub_path(tmp_path):
     """A `security` that answers find-generic-password -s S -a A -w with a sentinel, and fails for unknown items."""
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    known = {("aeo-pipeline-v3", "anthropic"), ("aeo-pipeline-v3", "gemini"),
+    known = {("aeo-pipeline-v3", "anthropic"), ("aeo-pipeline-v3", "gemini"), ("aeo-discovery-pipeline", "apify"),
              ("marketing-engineer", "META_ACCESS_TOKEN"), ("marketing-engineer", "META_READ_TOKEN")}
     cases = "\n".join(f'  "{s}|{a}") echo "{sentinel(s, a)}" ;;' for s, a in known)
     (bin_dir / "security").write_text(f"""#!/bin/sh
@@ -60,6 +60,14 @@ def test_exports_mapped_values_and_prints_only_names(shell, stub_path):
     assert "ANTHROPIC_API_KEY" in report and "GEMINI_API_KEY" in report and "META_READ_TOKEN" in report
     assert "not in keychain:" in report and "SCRAPECREATORS_API_KEY" in report
     assert "META_ACCESS_TOKEN" in report and "--with-meta-write" in report
+
+
+@pytest.mark.parametrize("shell", SHELLS)
+def test_apify_token_comes_from_the_aeo_discovery_item(shell, stub_path):
+    res = source(shell, stub_path, "APIFY_TOKEN", then='echo "P=$APIFY_TOKEN"')
+    assert "rc=0" in res.stdout, res.stdout + res.stderr
+    assert f"P={sentinel('aeo-discovery-pipeline', 'apify')}" in res.stdout.splitlines()
+    assert "SENTINEL" not in res.stdout.split("rc=")[0] + res.stderr
 
 
 @pytest.mark.parametrize("shell", SHELLS)
@@ -112,7 +120,7 @@ def test_mapping_holds_no_secret_and_names_every_keychain_variable():
     for var in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "SCRAPECREATORS_API_KEY", "META_ACCESS_TOKEN", "META_READ_TOKEN",
                 "META_AD_ACCOUNT_ID", "META_PAGE_ID", "META_PIXEL_ID", "META_CAPI_TOKEN", "SUPABASE_URL",
                 "SUPABASE_PUBLISHABLE_KEY", "TURNSTILE_SECRET_KEY", "REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET",
-                "CAL_WEBHOOK_SECRET"):
+                "CAL_WEBHOOK_SECRET", "APIFY_TOKEN"):
         assert var in text, var
     assert "-w" in text and "find-generic-password" in text
     for shape in ("sk-ant-", "AIza", "EAA", "sb_publishable_", "sb_secret_"):

@@ -1,6 +1,6 @@
 # Credentials status
 
-Names and status only, written by `scripts/preflight.py --write-status` on 2026-10-29. Each set credential was proven
+Names and status only, written by `scripts/preflight.py --write-status` on 2026-10-31. Each set credential was proven
 with one read-only call; no value is recorded here or anywhere in git. The keychain item behind each variable is in
 `scripts/env_from_keychain.sh`.
 
@@ -17,3 +17,4 @@ with one read-only call; no value is recorded here or anywhere in git. The keych
 | turnstile | `TURNSTILE_SECRET_KEY` | not set |  |
 | reddit | `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` | not set |  |
 | cal.com | `CAL_WEBHOOK_SECRET` | not set |  |
+| apify | `APIFY_TOKEN` | ok | token accepted, plan STARTER |

@@ -61,8 +61,9 @@ New credentials go in the keychain at service `marketing-engineer`, account `<VA
 
 ## Vendors
 
-- [ ] ★ **scrapecreators**: an account and key (`SCRAPECREATORS_API_KEY`, not in the keychain), then save one real
-      response per endpoint:
+- [x] **Ad Library vendor: Apify** (Sam, 2026-10-31). `APIFY_TOKEN` passes preflight (plan STARTER), and the
+      first real run's dataset still needs saving over `fixtures/apify/`. scrapecreators remains the alternative;
+      with it, you'd need an account and key (`SCRAPECREATORS_API_KEY`) and one real response per endpoint:
   - company ads as `fixtures/ad_library/real-001.json`;
   - search companies and company ads over `fixtures/scrapecreators/`.
   - Every fixture is an assumed shape until then.
@@ -87,7 +88,7 @@ New credentials go in the keychain at service `marketing-engineer`, account `<VA
 
 ## Admin
 
-- [ ] DPAs: Supabase, Anthropic, Google, scrapecreators, Vercel, Cloudflare.
+- [ ] DPAs: Supabase, Anthropic, Google, Apify, Vercel, Cloudflare.
 - [ ] `CHECKIN_TO`: set to your plain address. The local `.env` still has the dev placeholder `sam@example.invalid`.
 
 ## Scheduled runs (your decision; nothing registered)

@@ -1,0 +1,21 @@
+{
+ "_shape": "ASSUMED SHAPE from https://apify.com/apify/facebook-ads-scraper (README sample output) and https://docs.apify.com/api/v2 (actor runs, run status, dataset items), read 2026-10-31. Every ad is SYNTHETIC; replace with a recorded response at go-live.",
+ "request": {
+  "method": "POST",
+  "path": "/v2/actors/apify~facebook-ads-scraper/runs"
+ },
+ "status": 201,
+ "body": {
+  "data": {
+   "id": "fx-run-1",
+   "actId": "fx-actor",
+   "status": "RUNNING",
+   "statusMessage": "Starting the scraper",
+   "startedAt": "2026-10-31T09:00:00.000Z",
+   "defaultDatasetId": "fx-dataset-1",
+   "pricingInfo": {
+    "pricingModel": "PAY_PER_EVENT"
+   }
+  }
+ }
+}

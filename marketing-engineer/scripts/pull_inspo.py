@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """`pull inspo` (T2): the intel worker's format-library pull. SKILL.md §3, PRD FR-4, FR-5, FR-6, FR-8.
 
-    python3 scripts/pull_inspo.py [--client upclicklabs] [--today YYYY-MM-DD] [--brands "AG1,Ridge"]
+    python3 scripts/pull_inspo.py [--client upclicklabs] [--today YYYY-MM-DD] [--brands "AG1,Ridge"] [--per-brand 50]
     python3 scripts/pull_inspo.py --acknowledge <source>      # Sam clears an FR-8 block (SKILL.md §7)
 
 For every DTC seed brand in `clients.config.inspo.dtc_seed`:
@@ -50,6 +50,7 @@ SOURCE = "ad_library"
 TASK = "decompose_ad"
 PROVEN_DAYS = 30
 PROVEN_CONCURRENT = 3
+PER_BRAND = 50                 # ads fetched per brand unless --per-brand says otherwise; each new ad is one model call
 AD_LIBRARY_URL = "https://www.facebook.com/ads/library/?id={ad_id}"
 
 PROMPTS = Path(__file__).resolve().parent.parent / "references" / "prompts" / "intel.md"
@@ -195,17 +196,22 @@ def known_patterns(conn: wh.Connection, brand: str) -> dict[str, dict[str, Any]]
 
 # ---------- the pull ----------
 
-def pull(conn: wh.Connection, r: wh.Run, *, brands: list[str], inspo: Any, storage: Any, model: Any, today: date) -> None:
-    """The pull; a backend that tallies vendor calls (`usage()`) has them in `runs.counts.inspo_usage`, failed run too."""
+def pull(conn: wh.Connection, r: wh.Run, *, brands: list[str], inspo: Any, storage: Any, model: Any, today: date,
+         pages: dict[str, str] | None = None, per_brand: int = PER_BRAND) -> None:
+    """The pull; a backend that tallies vendor calls (`usage()`) has them in `runs.counts.inspo_usage`, failed run too.
+    `pages` (`clients.config.inspo.pages`, brand -> Facebook page URL) is passed on only for a brand that has one;
+    `per_brand` caps the ads fetched, and so the model calls made, per brand."""
     try:
-        _pull(conn, r, brands=brands, inspo=inspo, storage=storage, model=model, today=today)
+        _pull(conn, r, brands=brands, inspo=inspo, storage=storage, model=model, today=today, pages=pages or {},
+              per_brand=per_brand)
     finally:
         usage = getattr(inspo, "usage", None)
         if callable(usage):
             r.counts["inspo_usage"] = usage()
 
 
-def _pull(conn: wh.Connection, r: wh.Run, *, brands: list[str], inspo: Any, storage: Any, model: Any, today: date) -> None:
+def _pull(conn: wh.Connection, r: wh.Run, *, brands: list[str], inspo: Any, storage: Any, model: Any, today: date,
+          pages: dict[str, str], per_brand: int) -> None:
     fam = load_families(conn)
     format_families, hook_types, angles = fam["format"], fam["hook_type"], fam["angle"]
     schema = decompose_schema(format_families, hook_types, angles)
@@ -223,7 +229,8 @@ def _pull(conn: wh.Connection, r: wh.Run, *, brands: list[str], inspo: Any, stor
 
         def fetch() -> list[dict[str, Any]]:
             attempts[0] += 1
-            return inspo.fetch_ads(brand)
+            page = pages.get(brand)
+            return inspo.fetch_ads(brand, per_brand, **({"page": page} if page else {}))
 
         ads = _retry_once(fetch, f"source {brand!r}", warnings)
         api_calls += attempts[0]
@@ -360,6 +367,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--client", default="upclicklabs")
     ap.add_argument("--today", type=date.fromisoformat, default=None, help="FR-6 reference date (default: today)")
     ap.add_argument("--brands", default=None, help="comma-separated override of clients.config.inspo.dtc_seed")
+    ap.add_argument("--per-brand", type=int, default=PER_BRAND,
+                    help=f"ads fetched per brand (default {PER_BRAND}); each new ad is one model call")
     ap.add_argument("--acknowledge", metavar="SOURCE", default=None, help="clear the FR-8 block for one source")
     args = ap.parse_args(argv)
 
@@ -381,7 +390,8 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         inspo, storage, model = get_inspo(), get_storage(), get_model()
         with wh.run(conn, WORKER, client["id"]) as r:
-            pull(conn, r, brands=brands, inspo=inspo, storage=storage, model=model, today=args.today or date.today())
+            pull(conn, r, brands=brands, inspo=inspo, storage=storage, model=model, today=args.today or date.today(),
+                 pages=dict((client["config"].get("inspo") or {}).get("pages") or {}), per_brand=args.per_brand)
         c = r.counts
         print(f"pull_inspo: run {r.id} ok: sources ok {c['sources_ok']} failed {c['sources_failed']}; "
               f"ads {c['ads_fetched']}, raw_ingest new {c['raw_ingest_new']} seen {c['raw_ingest_seen']}, "

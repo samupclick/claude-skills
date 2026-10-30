@@ -37,7 +37,8 @@ Source of truth, in this order when they disagree: `warehouse/schema.sql` + `war
 | `ANTHROPIC_API_KEY`, `MODEL_ID`, `MODEL_EFFORT` | intel, language, planner, producer, gate | the model adapter (`MODEL_BACKEND=claude`; `fixture` needs no key). `MODEL_ID` default `claude-opus-5-5`; `MODEL_EFFORT` `low`/`medium`/`high`/`xhigh`/`max`, default `high`. A caller's `max_tokens` is the answer budget: thinking is always on and counts against it, so the adapter adds headroom (16k–20k sent) and opts into the server-side refusal fallback |
 | `SUPABASE_URL`, `SUPABASE_STORAGE_BUCKET` | every process that reads or writes assets (workers incl. gate, the executor) | Storage REST base and public object URLs (`creatives` bucket, `STORAGE_BACKEND=supabase`) |
 | `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_STORAGE_EMAIL`, `SUPABASE_STORAGE_PASSWORD` | storage writers only: intel (`pull_inspo.py`), producer (`render_creatives.py`, incl. `--reupload`) | sign-in as the dedicated storage-writer Auth user (RLS: insert / select / update in one bucket); never the service role |
-| `SCRAPECREATORS_API_KEY` | intel worker | Ad Library pulls (`INSPO_BACKEND=scrapecreators`) |
+| `APIFY_TOKEN` | intel worker | Ad Library pulls (`INSPO_BACKEND=apify`, Sam's vendor choice of 2026-10-31; each brand's page in `clients.config.inspo.pages`) |
+| `SCRAPECREATORS_API_KEY` | intel worker | Ad Library pulls (`INSPO_BACKEND=scrapecreators`, kept as the alternative) |
 | `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USER_AGENT` | language worker | `VOC_BACKEND=reddit` app-only OAuth (both or neither; neither = anonymous `.json`); the user agent names Sam's Reddit user |
 | `GEMINI_API_KEY`, `IMAGE_MODEL` | producer | image generation (`IMAGE_BACKEND=gemini`; `IMAGE_MODEL` default `gemini-nano-banana-2.1`, recorded as `creatives.image_model`) |
 | `META_ACCESS_TOKEN`, `META_PAGE_ID` | **executor only** (`get_meta(write=True)` in `scripts/apply_actions.py`); at go-live only the `marketing-engineer-executor` environment, which runs `me-executor` and nothing else (§8), and Sam's shell | campaign build, activate, kill, scale |
@@ -193,7 +194,7 @@ marketing-engineer/
 │   credential, names and status → references/credentials-status.md)
 ├── funnel/ (quiz page, /quiz and /cal-webhook app, local server on 8788, wsgi.py for Vercel; README.md has the deploy steps)
 ├── api/funnel.py · api/requirements.txt (the Vercel function; deployed from this repo, Root Directory marketing-engineer)
-├── fixtures/ad_library · voc · model · checkin · monday · scrapecreators · reddit · gemini · supabase · meta · capi
+├── fixtures/ad_library · voc · model · checkin · monday · apify · scrapecreators · reddit · gemini · supabase · meta · capi
 │   turnstile · gmail_connector
 └── tests/ (pytest against a local Postgres with every migration applied; never a mock)
 ```
@@ -234,14 +235,14 @@ below blocks the build, but all of it blocks going live. ★ = blocker; ◆ = si
 3. ◆ **Meta**: Ads Management Standard Access review submitted with the `go.` page as demo URL (Limited access throttles a batch build to minutes).
 4. ★ **`go.upclicklabs.com`**: the funnel is deployed **from this repo** to a Vercel project (Root Directory `marketing-engineer`, `funnel/README.md` § "Deploy on Vercel"), CNAME, SSL, a Turnstile widget (site + secret key), a Protection Bypass for Automation secret; Cal.com account and booking link (the DRAFT config's `offer.calendar_url` is a placeholder).
 5. ★ **Supabase EU**: pgvector enabled in the Dashboard, a session-pooler connection string per role, `scripts/apply_migrations.py` run (`0001` to `0008`, role passwords, Data API revoke), the storage-writer Auth user created and `--storage-writer <email>` run, Postgres MCP connected as `mcp_ro`.
-6. ★ **scrapecreators**: key and one real call per endpoint saved to `fixtures/scrapecreators/` (the fixture shape is assumed until then).
+6. ★ **Ad Library vendor**: Apify since 2026-10-31 (`APIFY_TOKEN`, each seed brand's page in `clients.config.inspo.pages`); one real run's dataset saved over `fixtures/apify/` (the fixture shape is assumed until then). scrapecreators stays the alternative.
 7. ★ **Gemini image key** and one test generation (`IMAGE_MODEL`, default `gemini-nano-banana-2.1`).
 8. ✓ **`references/families.md`**: DONE. Sam renamed the clashing angles to `contrarian_led` / `identity_led` on 2026-10-28, so the seed inserts every family and closes `ok` (the DTC seed list is still marked PLACEHOLDER for Sam to confirm).
 9. ★ **`config/clients/upclicklabs.json`**: offer, ICP, quiz questions, floors per lever, `daily_cap`, currency, trust thresholds, brakes, `disapproval_pause_threshold` (DRAFT values throughout).
 10. ★ **Vault seed**: 5 to 10 real notes copied into `config/clients/upclicklabs/voc-seed/`, anonymised as you copy (the checked-in notes are synthetic).
 11. ★ **Reddit**: an approved app for `VOC_BACKEND=reddit` (`REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USER_AGENT` naming your Reddit user).
 12. ★ **Gmail connector** connected on the claude.ai account that owns the routines (the check-in and memo send as that account).
-13. DPAs (Supabase, Anthropic, Google, scrapecreators, Vercel, Cloudflare); `CHECKIN_TO` set to Sam's plain address.
+13. DPAs (Supabase, Anthropic, Google, Apify, Vercel, Cloudflare); `CHECKIN_TO` set to Sam's plain address.
 
 Then the go-live swap in `references/dev-mode.md` § "Go-live swap checklist" (T13 in the tracker): one env value per
 service, `render_creatives.py --reupload`, the four routines registered from `scripts/routines.py register --print`

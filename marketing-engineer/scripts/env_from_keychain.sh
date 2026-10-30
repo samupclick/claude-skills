@@ -17,11 +17,13 @@
 # Mapping decided with Sam 2026-10-29: Anthropic and Gemini come from the live aeo-pipeline-v3 items; every other
 # variable is service `marketing-engineer`, account = the variable name. The circadian-supabase-* items are
 # Circadian's project, not the Growth Warehouse, and are not mapped.
+# APIFY_TOKEN (INSPO_BACKEND=apify) comes from the aeo-discovery-pipeline item: Sam chose Apify on 2026-10-31.
 
 _me_kc_map() {
   cat <<'MAP'
 ANTHROPIC_API_KEY            aeo-pipeline-v3      anthropic
 GEMINI_API_KEY               aeo-pipeline-v3      gemini
+APIFY_TOKEN                  aeo-discovery-pipeline apify
 SCRAPECREATORS_API_KEY       marketing-engineer   SCRAPECREATORS_API_KEY
 META_ACCESS_TOKEN            marketing-engineer   META_ACCESS_TOKEN
 META_READ_TOKEN              marketing-engineer   META_READ_TOKEN

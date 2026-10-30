@@ -25,6 +25,7 @@ SECRETS = {
     "REDDIT_CLIENT_ID": "SENTINEL-reddit-id-0009",
     "REDDIT_CLIENT_SECRET": "SENTINEL-reddit-secret-0010",
     "CAL_WEBHOOK_SECRET": "SENTINEL-cal-0011",
+    "APIFY_TOKEN": "SENTINEL-apify-0012",
 }
 IDS = {"META_AD_ACCOUNT_ID": "1234567890", "META_PIXEL_ID": "555000111", "SUPABASE_URL": "https://abc.supabase.co"}
 
@@ -71,6 +72,10 @@ def vendor(request, *, bad=(), noscope=()):
     if host == "challenges.cloudflare.com":
         codes = ["invalid-input-secret"] if "TURNSTILE_SECRET_KEY" in bad else ["invalid-input-response"]
         return httpx.Response(200, json={"success": False, "error-codes": codes, "messages": [echo(request)]})
+    if host == "api.apify.com" and path == "/v2/users/me":
+        if auth.removeprefix("Bearer ") != SECRETS["APIFY_TOKEN"] or "APIFY_TOKEN" in bad:
+            return httpx.Response(401, json={"error": {"type": "token-not-valid", "message": echo(request)}})
+        return httpx.Response(200, json={"data": {"id": "fx-user", "username": "someone", "plan": {"id": "FREE"}}})
     if host == "www.reddit.com" and path == "/api/v1/access_token":
         if "REDDIT_CLIENT_SECRET" in bad:
             return httpx.Response(401, json={"message": "Unauthorized", "error": 401, "echo": echo(request)})
@@ -107,10 +112,11 @@ def test_every_backend_ok_with_one_read_only_call_each(capsys):
     got = {s: r.status for s, r in by_service(results).items()}
     assert got == {"anthropic": "ok", "gemini": "ok", "scrapecreators": "ok", "meta write token": "ok",
                    "meta read token": "ok", "meta capi token": "ok", "supabase": "ok", "warehouse": "not set",
-                   "turnstile": "ok", "reddit": "ok", "cal.com": "set"}
+                   "turnstile": "ok", "reddit": "ok", "cal.com": "set", "apify": "ok"}
     assert "claude-opus-5-5 listed" in by_service(results)["anthropic"].detail
     assert "gemini-nano-banana-2.1 listed" in by_service(results)["gemini"].detail
     assert "333 credits" in by_service(results)["scrapecreators"].detail
+    assert by_service(results)["apify"].detail == "token accepted, plan FREE" and "someone" not in all_output(results, capsys)
     assert "act_1234567890 active, USD, spend_cap set" in by_service(results)["meta read token"].detail
     assert "pixel 555000111 readable" in by_service(results)["meta capi token"].detail
     assert {m for m, _, _ in calls} <= {"GET", "POST"}
@@ -122,10 +128,10 @@ def test_every_backend_ok_with_one_read_only_call_each(capsys):
 
 def test_failures_are_labelled_and_no_echoed_secret_is_printed(capsys):
     bad = ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "SCRAPECREATORS_API_KEY", "META_ACCESS_TOKEN",
-           "SUPABASE_PUBLISHABLE_KEY", "TURNSTILE_SECRET_KEY", "REDDIT_CLIENT_SECRET")
+           "SUPABASE_PUBLISHABLE_KEY", "TURNSTILE_SECRET_KEY", "REDDIT_CLIENT_SECRET", "APIFY_TOKEN")
     results = preflight.run_checks({**SECRETS, **IDS}, transport=transport(bad=bad), verify_warehouse=warehouse_local)
     got = {s: r.status for s, r in by_service(results).items()}
-    for service in ("anthropic", "gemini", "scrapecreators", "meta write token", "supabase", "turnstile", "reddit"):
+    for service in ("anthropic", "gemini", "scrapecreators", "meta write token", "supabase", "turnstile", "reddit", "apify"):
         assert got[service] == "auth failed", (service, by_service(results)[service])
     assert got["meta read token"] == "ok"
     out = all_output(results, capsys)
@@ -201,7 +207,7 @@ def test_main_prints_names_and_status_and_writes_the_status_file(tmp_path, monke
     assert preflight.main(["--write-status", str(status_file)]) == 0
     out = capsys.readouterr().out
     assert "anthropic: ok (claude-opus-5-5 listed)" in out
-    assert "gemini: not set" in out
+    assert "gemini: not set" in out and "apify: not set" in out
     md = status_file.read_text()
     assert "| anthropic | `ANTHROPIC_API_KEY` | ok | claude-opus-5-5 listed |" in md
     assert "SENTINEL" not in out + md

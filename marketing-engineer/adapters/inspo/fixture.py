@@ -24,7 +24,7 @@ class FixtureAdLibrary:
         self.fail_brands = {b for b in (os.environ.get("INSPO_FIXTURE_FAIL") or "").split(",") if b}
         self.fetch_ads_calls: dict[str, int] = {}
 
-    def fetch_ads(self, brand: str, limit: int = 50) -> list[dict[str, Any]]:
+    def fetch_ads(self, brand: str, limit: int = 50, *, page: str | None = None) -> list[dict[str, Any]]:
         slug = brand_slug(brand)
         self.fetch_ads_calls[slug] = self.fetch_ads_calls.get(slug, 0) + 1
         if slug in self.fail_brands:

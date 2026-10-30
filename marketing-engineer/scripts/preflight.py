@@ -12,6 +12,7 @@ read-only and opens no `runs` row. One line per service:
 - anthropic       GET /v1/models; MODEL_ID (default claude-opus-5-5) must be listed
 - gemini          GET /v1beta/models (x-goog-api-key); IMAGE_MODEL (default gemini-nano-banana-2.1) must be listed
 - scrapecreators  GET /v1/account/credit-balance (x-api-key; the vendor's balance endpoint, spends no search credit)
+- apify           GET /v2/users/me (Bearer header; spends nothing); reports the plan id, never the account name
 - meta * token    GET /me per token (Bearer header); the write and read tokens then GET act_<id>?fields=account_status,
                   currency,timezone_name,spend_cap; the CAPI token GET <pixel id>?fields=id
 - supabase        GET <SUPABASE_URL>/auth/v1/health with the publishable key as `apikey`
@@ -44,6 +45,7 @@ if str(ME_DIR) not in sys.path:
 
 from adapters.graph import base_url as graph_base, env_api_version, is_api_version  # noqa: E402
 from adapters.image.gemini import API_BASE as GEMINI_BASE, DEFAULT_MODEL as DEFAULT_IMAGE_MODEL  # noqa: E402
+from adapters.inspo.apify import API_BASE as APIFY_BASE  # noqa: E402
 from adapters.inspo.scrapecreators import API_BASE as SCRAPECREATORS_BASE  # noqa: E402
 from adapters.model import DEFAULT_MODEL_ID  # noqa: E402
 from adapters.turnstile.live import SECRET_CODES, SITEVERIFY_URL  # noqa: E402
@@ -54,7 +56,7 @@ SCRAPECREATORS_BALANCE = "/v1/account/credit-balance"
 SECRET_VARS = ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "SCRAPECREATORS_API_KEY", "META_ACCESS_TOKEN", "META_READ_TOKEN",
                "META_CAPI_TOKEN", "META_TEST_EVENT_CODE", "SUPABASE_PUBLISHABLE_KEY", "SUPABASE_STORAGE_PASSWORD",
                "TURNSTILE_SECRET_KEY", "REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET", "CAL_WEBHOOK_SECRET",
-               "VERCEL_AUTOMATION_BYPASS_SECRET")
+               "VERCEL_AUTOMATION_BYPASS_SECRET", "APIFY_TOKEN")
 WORKER_VAR = "WAREHOUSE_URL_WORKER"   # the only role string preflight reads; --verify reads the others (NFR-1)
 LOCAL_HOSTS = frozenset({"", "localhost", "127.0.0.1", "::1"})
 FAILING = frozenset({"auth failed", "wrong scope", "unreachable", "error"})
@@ -137,6 +139,16 @@ def check_scrapecreators(env: Mapping[str, str], http: httpx.Client) -> tuple[st
         return failed
     credits = _json(resp).get("creditCount")   # ASSUMED SHAPE: the vendor's tutorial pages show {"creditCount": n}
     return "ok", f"{credits} credits" if isinstance(credits, int) else "balance endpoint answered"
+
+
+def check_apify(env: Mapping[str, str], http: httpx.Client) -> tuple[str, str]:
+    resp = http.get(f"{APIFY_BASE}/users/me", headers={"authorization": f"Bearer {env['APIFY_TOKEN']}"})
+    failed = _http_status(resp, auth=(401, 403), scope=())
+    if failed:
+        return failed
+    plan = (_json(resp).get("data") or {}).get("plan") or {}
+    plan_id = plan.get("id") if isinstance(plan, dict) else None
+    return "ok", f"token accepted, plan {plan_id}" if isinstance(plan_id, str) and plan_id.isalnum() else "token accepted"
 
 
 def _meta_error(resp: httpx.Response) -> tuple[str, str] | None:
@@ -286,6 +298,7 @@ def run_checks(env: Mapping[str, str], *, transport: httpx.BaseTransport | None 
         ("turnstile", ("TURNSTILE_SECRET_KEY",), ("TURNSTILE_SECRET_KEY",), check_turnstile),
         ("reddit", ("REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET"), ("REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET"), check_reddit),
         ("cal.com", ("CAL_WEBHOOK_SECRET",), ("CAL_WEBHOOK_SECRET",), None),
+        ("apify", ("APIFY_TOKEN",), ("APIFY_TOKEN",), check_apify),
     ]
     url = worker_url(env)
     secrets = _secrets(env, url)

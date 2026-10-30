@@ -1,0 +1,120 @@
+{
+ "_shape": "ASSUMED SHAPE from https://apify.com/apify/facebook-ads-scraper (README sample output) and https://docs.apify.com/api/v2 (actor runs, run status, dataset items), read 2026-10-31. Every ad is SYNTHETIC; replace with a recorded response at go-live.",
+ "request": {
+  "method": "GET",
+  "path": "/v2/datasets/fx-dataset-1/items"
+ },
+ "status": 200,
+ "body": [
+  {
+   "inputUrl": "https://www.facebook.com/fixturebrand",
+   "pageID": "fx-page-1",
+   "pageName": "Fixture Pillow Co",
+   "adArchiveID": "fx-ap-2001",
+   "isActive": true,
+   "publisherPlatform": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "startDate": 1785542400,
+   "startDateFormatted": "2026-08-01T00:00:00.000Z",
+   "collationCount": 3,
+   "snapshot": {
+    "pageId": "fx-page-1",
+    "pageName": "Fixture Pillow Co",
+    "displayFormat": "IMAGE",
+    "body": {
+     "text": "SYNTHETIC: Hulls that hold their shape all night."
+    },
+    "title": "SYNTHETIC: The pillow that stays put",
+    "linkUrl": "https://shop.example/products/pillow",
+    "ctaText": "Shop now",
+    "ctaType": "SHOP_NOW",
+    "images": [
+     {
+      "originalImageUrl": "https://scontent.xx.fbcdn.net/v/fx-ap-2001.jpg",
+      "resizedImageUrl": "https://scontent.xx.fbcdn.net/v/fx-ap-2001-s.jpg"
+     }
+    ],
+    "videos": [],
+    "cards": []
+   }
+  },
+  {
+   "inputUrl": "https://www.facebook.com/fixturebrand",
+   "pageID": "fx-page-1",
+   "pageName": "Fixture Pillow Co",
+   "adArchiveID": "fx-ap-2002",
+   "isActive": true,
+   "publisherPlatform": [
+    "FACEBOOK"
+   ],
+   "startDate": 1790000000,
+   "startDateFormatted": "2026-09-21T14:13:20.000Z",
+   "collationCount": 1,
+   "snapshot": {
+    "pageName": "Fixture Pillow Co",
+    "displayFormat": "DCO",
+    "body": {
+     "text": "{{product.brand}}"
+    },
+    "title": null,
+    "linkUrl": null,
+    "ctaText": null,
+    "images": [],
+    "videos": [],
+    "cards": [
+     {
+      "body": "SYNTHETIC: Cool side up, every night.",
+      "title": "SYNTHETIC: Sleep cool",
+      "linkUrl": "https://shop.example/products/pillow?v=2",
+      "ctaText": "Learn more",
+      "originalImageUrl": "https://scontent.xx.fbcdn.net/v/fx-ap-2002-a.jpg",
+      "resizedImageUrl": "https://scontent.xx.fbcdn.net/v/fx-ap-2002-a-s.jpg",
+      "videoPreviewImageUrl": null
+     },
+     {
+      "body": "SYNTHETIC: Set the height yourself.",
+      "title": "SYNTHETIC: Your height",
+      "linkUrl": "https://shop.example/products/pillow?v=3",
+      "ctaText": "Learn more",
+      "originalImageUrl": null,
+      "resizedImageUrl": "https://scontent.xx.fbcdn.net/v/fx-ap-2002-b-s.jpg"
+     }
+    ]
+   }
+  },
+  {
+   "inputUrl": "https://www.facebook.com/fixturebrand",
+   "pageID": "fx-page-1",
+   "pageName": "Fixture Pillow Co",
+   "adArchiveID": "fx-ap-2003",
+   "isActive": false,
+   "publisherPlatform": [
+    "INSTAGRAM"
+   ],
+   "startDate": 1780000000,
+   "endDate": 1782000000,
+   "collationCount": 1,
+   "snapshot": {
+    "pageName": "Fixture Pillow Co",
+    "displayFormat": "VIDEO",
+    "body": {
+     "text": "SYNTHETIC: Thirty nights to decide."
+    },
+    "title": "SYNTHETIC: Try it",
+    "linkUrl": "https://shop.example/",
+    "ctaText": "Shop now",
+    "images": [],
+    "cards": [],
+    "videos": [
+     {
+      "videoHdUrl": "https://video.xx.fbcdn.net/v/fx-ap-2003-hd.mp4",
+      "videoSdUrl": "https://video.xx.fbcdn.net/v/fx-ap-2003-sd.mp4",
+      "videoPreviewImageUrl": "https://scontent.xx.fbcdn.net/v/fx-ap-2003-preview.jpg"
+     }
+    ]
+   }
+  }
+ ]
+}
