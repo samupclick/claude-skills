@@ -363,5 +363,8 @@ The remaining amendments (A1–A24 in `CRUCIBLE.md` §2) add enforcement, statis
 
 **Open**
 
-- The dataset shape is still an assumption (`fixtures/apify/`) until the first real run is saved over it.
+- The dataset shape was seen in real runs on 2026-10-31 (`fixtures/apify/README.md`); the fixtures keep synthetic
+  values, so no third-party ad is committed. A non-empty `snapshot.images[]` entry has not been seen yet.
+- A brand's own website can link a page that is not its advertiser (Avocado's does). `clients.config.inspo.pages`
+  holds Ad Library URLs built from the advertiser's page id.
 - A DPA for Apify replaces the scrapecreators one in the Friday list.

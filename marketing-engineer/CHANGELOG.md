@@ -67,8 +67,15 @@ Following `references/handoff-local.md`:
     and so the model calls, per brand (default 50).
   - `APIFY_TOKEN` is mapped to the keychain item `aeo-discovery-pipeline/apify`. Preflight checks it with
     `GET /v2/users/me`; on 2026-10-31 it was ok, plan STARTER.
-  - Circadian's pages are the ones each rival's own website links to. The Apify fixtures are an ASSUMED SHAPE from
-    the actor's README until the first real run is saved.
+  - The first real runs (2026-10-31, about $0.06) confirmed the per-ad shape and showed two more:
+    - a page with no ads answers one summary item (`results: []`), which counts as zero ads;
+    - an input the actor cannot read answers one error item (`no_items`), which fails the source.
+
+    The fixtures record all three shapes with synthetic values.
+  - Avocado's website links a page that is not its advertiser, so Circadian's `inspo.pages` are Ad Library URLs built
+    from each advertiser's page id (active ads, US). Hullo has no Meta ads, active or past.
+  - `scripts/seed.py --refresh-config` rewrites an existing client's `clients.config`, `currency` and `daily_cap` from
+    its file. A plain re-seed leaves an existing client as it was, so the new pages never reached the database.
 
 ## Phase 0 completion — 2026-10-28 (branch `claude/sleepy-brahmagupta-jng3kp`)
 

@@ -88,8 +88,8 @@ def library(apify: Apify, sleeps: list[float] | None = None, **kw) -> ApifyAdLib
 def test_every_fixture_declares_its_assumed_shape_and_source():
     for f in sorted(FIX.glob("*.json")):
         shape = json.loads(f.read_text())["_shape"]
-        assert shape.startswith("ASSUMED SHAPE from https://apify.com/apify/facebook-ads-scraper"), f
-        assert "read 2026-10-31" in shape and "SYNTHETIC" in shape and "replace with a recorded response at go-live" in shape, f
+        assert shape.startswith("SEEN SHAPE in real runs of https://apify.com/apify/facebook-ads-scraper"), f
+        assert "2026-10-31" in shape and "SYNTHETIC" in shape and "no third-party ad is committed" in shape, f
     assert not [p for p in FIX.iterdir() if p.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp", ".mp4")]
 
 
@@ -244,3 +244,25 @@ def test_pull_inspo_on_the_apify_backend_uses_the_configured_page_and_the_per_br
         assert p["source_url"].startswith("https://www.facebook.com/ads/library/?id=fx-ap-")
         path = Path(url2pathname(urlparse(p["source_image_url"]).path))
         assert path.is_relative_to(storage_root) and path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n", "our Storage copy (FR-5)"
+
+
+# ---------- shapes first seen in real runs on 2026-10-31 ----------
+
+def test_a_page_with_no_ads_answers_one_summary_item_and_that_is_zero_ads():
+    summary = exchange("dataset-page-summary")["body"]
+    lib = library(Apify(items=summary))
+    assert lib.fetch_ads("Fixture Pillow", page=PAGE) == []
+    assert lib.usage()["items"] == 0
+
+
+def test_a_summary_item_that_carries_results_yields_its_ads():
+    ad = exchange("dataset-items")["body"][0]
+    summary = exchange("dataset-page-summary")["body"][0]
+    ads = library(Apify(items=[{**summary, "totalCount": 1, "results": [ad]}])).fetch_ads("Fixture Pillow", page=PAGE)
+    assert [a["ad_id"] for a in ads] == ["fx-ap-2001"]
+
+
+def test_an_error_item_fails_the_source_with_the_actors_code():
+    errors = exchange("dataset-error")["body"]
+    with pytest.raises(ApifyError, match=r"'Fixture Pillow'.*no_items.*Empty or private data"):
+        library(Apify(items=errors)).fetch_ads("Fixture Pillow", page=PAGE)

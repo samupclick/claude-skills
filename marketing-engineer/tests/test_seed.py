@@ -90,3 +90,25 @@ def test_a_broken_config_fails_the_run_without_blaming_upclicklabs(db_env, tmp_p
                            "order by started_at desc limit 1").fetchone()
         conn.execute("delete from runs where worker = 'seed' and status = 'failed' and error like 'JSONDecodeError%%'")
     assert run["status"] == "failed" and run["client_id"] is None and run["error"].startswith("JSONDecodeError")
+
+
+def test_refresh_config_rewrites_the_client_config_from_its_file(db_env, tmp_path, capsys):
+    slug = f"seedtest-{uuid.uuid4().hex[:8]}"
+    path = _client_config(tmp_path, slug)
+    try:
+        assert seed.main(["--config", str(path)]) == 0
+        cfg = json.loads(path.read_text())
+        cfg["inspo"] = {"dtc_seed": ["Fixture Pillow"], "pages": {"Fixture Pillow": "https://www.facebook.com/fixture"}}
+        cfg["daily_cap"] = 60
+        path.write_text(json.dumps(cfg))
+        assert seed.main(["--config", str(path)]) == 0     # without the flag an existing client is left as it was
+        with psycopg.connect(db_env["WAREHOUSE_URL_ADMIN"], row_factory=dict_row) as conn:
+            assert conn.execute("select config->'inspo' as i from clients where slug = %s", (slug,)).fetchone()["i"] != cfg["inspo"]
+        capsys.readouterr()
+        assert seed.main(["--config", str(path), "--refresh-config"]) == 0
+        assert "'config_refreshed': 1" in capsys.readouterr().out
+        with psycopg.connect(db_env["WAREHOUSE_URL_ADMIN"], row_factory=dict_row) as conn:
+            row = conn.execute("select config, daily_cap from clients where slug = %s", (slug,)).fetchone()
+        assert row["config"]["inspo"] == cfg["inspo"] and float(row["daily_cap"]) == 60
+    finally:
+        _cleanup(db_env["WAREHOUSE_URL_ADMIN"], slug)

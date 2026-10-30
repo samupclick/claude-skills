@@ -1,15 +1,22 @@
-# Apify contract fixtures (INSPO_BACKEND=apify): ASSUMED SHAPE
+# Apify contract fixtures (INSPO_BACKEND=apify): shapes seen in real runs
 
-`tests/test_inspo_apify.py` serves these through `httpx.MockTransport`. Nothing here was recorded from the vendor. Each
-file is one HTTP exchange: `_shape` (where the shape comes from), `request`, `status`, `body`.
+`tests/test_inspo_apify.py` serves these through `httpx.MockTransport`. Each file is one HTTP exchange: `_shape`,
+`request`, `status`, `body`.
 
-- The run endpoints and their `data` envelope come from Apify's API v2 docs, read 2026-10-31.
-- The ad fields come from the README sample of Apify's own actor `apify/facebook-ads-scraper`, read 2026-10-31.
-  - Confirmed there: `adArchiveID`, `pageID`, `pageName`, `startDate` / `endDate` (Unix seconds), `isActive`,
-    `publisherPlatform`, `snapshot.body.text`, `snapshot.title` / `linkUrl` / `ctaText` / `displayFormat`, and the
-    `snapshot.videos[]` and `snapshot.cards[]` keys.
-  - Not seen, because the sample had none: the entries of `snapshot.images[]`. They are assumed to use the cards'
-    `originalImageUrl` / `resizedImageUrl`.
+The shapes were seen in real runs of Apify's own actor `apify/facebook-ads-scraper` on 2026-10-31, against the five
+Circadian rivals, through the API v2 endpoints for starting a run, polling it and reading its dataset. Keys and types
+are as seen. Every value is SYNTHETIC: no third-party ad is committed.
 
-Every ad is SYNTHETIC. At go-live, save one real run's dataset here, replacing these bodies. If the real shape differs,
-change `item_rows`, `item_id` and `normalise_item` at the top of `adapters/inspo/apify.py` and nothing else.
+What a run's dataset holds:
+
+- **One item per ad.** Seen keys include `adArchiveID`, `pageID`, `pageName`, `startDate` / `endDate` (Unix seconds),
+  `startDateFormatted`, `isActive`, `publisherPlatform`, and `snapshot` with `body.text`, `title`, `linkUrl`,
+  `ctaText`, `displayFormat`, `images`, `videos`, `cards`. (`dataset-items.json`)
+- **A page with no ads**: one summary item `{inputUrl, pageInfo, isResultComplete, totalCount, results: []}`. This is
+  zero ads, not a failure. (`dataset-page-summary.json`)
+- **An input the actor cannot read**, such as a page slug that is not the advertiser: one error item
+  `{url, error: "no_items", errorDescription}`. The source fails. (`dataset-error.json`)
+
+Not seen yet: a non-empty `snapshot.images[]` entry. Its keys are assumed to be the cards' `originalImageUrl` /
+`resizedImageUrl`. If a later run differs, change `item_rows`, `error_items`, `item_id` and `normalise_item` at the top
+of `adapters/inspo/apify.py` and nothing else.

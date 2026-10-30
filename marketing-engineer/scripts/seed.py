@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Seed the local warehouse from the DRAFT files, as-is. Idempotent: a second run adds zero rows.
 
-    python3 scripts/seed.py [--config config/clients/<slug>.json]   (default: upclicklabs.json)
+    python3 scripts/seed.py [--config config/clients/<slug>.json] [--refresh-config]   (default: upclicklabs.json)
+
+An existing client is left as it is unless --refresh-config, which rewrites its `clients.config`, `currency` and
+`daily_cap` from the file (offers and ICPs are matched by name and never rewritten).
 
 Connects as WAREHOUSE_URL_ADMIN (worker_rw has no insert on clients/offers/icps). Opens and closes a
 `runs` row (worker 'seed') including on failure. Placeholder values are copied verbatim.
@@ -51,8 +54,11 @@ def name_conflicts(families: list[tuple[str, str]]) -> dict[str, list[str]]:
     return {n: k for n, k in kinds.items() if len(k) > 1}
 
 
-def seed(conn: psycopg.Connection, config: dict, families: list[tuple[str, str]]) -> dict[str, int]:
+def seed(conn: psycopg.Connection, config: dict, families: list[tuple[str, str]], *,
+         refresh_config: bool = False) -> dict[str, int]:
     counts = {"families": 0, "clients": 0, "offers": 0, "icps": 0}
+    if refresh_config:
+        counts["config_refreshed"] = 0
     conflicts = name_conflicts(families)
     with conn.cursor() as cur:
         for name, kind in families:
@@ -68,6 +74,10 @@ def seed(conn: psycopg.Connection, config: dict, families: list[tuple[str, str]]
              config.get("daily_cap"), Jsonb(config)),
         )
         counts["clients"] += cur.rowcount
+        if refresh_config and not cur.rowcount:
+            cur.execute("update clients set config = %s, currency = %s, daily_cap = %s where slug = %s",
+                        (Jsonb(config), config.get("currency", "EUR"), config.get("daily_cap"), c["slug"]))
+            counts["config_refreshed"] += cur.rowcount
         cur.execute("select id from clients where slug = %s", (c["slug"],))
         client_id = cur.fetchone()[0]
 
@@ -104,6 +114,8 @@ class FamilyNameConflict(RuntimeError):
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="Seed families and one client (offer, ICP) from its config file.")
     ap.add_argument("--config", type=Path, default=CONFIG, help="client config (default: config/clients/upclicklabs.json)")
+    ap.add_argument("--refresh-config", action="store_true",
+                    help="rewrite an existing client's clients.config, currency and daily_cap from the file")
     return ap.parse_args(argv)
 
 
@@ -121,7 +133,7 @@ def main(argv: list[str] | None = None) -> int:
             config = json.loads(args.config.read_text())
             slug = config["client"]["slug"]
             families = parse_families(FAMILIES.read_text())
-            counts = seed(conn, config, families)
+            counts = seed(conn, config, families, refresh_config=args.refresh_config)
             conn.commit()  # unambiguous rows stay even when the conflict below fails the run
             conflicts = name_conflicts(families)
             if conflicts:

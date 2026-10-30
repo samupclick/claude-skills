@@ -9,8 +9,9 @@ never in a URL, and never reaches the ad CDN: `fetch_image` uses a separate clie
 (`adapters/inspo/shared.py`). `usage()` is the tally the intel worker writes to `runs.counts.inspo_usage`, including
 Apify's own cost figure for the runs. Read-only: no write endpoint is called.
 
-The dataset shape is ASSUMED from the actor's README sample (fixtures/apify/README.md); `item_rows`, `item_id` and
-`normalise_item` are the only functions that know it.
+The dataset shape was seen in real runs on 2026-10-31 (fixtures/apify/README.md): one item per ad; for a page with no
+ads, one summary item whose `results` is empty; for an input the actor cannot read, one error item. `item_rows`,
+`error_items`, `item_id` and `normalise_item` are the only functions that know it.
 """
 from __future__ import annotations
 
@@ -37,12 +38,27 @@ class ApifyError(RuntimeError):
     """Apify or the ad CDN refused or failed. Messages never carry the token."""
 
 
-# ---------- the dataset shape: ASSUMED until a real run is saved; a different real shape changes only these ----------
+# ---------- the dataset shape: seen in real runs 2026-10-31; a different real shape changes only these ----------
 
 def item_rows(payload: Any) -> list[dict[str, Any]]:
-    """The dataset items endpoint answers a bare JSON array."""
+    """The ad items of a dataset (a bare JSON array). A page summary item contributes the ads in its `results`; an
+    error item contributes nothing (`error_items`)."""
     rows = payload if isinstance(payload, list) else (payload or {}).get("items") or []
-    return [r for r in rows if isinstance(r, dict)]
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict) or "error" in row:
+            continue
+        if isinstance(row.get("results"), list) and "snapshot" not in row:
+            out += [r for r in row["results"] if isinstance(r, dict)]
+        else:
+            out.append(row)
+    return out
+
+
+def error_items(payload: Any) -> list[str]:
+    """`code: description` for each error item, e.g. no_items for a page the actor cannot read."""
+    rows = payload if isinstance(payload, list) else []
+    return [f"{r.get('error')}: {r.get('errorDescription') or '-'}" for r in rows if isinstance(r, dict) and r.get("error")]
 
 
 def item_id(item: dict[str, Any]) -> str | None:
@@ -142,7 +158,11 @@ class ApifyAdLibrary:
         payload = self._call("GET", f"datasets/{run.get('defaultDatasetId')}/items", "dataset_items",
                              params={"clean": "true", "format": "json", "limit": limit})
         rows: dict[str, dict[str, Any]] = {}
-        for item in item_rows(payload):
+        ads = item_rows(payload)
+        errors = error_items(payload)
+        if errors and not ads:
+            raise ApifyError(f"Apify could not read the page for {brand!r} ({page}): {'; '.join(errors)[:300]}")
+        for item in ads:
             ad_id = item_id(item)
             if ad_id and ad_id not in rows:
                 rows[ad_id] = item

@@ -62,7 +62,7 @@ New credentials go in the keychain at service `marketing-engineer`, account `<VA
 ## Vendors
 
 - [x] **Ad Library vendor: Apify** (Sam, 2026-10-31). `APIFY_TOKEN` passes preflight (plan STARTER), and the
-      first real run's dataset still needs saving over `fixtures/apify/`. scrapecreators remains the alternative;
+      shape was seen in real runs on 2026-10-31 (`fixtures/apify/README.md`). scrapecreators remains the alternative;
       with it, you'd need an account and key (`SCRAPECREATORS_API_KEY`) and one real response per endpoint:
   - company ads as `fixtures/ad_library/real-001.json`;
   - search companies and company ads over `fixtures/scrapecreators/`.

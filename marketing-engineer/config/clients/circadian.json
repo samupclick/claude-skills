@@ -1,5 +1,5 @@
 {
-  "_status": "DRAFT for a creative-only test batch (hand-off Step 6, 2026-10-30). Nothing here launches on Meta: UpClick designs, Circadian publishes, and UpClick never creates, owns or publishes on Circadian's Meta assets, so there is deliberately no `campaign` or `trust` block. Product facts come only from Jacob's fact file, version 2026-10-27 (ucl-brain clients/circadian-rest/inputs/jacob-2026-10-27/OFFICIAL_FACT_FILE_OCTOBER_2026.md); the PDP Copy Master and Insider Knowledge Bank were retired on 2026-10-28. Colours and font read from circadianrest.com's theme on 2026-10-30. Sam, 2026-10-31: Buckwheat Pillow; the product_photo_caption template; Gemini images with Jacob's reference photos as ground truth (image_references; the photos stay in the vault, never git; no tag or logo reference, since images are text-free, FR-24); inspo from the fact file's main rivals through Apify (INSPO_BACKEND=apify, Sam 2026-10-31); each rival's Facebook page is the one its own website links to (read 2026-10-31). Customer-language sources: none yet (voc-seed is empty). daily_cap and cpm_estimate are guesses that give capacity 6 for one batch of 6.",
+  "_status": "DRAFT for a creative-only test batch (hand-off Step 6, 2026-10-30). Nothing here launches on Meta: UpClick designs, Circadian publishes, and UpClick never creates, owns or publishes on Circadian's Meta assets, so there is deliberately no `campaign` or `trust` block. Product facts come only from Jacob's fact file, version 2026-10-27 (ucl-brain clients/circadian-rest/inputs/jacob-2026-10-27/OFFICIAL_FACT_FILE_OCTOBER_2026.md); the PDP Copy Master and Insider Knowledge Bank were retired on 2026-10-28. Colours and font read from circadianrest.com's theme on 2026-10-30. Sam, 2026-10-31: Buckwheat Pillow; the product_photo_caption template; Gemini images with Jacob's reference photos as ground truth (image_references; the photos stay in the vault, never git; no tag or logo reference, since images are text-free, FR-24); inspo from the fact file's main rivals through Apify (INSPO_BACKEND=apify, Sam 2026-10-31); each rival is its advertiser page in the Meta Ad Library (page ids from Ad Library searches through Apify, 2026-10-31: the page Avocado's site links to is not the one that advertises), active ads shown in the US. Hullo had no Meta ads, active or past, on 2026-10-31. Customer-language sources: none yet (voc-seed is empty). daily_cap and cpm_estimate are guesses that give capacity 6 for one batch of 6.",
   "client": {
     "name": "Circadian",
     "slug": "circadian",
@@ -176,11 +176,11 @@
       "Turmerry"
     ],
     "pages": {
-      "Hullo": "https://www.facebook.com/hullopillow",
-      "Avocado": "https://www.facebook.com/AvocadoMattress",
-      "Coyuchi": "https://www.facebook.com/CoyuchiHome",
-      "Naturepedic": "https://www.facebook.com/Naturepedic",
-      "Turmerry": "https://www.facebook.com/turmerry"
+      "Hullo": "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&view_all_page_id=416316971758562&search_type=page&media_type=all",
+      "Avocado": "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&view_all_page_id=563263527194297&search_type=page&media_type=all",
+      "Coyuchi": "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&view_all_page_id=45756669530&search_type=page&media_type=all",
+      "Naturepedic": "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&view_all_page_id=53809332932&search_type=page&media_type=all",
+      "Turmerry": "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&view_all_page_id=673903679434971&search_type=page&media_type=all"
     },
     "category_seed": []
   }
