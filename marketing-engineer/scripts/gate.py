@@ -119,15 +119,33 @@ def verbatim_hits(words: str, phrases: list[dict[str, Any]], *, min_words: int =
     return hits
 
 
-def brand_rule_hits(words: str, hard_blocks: list[str]) -> list[str]:
+def banned_term_re(term: str) -> re.Pattern[str]:
+    """A banned term as a pattern: any case, a space or hyphen between its words matches either or none, and a term
+    that starts or ends with a letter or digit matches only as a whole word ("Circadian Rest" never hits "restores")."""
+    words = [w for w in re.split(r"[\s\-]+", term.strip()) if w]
+    pattern = r"[\s\-]*".join(re.escape(w) for w in words)
+    if words and words[0][0].isalnum():
+        pattern = r"(?<!\w)" + pattern
+    if words and words[-1][-1].isalnum():
+        pattern += r"(?!\w)"
+    return re.compile(pattern, re.I)
+
+
+def brand_rule_hits(words: str, hard_blocks: list[str], *, banned_terms: list[str] = ()) -> list[str]:
     """The rule-based half of the `brand` check: pricing and income claims are found by pattern; client names need the
-    model (`brand_flags`). Only rules named in `clients.config.brand.hard_blocks` fire."""
+    model (`brand_flags`). Only rules named in `clients.config.brand.hard_blocks` fire. Every term in
+    `clients.config.brand.banned_terms` fires wherever it appears (`banned_term_re`)."""
     rules = " ".join(hard_blocks).lower()
     hits = []
     if "pricing" in rules or "price" in rules:
         hits += [f"pricing: {m.group(0).strip()!r}" for m in PRICE_RE.finditer(words)]
     if "income" in rules:
         hits += [f"income claim: {m.group(0).strip()!r}" for m in INCOME_RE.finditer(words)]
+    for term in banned_terms:
+        if term.strip():
+            m = banned_term_re(term).search(words)
+            if m:
+                hits.append(f"banned term: {m.group(0)!r}")
     return hits
 
 
@@ -264,8 +282,8 @@ def trusted_context(offer: dict[str, Any], icp: dict[str, Any] | None, config: d
     lines = ["", "Offer (ours):", f"- name: {offer.get('name')}", f"- promise: {offer.get('promise')}",
              f"- price anchor: {offer.get('price_anchor')}", f"- proof points (the only figures allowed): {', '.join(offer.get('proof_points') or []) or '-'}",
              f"- offer layer (fixed): {json.dumps(offer.get('offer_layer') or {}, sort_keys=True)}",
-             f"- landing page: the quiz at {landing_page}, then a 15-minute call",
-             f"- brand hard blocks: {', '.join(brand.get('hard_blocks') or []) or '-'}"]
+             f"- landing page: {landing_text(offer, landing_page)}",
+             f"- brand hard blocks: {', '.join(brand.get('hard_blocks') or []) or '-'}", *banned_terms_lines(config)]
     if icp:
         lines += ["Audience (ICP):", f"- {icp.get('label')}", f"- role: {icp.get('role')}; company: {icp.get('company_type')}; "
                   f"size: {icp.get('size_band')}; geo: {', '.join(icp.get('geo') or [])}",
@@ -286,6 +304,20 @@ def check_config(config: dict[str, Any]) -> None:
 
 def paused(client: dict[str, Any]) -> bool:
     return bool(client.get("paused")) or os.environ.get("PIPELINE_PAUSED", "").strip().lower() in ("1", "true", "yes")
+
+
+def landing_text(offer: dict[str, Any], landing_page: str) -> str:
+    """How the prompts name the landing page: the offer's own page when it has one (a shop's product page), else the
+    upClickLabs quiz and call. Same wording as the producer."""
+    if offer.get("landing_url"):
+        return f"{landing_page}, the offer's own page (terminal metric: {offer.get('terminal_metric') or 'booked_call'})"
+    return f"the quiz at {landing_page}, then a 15-minute call"
+
+
+def banned_terms_lines(config: dict[str, Any]) -> list[str]:
+    """The prompt line for `clients.config.brand.banned_terms`; none when the client has none. Same as the producer."""
+    terms = [t for t in ((config.get("brand") or {}).get("banned_terms") or []) if str(t).strip()]
+    return [f"- banned words (never write them, in any spelling): {', '.join(terms)}"] if terms else []
 
 
 def landing_page_for(offer: dict[str, Any]) -> str:
@@ -381,6 +413,7 @@ def gate(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: dict
     landing_page = landing_page_for(offer)
     cta_mechanic = str((offer.get("offer_layer") or {}).get("cta_mechanic") or "")
     hard_blocks = list((config.get("brand") or {}).get("hard_blocks") or [])
+    banned_terms = list((config.get("brand") or {}).get("banned_terms") or [])
     releases = conn.execute(QUOTE_RELEASE_SQL, (client_id,)).fetchall()
     restricted = conn.execute(RESTRICTED_VOC_SQL, (client_id,)).fetchall()
     prompts = load_prompts()
@@ -427,7 +460,7 @@ def gate(conn: wh.Connection, r: wh.Run, *, client: dict[str, Any], config: dict
         failures: dict[str, list[str]] = {}
         if checks["policy_flags"]:
             failures["policy"] = list(checks["policy_flags"])
-        brand_hits = brand_rule_hits(words, hard_blocks) + list(checks["brand_flags"])
+        brand_hits = brand_rule_hits(words, hard_blocks, banned_terms=banned_terms) + list(checks["brand_flags"])
         if brand_hits:
             failures["brand"] = brand_hits
         if vision["real_person_likeness"] or vision["logos_or_wordmarks"]:

@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Seed the local warehouse from the DRAFT files, as-is. Idempotent: a second run adds zero rows.
 
+    python3 scripts/seed.py [--config config/clients/<slug>.json]   (default: upclicklabs.json)
+
 Connects as WAREHOUSE_URL_ADMIN (worker_rw has no insert on clients/offers/icps). Opens and closes a
 `runs` row (worker 'seed') including on failure. Placeholder values are copied verbatim.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -98,7 +101,15 @@ class FamilyNameConflict(RuntimeError):
     """families.md lists one name under two kinds; families.name is unique, so the seed cannot be complete."""
 
 
-def main() -> int:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    ap = argparse.ArgumentParser(description="Seed families and one client (offer, ICP) from its config file.")
+    ap.add_argument("--config", type=Path, default=CONFIG, help="client config (default: config/clients/upclicklabs.json)")
+    return ap.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    slug = args.config.stem   # the run is attributed to this client until the file is parsed
     load_env()
     url = require("seed", "WAREHOUSE_URL_ADMIN")["WAREHOUSE_URL_ADMIN"]
     with psycopg.connect(url) as conn:
@@ -107,7 +118,8 @@ def main() -> int:
             run_id = cur.fetchone()[0]
         conn.commit()
         try:
-            config = json.loads(CONFIG.read_text())
+            config = json.loads(args.config.read_text())
+            slug = config["client"]["slug"]
             families = parse_families(FAMILIES.read_text())
             counts = seed(conn, config, families)
             conn.commit()  # unambiguous rows stay even when the conflict below fails the run
@@ -120,15 +132,15 @@ def main() -> int:
                 cur.execute(
                     """update runs set status = 'ok', finished_at = now(), counts = %s,
                               client_id = (select id from clients where slug = %s) where id = %s""",
-                    (Jsonb(counts), config["client"]["slug"], run_id),
+                    (Jsonb(counts), slug, run_id),
                 )
             conn.commit()
         except Exception as exc:  # noqa: BLE001 — record then re-raise
             conn.rollback()
             with conn.cursor() as cur:
                 cur.execute("""update runs set status = 'failed', finished_at = now(), error = %s,
-                                  client_id = (select id from clients where slug = 'upclicklabs') where id = %s""",
-                            (f"{type(exc).__name__}: {exc}"[:2000], run_id))
+                                  client_id = (select id from clients where slug = %s) where id = %s""",
+                            (f"{type(exc).__name__}: {exc}"[:2000], slug, run_id))
             conn.commit()
             if isinstance(exc, FamilyNameConflict):
                 print(f"seed: run {run_id} FAILED: {exc}", file=sys.stderr)

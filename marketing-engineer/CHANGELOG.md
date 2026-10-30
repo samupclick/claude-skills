@@ -29,6 +29,19 @@ Following `references/handoff-local.md`:
 - **Live-run blockers**: `references/live-run-blockers.md` lists Sam's remaining items, checked against the repo,
   preflight and DNS. `go.upclicklabs.com` does not resolve yet. The routines are printed, not registered; cloud or
   local `launchd` is Sam's call.
+- **A second, creative-only client (Circadian, Step 6 gaps 1 and 2)**:
+  - `scripts/seed.py --config <path>` seeds any client file. The default is still `upclicklabs.json`, and a failed run
+    is attributed to the file's client, not to upClickLabs.
+  - `clients.config.brand.banned_terms` is a list of words the gate's rule-based brand check rejects wherever they
+    appear, ignoring case and treating spaces and hyphens alike, whole words only. The planner, producer and gate
+    prompts list them.
+  - An offer with its own `landing_url` (a shop's product page) is named as that page and its terminal metric in the
+    producer and gate prompts, instead of "the quiz, then a 15-minute call". `landing_check` already passed a
+    non-funnel URL. The upClickLabs prompts are unchanged.
+  - `config/clients/circadian.json` is DRAFT: product facts only from Jacob's fact file of 2026-10-27; no `campaign`
+    or `trust` block, so nothing can launch from it; inspo seeds, customer-language sources, templates and imagery
+    wait on Sam.
+  - Not touched, launch-side only: `meta_insights.py` still assumes booked calls and the quiz floors.
 
 ## Phase 0 completion — 2026-10-28 (branch `claude/sleepy-brahmagupta-jng3kp`)
 

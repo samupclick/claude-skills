@@ -1,0 +1,66 @@
+{
+  "_status": "DRAFT for a creative-only test batch (hand-off Step 6, 2026-10-30). Nothing here launches on Meta: UpClick designs, Circadian publishes, and UpClick never creates, owns or publishes on Circadian's Meta assets, so there is deliberately no `campaign` or `trust` block. Product facts come only from Jacob's fact file, version 2026-10-27 (ucl-brain clients/circadian-rest/inputs/jacob-2026-10-27/OFFICIAL_FACT_FILE_OCTOBER_2026.md); the PDP Copy Master and Insider Knowledge Bank were retired on 2026-10-28. Colours and font read from circadianrest.com's theme on 2026-10-30. Waiting on Sam: the product (Buckwheat Pillow is a placeholder pick), inspo seed brands, customer-language sources, templates and imagery. daily_cap and cpm_estimate are guesses that give capacity 6 for one batch of 6.",
+  "client": { "name": "Circadian", "slug": "circadian", "site": "https://circadianrest.com", "industry": "dtc_bedding" },
+  "currency": "USD",
+  "daily_cap": 35,
+  "offer": {
+    "name": "Buckwheat Pillow",
+    "promise": "Hulls flex under the head, then lock and hold the neck in line all night instead of sinking",
+    "price_anchor": "60-night sleep trial and free shipping",
+    "proof_points": [
+      "USA-grown buckwheat hulls, pre-polished and air-jet cleaned by a patented process, then UV sterilized with no chemicals",
+      "Up to 68% less crunch than standard hulls, because ours are pre-polished",
+      "Air moves between the hulls, so it is the coolest pillow we make",
+      "You set the height yourself by taking hulls out, and it stays there",
+      "Handmade to order in our New Jersey workshop",
+      "Lasts 3 to 5 years; a hull refill brings it back",
+      "60-night sleep trial, free shipping"
+    ],
+    "terminal_metric": "purchase",
+    "landing_url": "https://circadianrest.com/products/buckwheat-pillow",
+    "funnel_host": null,
+    "calendar_url": null,
+    "offer_layer": { "offer_mechanic": "product_purchase", "proof_type": "material_and_process", "cta_mechanic": "shop_now" }
+  },
+  "icp": {
+    "label": "US sleepers with neck pain or who sleep hot, buying natural materials",
+    "role": "side, back or combination sleeper",
+    "company_type": "household (DTC)",
+    "industry": "dtc_bedding",
+    "geo": ["US"],
+    "size_band": null,
+    "pains": ["neck pain", "sleeping hot", "pillows that go flat"],
+    "outcomes": ["neck held in line all night", "a cool pillow", "a height you set yourself that stays"]
+  },
+  "targets": { "ctr_floor": 0.01, "kill_impressions": 2000, "cpl_target": null },
+  "floors": { "cost_per_link_click": 1.5 },
+  "cpm_estimate": 20,
+  "batch": { "recipes": 3, "executions_per_recipe": 2, "proposals_multiplier": 4 },
+  "renderer": "html_template",
+  "image_model": "placeholder",
+  "families_ref": "references/families.md",
+  "brand": {
+    "colors": { "primary": "#1A1A1A", "accent": "#000000", "bg": "#EEF1EA" },
+    "font": "Inter",
+    "hard_blocks": [
+      "no pricing: no dollar amounts outside the product pages (Jacob's voice kit)",
+      "never name the workshop or the manufacturer; say 'our New Jersey workshop'",
+      "GOTS only as the full label (Global Organic Textile Standard) on the finished product of the cotton and wool lines; never on buckwheat, Buckwool, kapok or latex, never on a fiber",
+      "no OEKO-TEX, FSC or other certification claims in this test batch",
+      "product facts only from the offer's proof points (Jacob's fact file, 2026-10-27); nothing else is claimed",
+      "no medical claims: never cures, treats or prevents; neck support and alignment are fine",
+      "never talk down the product, the company or the packaging; no trade-offs such as rustle or weight",
+      "never invent a personal fact about Jacob",
+      "fill names are fixed: Wild-Harvested Kapok, Tree-Tapped Latex",
+      "no em dashes"
+    ],
+    "banned_terms": [
+      "White Lotus", "Circadian Rest", "Talalay", "organic latex", "natural latex", "organic kapok", "Natural Kapok",
+      "Shredded Latex", "proprietary", "knife edge", "piped", "side by side", "buy two", "nothing is made offshore",
+      "nothing is planted", "OEKO-TEX", "FSC", "cures", "treats", "prevents", "for life", "—"
+    ]
+  },
+  "worker_budgets": { "intel": { "api_calls": 50 }, "planner": { "tokens": 400000 }, "producer": { "tokens": 400000, "images": 20 }, "gate": { "tokens": 200000 } },
+  "voc": { "seed_dir": "config/clients/circadian/voc-seed", "vault_path": null, "public_sources": [] },
+  "inspo": { "dtc_seed": [], "category_seed": [] }
+}

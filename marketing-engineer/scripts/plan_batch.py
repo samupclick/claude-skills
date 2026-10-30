@@ -247,6 +247,9 @@ def offer_instructions(offer: dict[str, Any], icp: dict[str, Any] | None, config
         f"- offer layer (fixed): {json.dumps(offer.get('offer_layer') or {}, sort_keys=True)}",
         f"- brand hard blocks: {', '.join(((config.get('brand') or {}).get('hard_blocks')) or []) or '-'}",
     ]
+    banned = [t for t in ((config.get("brand") or {}).get("banned_terms") or []) if str(t).strip()]
+    if banned:   # same line as the producer and the gate, which checks them
+        lines.append(f"- banned words (never write them, in any spelling): {', '.join(banned)}")
     if icp:
         lines += ["Audience (ICP):", f"- {icp.get('label')}", f"- role: {icp.get('role')}; company: {icp.get('company_type')}; "
                   f"size: {icp.get('size_band')}; geo: {', '.join(icp.get('geo') or [])}",

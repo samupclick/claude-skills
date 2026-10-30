@@ -359,8 +359,8 @@ def producer_instructions(base: str, *, offer: dict[str, Any], icp: dict[str, An
         "Offer (ours):", f"- name: {offer.get('name')}", f"- promise: {offer.get('promise')}",
         f"- price anchor: {offer.get('price_anchor')}", f"- proof points: {', '.join(offer.get('proof_points') or []) or '-'}",
         f"- offer layer (fixed): {json.dumps(layer, sort_keys=True)}",
-        f"- CTA mechanic: {layer.get('cta_mechanic')}; landing page: the quiz at {landing_page}, then a 15-minute call",
-        f"- brand hard blocks: {', '.join(brand.get('hard_blocks') or []) or '-'}",
+        f"- CTA mechanic: {layer.get('cta_mechanic')}; landing page: {landing_text(offer, landing_page)}",
+        f"- brand hard blocks: {', '.join(brand.get('hard_blocks') or []) or '-'}", *banned_terms_lines(config),
     ]
     if icp:
         lines += ["Audience (ICP):", f"- {icp.get('label')}", f"- role: {icp.get('role')}; company: {icp.get('company_type')}; "
@@ -521,6 +521,20 @@ QUOTE_RELEASE_SQL = """
 select 1 from actions where client_id = %s and action_type = 'quote_release' and status = 'applied'
    and (target_id = %s or proposal->>'brief_id' = %s) limit 1;
 """
+
+
+def landing_text(offer: dict[str, Any], landing_page: str) -> str:
+    """How the prompts name the landing page: the offer's own page when it has one (a shop's product page), else the
+    upClickLabs quiz and call. Same wording as the gate (`scripts/gate.py`)."""
+    if offer.get("landing_url"):
+        return f"{landing_page}, the offer's own page (terminal metric: {offer.get('terminal_metric') or 'booked_call'})"
+    return f"the quiz at {landing_page}, then a 15-minute call"
+
+
+def banned_terms_lines(config: dict[str, Any]) -> list[str]:
+    """The prompt line for `clients.config.brand.banned_terms`; none when the client has none. The gate checks them."""
+    terms = [t for t in ((config.get("brand") or {}).get("banned_terms") or []) if str(t).strip()]
+    return [f"- banned words (never write them, in any spelling): {', '.join(terms)}"] if terms else []
 
 
 def landing_page_for(offer: dict[str, Any]) -> str:
