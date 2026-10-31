@@ -76,6 +76,13 @@ Following `references/handoff-local.md`:
     from each advertiser's page id (active ads, US). Hullo has no Meta ads, active or past.
   - `scripts/seed.py --refresh-config` rewrites an existing client's `clients.config`, `currency` and `daily_cap` from
     its file. A plain re-seed leaves an existing client as it was, so the new pages never reached the database.
+- **Structured outputs take a subset of JSON Schema** (found by the planner's first real call, 2026-10-31: HTTP 400
+  `maxItems is not supported`).
+  - `adapters/model/claude.py` now sends `api_schema(schema)`, the SDK's own `transform_schema`. It moves `maxItems`,
+    `minItems` above 1, `maxLength`, `minimum`, `maximum` and the like into the description as hints.
+  - The answer is still validated against the caller's full schema.
+  - Every schema the pipeline sends passes through it. Intel's decomposition schema had happened to fit, which is why
+    `pull_inspo` worked first. FR-49.
 
 ## Phase 0 completion — 2026-10-28 (branch `claude/sleepy-brahmagupta-jng3kp`)
 

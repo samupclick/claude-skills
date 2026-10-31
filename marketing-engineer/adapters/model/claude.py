@@ -24,6 +24,15 @@ MIN_REQUEST_TOKENS = 16_000
 MAX_NON_STREAMING_TOKENS = 20_000
 
 
+def api_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """The schema as structured outputs accept it. The API takes a subset of JSON Schema (no maxItems, minItems above 1,
+    maxLength, minimum, maximum...); the SDK's own `transform_schema` moves those into the description as hints. The
+    caller's schema is left as it is, and the answer is still validated against it in full."""
+    from anthropic import transform_schema  # the only vendor import for model calls (FR-49)
+
+    return transform_schema(schema)
+
+
 def request_max_tokens(answer_budget: int) -> int:
     """max_tokens to send: the answer budget plus thinking headroom, at least 16k, at most 20k (non-streaming), and
     never below the caller's own budget."""
@@ -62,7 +71,9 @@ class ClaudeModel:
             max_tokens=requested,
             system=system,
             messages=[{"role": "user", "content": content}],
-            output_config={"effort": self.effort, "format": {"type": "json_schema", "schema": schema}},
+            # structured outputs take a subset of JSON Schema: the SDK moves maxItems, maxLength, minimum and the
+            # like into the description as hints; `validate` below still enforces the full schema on the answer
+            output_config={"effort": self.effort, "format": {"type": "json_schema", "schema": api_schema(schema)}},
             betas=[FALLBACK_BETA],
             fallbacks="default",
         )

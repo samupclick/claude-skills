@@ -118,3 +118,37 @@ def test_env_example_defaults_to_opus_5_5_and_names_model_effort():
     lines = (ME_DIR / ".env.example").read_text().splitlines()
     assert "MODEL_ID=claude-opus-5-5" in lines
     assert any(line.lstrip("# ").startswith("MODEL_EFFORT=") for line in lines)
+
+
+# ---------- structured outputs take a subset of JSON Schema (the planner's first real call, 2026-10-31) ----------
+
+LIMITED = {"type": "object", "additionalProperties": False, "required": ["picks", "score", "kind"],
+           "properties": {"picks": {"type": "array", "items": {"type": "string", "maxLength": 12}, "minItems": 1, "maxItems": 2},
+                          "score": {"type": "integer", "minimum": 1, "maximum": 5},
+                          "kind": {"type": "string", "enum": ["a", "b"]}}}
+
+
+def run_limited(answer):
+    model = ClaudeModel(model_id="claude-opus-5-5")
+    model._client = FakeClient(response([text(json.dumps(answer))]))
+    result = model.generate_json(task="plan", system="SYS", instructions="Plan.", untrusted="x", schema=LIMITED)
+    return model, result
+
+
+def test_the_schema_sent_drops_what_the_api_rejects_and_keeps_it_as_hints():
+    model, result = run_limited({"picks": ["one"], "score": 3, "kind": "a"})
+    sent = model._client.calls[0]["output_config"]["format"]["schema"]
+    flat = json.dumps(sent)
+    for keyword in ("maxItems", "maxLength", "minimum", "maximum"):
+        assert f'"{keyword}"' not in flat, keyword
+    assert sent["properties"]["kind"]["enum"] == ["a", "b"] and sent["additionalProperties"] is False
+    assert "maxItems: 2" in sent["properties"]["picks"]["description"], "the limit still reaches the model, as a hint"
+    assert LIMITED["properties"]["picks"]["maxItems"] == 2, "the caller's schema is not modified"
+    assert result.output["picks"] == ["one"]
+
+
+def test_an_answer_outside_the_full_schema_is_still_refused_locally():
+    with pytest.raises(ModelOutputInvalid, match="plan"):
+        run_limited({"picks": ["one", "two", "three"], "score": 3, "kind": "a"})
+    with pytest.raises(ModelOutputInvalid):
+        run_limited({"picks": ["one"], "score": 9, "kind": "a"})
