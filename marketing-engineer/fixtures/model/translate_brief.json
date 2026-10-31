@@ -1,0 +1,101 @@
+{
+  "_shape": "SYNTHETIC fixture for scripts/plan_batch.py in CI (MODEL_BACKEND=fixture): not recorded from Claude (no ANTHROPIC_API_KEY in the build container, T0 comment). Twelve outputs cycle in call order, one per proposed brief (3 recipes x proposals_multiplier 4). Hook lines say FIXTURE on purpose; voc_phrase_indexes stay within 0..2 so any client with >= 3 voc_phrases rows validates. Record a real one at go-live and replace.",
+  "outputs": [
+    {
+      "hook_line": "FIXTURE hook 1: when a prospect asks an AI who does this, is it you or a competitor?",
+      "product_nouns": ["AI visibility audit", "free 15-minute call"],
+      "imagery_subject": "FIXTURE: a founder at a laptop reading an AI chat answer, office setting, no readable text",
+      "visual_spec": "FIXTURE: fake iMessage thread on a phone frame, reply from the audit team last; imagery subject swapped to a founder's desk",
+      "voc_phrase_indexes": [0],
+      "changed_ingredients": ["offer", "product_nouns", "voc_phrases", "imagery_subject"]
+    },
+    {
+      "hook_line": "FIXTURE hook 2: one number your last agency never reported",
+      "product_nouns": ["AI visibility audit"],
+      "imagery_subject": "FIXTURE: a single large numeral over a flat brand colour",
+      "visual_spec": "FIXTURE: one large numeral centred, one line of context below; imagery subject swapped to the audit's headline count",
+      "voc_phrase_indexes": [],
+      "changed_ingredients": ["offer", "product_nouns", "imagery_subject"]
+    },
+    {
+      "hook_line": "FIXTURE hook 3: three things ChatGPT says about your category before it says your name",
+      "product_nouns": ["AI visibility audit", "15-minute call"],
+      "imagery_subject": "FIXTURE: a notes-app window on a desk, three-line list, no readable text",
+      "visual_spec": "FIXTURE: notes app window with a three-line list; imagery subject swapped to a marketing lead's desk",
+      "voc_phrase_indexes": [1],
+      "changed_ingredients": ["offer", "product_nouns", "voc_phrases", "imagery_subject"]
+    },
+    {
+      "hook_line": "FIXTURE hook 4: the subject line we send after every audit",
+      "product_nouns": ["audit"],
+      "imagery_subject": "FIXTURE: an email client with one highlighted subject line, no readable text",
+      "visual_spec": "FIXTURE: email client with one highlighted subject line; imagery subject swapped to an inbox on a founder's screen",
+      "voc_phrase_indexes": [],
+      "changed_ingredients": ["offer", "product_nouns"]
+    },
+    {
+      "hook_line": "FIXTURE hook 5: referrals or the AI answer, which one do your buyers ask first?",
+      "product_nouns": ["AI visibility audit"],
+      "imagery_subject": "FIXTURE: two columns, a crossed-out referral chain on the left and an AI answer on the right",
+      "visual_spec": "FIXTURE: two columns, left crossed out, right ticked; imagery subject swapped to referrals vs AI answers",
+      "voc_phrase_indexes": [2],
+      "changed_ingredients": ["offer", "product_nouns", "voc_phrases", "imagery_subject"]
+    },
+    {
+      "hook_line": "FIXTURE hook 6: I want a prospect to say the AI told me to call you",
+      "product_nouns": ["AI visibility audit", "free call"],
+      "imagery_subject": "FIXTURE: a plain flat colour card, no picture, no readable text",
+      "visual_spec": "FIXTURE: plain text on a flat colour; imagery subject unchanged (none)",
+      "voc_phrase_indexes": [0, 1],
+      "changed_ingredients": ["offer", "product_nouns", "voc_phrases"]
+    },
+    {
+      "hook_line": "FIXTURE hook 7: your SEO agency's report never had this line in it",
+      "product_nouns": ["AI visibility audit"],
+      "imagery_subject": "FIXTURE: a founder at a laptop, over-the-shoulder, no readable text",
+      "visual_spec": "FIXTURE: fake iMessage thread on a phone frame, brand reply last; imagery subject swapped to a founder's phone",
+      "voc_phrase_indexes": [1],
+      "changed_ingredients": ["offer", "product_nouns", "voc_phrases", "imagery_subject"]
+    },
+    {
+      "hook_line": "FIXTURE hook 8: how many of your competitors does the AI name before you?",
+      "product_nouns": ["AI visibility audit"],
+      "imagery_subject": "FIXTURE: one large numeral over a flat colour",
+      "visual_spec": "FIXTURE: one large numeral centred, one line of context below; imagery subject swapped to the competitor count",
+      "voc_phrase_indexes": [],
+      "changed_ingredients": ["offer", "product_nouns", "imagery_subject"]
+    },
+    {
+      "hook_line": "FIXTURE hook 9: three questions we ask in the first five minutes",
+      "product_nouns": ["audit call"],
+      "imagery_subject": "FIXTURE: a notes-app window on a phone, three-line list, no readable text",
+      "visual_spec": "FIXTURE: notes app window with a three-line list; imagery subject swapped to a phone on a meeting table",
+      "voc_phrase_indexes": [2],
+      "changed_ingredients": ["offer", "product_nouns", "voc_phrases", "imagery_subject"]
+    },
+    {
+      "hook_line": "FIXTURE hook 10: the one email a founder forwards to their marketing lead",
+      "product_nouns": ["AI visibility audit"],
+      "imagery_subject": "FIXTURE: an email client with one highlighted line, no readable text",
+      "visual_spec": "FIXTURE: email client with one highlighted subject line; imagery subject swapped to a forwarded thread",
+      "voc_phrase_indexes": [0],
+      "changed_ingredients": ["offer", "product_nouns", "voc_phrases", "imagery_subject"]
+    },
+    {
+      "hook_line": "FIXTURE hook 11: old way, a bigger SEO retainer; new way, find out who the AI recommends",
+      "product_nouns": ["AI visibility audit"],
+      "imagery_subject": "FIXTURE: two columns, an invoice on the left and an AI chat window on the right",
+      "visual_spec": "FIXTURE: two columns, left crossed out, right ticked; imagery subject swapped to retainer vs audit",
+      "voc_phrase_indexes": [],
+      "changed_ingredients": ["offer", "product_nouns", "imagery_subject"]
+    },
+    {
+      "hook_line": "FIXTURE hook 12: everyone's first step is asking an AI, not a friend",
+      "product_nouns": ["AI visibility audit", "15-minute call"],
+      "imagery_subject": "FIXTURE: plain flat colour, no picture",
+      "visual_spec": "FIXTURE: plain text on a flat colour; imagery subject unchanged (none)",
+      "voc_phrase_indexes": [2],
+      "changed_ingredients": ["offer", "product_nouns", "voc_phrases"]
+    }
+  ]
+}

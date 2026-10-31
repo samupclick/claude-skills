@@ -1,0 +1,32 @@
+{
+ "_shape": "SEEN SHAPE in real runs of https://apify.com/apify/facebook-ads-scraper through https://docs.apify.com/api/v2 on 2026-10-31 (keys and types); every value is SYNTHETIC, no third-party ad is committed.",
+ "request": {
+  "method": "GET",
+  "path": "/v2/datasets/fx-dataset-1/items"
+ },
+ "status": 200,
+ "body": [
+  {
+   "inputUrl": "https://www.facebook.com/fixturebrand",
+   "isResultComplete": true,
+   "totalCount": 0,
+   "results": [],
+   "pageInfo": {
+    "page": {
+     "id": "fx-page-1",
+     "name": "Fixture Pillow Co"
+    },
+    "xfbAdLibraryIsCaptchaRequired": false,
+    "adLibraryPageInfo": {
+     "pageInfo": {
+      "relatedPages": [],
+      "hasBlankAds": false,
+      "hiddenAds": 0,
+      "pageIsDeleted": false
+     }
+    },
+    "adLibraryUser": null
+   }
+  }
+ ]
+}

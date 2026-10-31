@@ -1,0 +1,219 @@
+{
+  "_shape": "ASSUMED SHAPE from https://www.reddit.com/dev/api#GET_comments_{article} and https://github.com/reddit-archive/reddit/wiki/JSON (a two-element array: the post Listing with one t3, then the comment Listing of t1 things whose `replies` is a Listing or \"\", plus `more` stubs; deleted bodies read \"[deleted]\", removed ones \"[removed]\"; rate-limit headers X-Ratelimit-Used / -Remaining / -Reset), read 2026-10-28; the pages were not opened from the build session, so the shape comes from search-result summaries and prior knowledge of the API; the thread is SYNTHETIC and the author names are fake on purpose so a test can prove none survives normalisation; replace with a recorded response at go-live",
+  "request": "GET https://www.reddit.com/comments/fx1abc.json?raw_json=1&sort=top&depth=3&limit=200 (or https://oauth.reddit.com/comments/fx1abc with a bearer token)",
+  "status": 200,
+  "headers": {"content-type": "application/json; charset=UTF-8", "x-ratelimit-used": "1", "x-ratelimit-remaining": "99.0", "x-ratelimit-reset": "540"},
+  "body": [
+    {
+      "kind": "Listing",
+      "data": {
+        "after": null,
+        "before": null,
+        "dist": 1,
+        "children": [
+          {
+            "kind": "t3",
+            "data": {
+              "id": "fx1abc",
+              "name": "t3_fx1abc",
+              "subreddit": "fixture_sub",
+              "title": "SYNTHETIC: Has anyone measured results from an 'AI search' agency?",
+              "selftext": "SYNTHETIC post body by fx_op_user.",
+              "author": "fx_op_user",
+              "author_fullname": "t2_fxop",
+              "score": 128,
+              "num_comments": 22,
+              "permalink": "/r/fixture_sub/comments/fx1abc/synthetic_thread/",
+              "url": "https://www.reddit.com/r/fixture_sub/comments/fx1abc/synthetic_thread/"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "Listing",
+      "data": {
+        "after": null,
+        "before": null,
+        "children": [
+          {
+            "kind": "t1",
+            "data": {
+              "id": "fxc1",
+              "name": "t1_fxc1",
+              "parent_id": "t3_fx1abc",
+              "depth": 0,
+              "author": "fx_user_alpha",
+              "author_fullname": "t2_fxalpha",
+              "author_flair_text": "Agency owner",
+              "body": "SYNTHETIC: We paid an agency for six months to 'get us into ChatGPT' and nobody could say how they measured it.",
+              "score": 41,
+              "stickied": false,
+              "distinguished": null,
+              "replies": {
+                "kind": "Listing",
+                "data": {
+                  "after": null,
+                  "before": null,
+                  "children": [
+                    {
+                      "kind": "t1",
+                      "data": {
+                        "id": "fxc2",
+                        "name": "t1_fxc2",
+                        "parent_id": "t1_fxc1",
+                        "depth": 1,
+                        "author": "fx_user_beta",
+                        "body": "SYNTHETIC: Same here. Inbound went up but we can't tell what caused it.",
+                        "score": 12,
+                        "replies": {
+                          "kind": "Listing",
+                          "data": {
+                            "after": null,
+                            "before": null,
+                            "children": [
+                              {
+                                "kind": "t1",
+                                "data": {
+                                  "id": "fxc3",
+                                  "name": "t1_fxc3",
+                                  "parent_id": "t1_fxc2",
+                                  "depth": 2,
+                                  "author": "fx_user_gamma",
+                                  "body": "SYNTHETIC: Prospects now literally say an AI suggested us.",
+                                  "score": 5,
+                                  "replies": {
+                                    "kind": "Listing",
+                                    "data": {
+                                      "after": null,
+                                      "before": null,
+                                      "children": [
+                                        {
+                                          "kind": "t1",
+                                          "data": {
+                                            "id": "fxc4",
+                                            "name": "t1_fxc4",
+                                            "parent_id": "t1_fxc3",
+                                            "depth": 3,
+                                            "author": "fx_user_delta",
+                                            "body": "SYNTHETIC: too deep, the depth limit drops this one.",
+                                            "score": 2,
+                                            "replies": ""
+                                          }
+                                        },
+                                        {
+                                          "kind": "more",
+                                          "data": {"count": 4, "name": "t1_fxmore2", "id": "fxmore2", "parent_id": "t1_fxc3", "depth": 3, "children": ["fxd1", "fxd2"]}
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "t1",
+            "data": {
+              "id": "fxc5",
+              "name": "t1_fxc5",
+              "parent_id": "t3_fx1abc",
+              "depth": 0,
+              "author": "[deleted]",
+              "body": "[deleted]",
+              "score": 3,
+              "replies": ""
+            }
+          },
+          {
+            "kind": "t1",
+            "data": {
+              "id": "fxc6",
+              "name": "t1_fxc6",
+              "parent_id": "t3_fx1abc",
+              "depth": 0,
+              "author": "fx_user_epsilon",
+              "body": "[removed]",
+              "score": 1,
+              "replies": {
+                "kind": "Listing",
+                "data": {
+                  "after": null,
+                  "before": null,
+                  "children": [
+                    {
+                      "kind": "t1",
+                      "data": {
+                        "id": "fxc7",
+                        "name": "t1_fxc7",
+                        "parent_id": "t1_fxc6",
+                        "depth": 1,
+                        "author": "fx_user_zeta",
+                        "body": "SYNTHETIC: A reply under a removed comment still counts.",
+                        "score": 4,
+                        "replies": ""
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "t1",
+            "data": {
+              "id": "fxc8",
+              "name": "t1_fxc8",
+              "parent_id": "t3_fx1abc",
+              "depth": 0,
+              "author": "AutoModerator",
+              "body": "SYNTHETIC: Reminder, this subreddit does not allow self-promotion.",
+              "score": 1,
+              "stickied": true,
+              "distinguished": "moderator",
+              "replies": ""
+            }
+          },
+          {
+            "kind": "t1",
+            "data": {
+              "id": "fxc9",
+              "name": "t1_fxc9",
+              "parent_id": "t3_fx1abc",
+              "depth": 0,
+              "author": "fx_user_eta",
+              "body": "SYNTHETIC: Getting listed on the comparison sites the models cite &amp; nothing else moved the needle.",
+              "score": 27,
+              "replies": ""
+            }
+          },
+          {
+            "kind": "t1",
+            "data": {
+              "id": "fxc10",
+              "name": "t1_fxc10",
+              "parent_id": "t3_fx1abc",
+              "depth": 0,
+              "author": "fx_user_theta",
+              "body": "[removed by Reddit]",
+              "score": 0,
+              "replies": ""
+            }
+          },
+          {
+            "kind": "more",
+            "data": {"count": 14, "name": "t1_fxmore", "id": "fxmore", "parent_id": "t3_fx1abc", "depth": 0, "children": ["fxa", "fxb", "fxc"]}
+          }
+        ]
+      }
+    }
+  ]
+}

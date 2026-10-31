@@ -1,0 +1,22 @@
+{
+ "_shape": "SEEN SHAPE in real runs of https://apify.com/apify/facebook-ads-scraper through https://docs.apify.com/api/v2 on 2026-10-31 (keys and types); every value is SYNTHETIC, no third-party ad is committed.",
+ "request": {
+  "method": "GET",
+  "path": "/v2/actor-runs/fx-run-1"
+ },
+ "status": 200,
+ "body": {
+  "data": {
+   "id": "fx-run-1",
+   "actId": "fx-actor",
+   "status": "FAILED",
+   "statusMessage": "The page could not be loaded",
+   "startedAt": "2026-10-31T09:00:00.000Z",
+   "defaultDatasetId": "fx-dataset-1",
+   "pricingInfo": {
+    "pricingModel": "PAY_PER_EVENT"
+   },
+   "finishedAt": "2026-10-31T09:01:10.000Z"
+  }
+ }
+}

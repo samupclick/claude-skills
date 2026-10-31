@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- job_photo_bubble (references/families.md): a real-looking work photo with a text bubble overlay, organic feel.
+     Rendered by scripts/render_creatives.py at 1080x1080. The image is the only generated part (text-free, FR-24);
+     every word here is ours. Slots: {{image_data_uri}} {{bubble_text}} {{caption}} {{cta_text}} {{client_name}}
+     {{brand_font}} {{brand_primary}} {{brand_accent}} {{brand_bg}}. Values are HTML-escaped by the script. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1080px; overflow: hidden; background: {{brand_bg}}; }
+  body { font-family: "{{brand_font}}", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: {{brand_primary}}; }
+  .photo { position: absolute; inset: 0; background: url("{{image_data_uri}}") center / cover no-repeat; }
+  .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,.55) 100%); }
+  .bubble { position: absolute; top: 72px; left: 72px; max-width: 700px; background: #fff; color: {{brand_primary}};
+            border-radius: 36px; padding: 40px 48px; font-size: 52px; line-height: 1.18; font-weight: 600;
+            letter-spacing: -0.01em; box-shadow: 0 18px 50px rgba(0,0,0,.28); overflow-wrap: anywhere; }
+  .bubble::after { content: ""; position: absolute; left: 64px; bottom: -28px; border: 30px solid transparent;
+                   border-top-color: #fff; border-bottom: 0; }
+  .caption { position: absolute; left: 72px; right: 72px; bottom: 176px; color: #fff; font-size: 34px; line-height: 1.3;
+             font-weight: 500; text-shadow: 0 2px 12px rgba(0,0,0,.6); overflow-wrap: anywhere; }
+  .footer { position: absolute; left: 72px; right: 72px; bottom: 64px; display: flex; align-items: center; justify-content: space-between; }
+  .cta { background: {{brand_accent}}; color: #fff; font-size: 34px; font-weight: 700; padding: 22px 40px; border-radius: 999px;
+         white-space: nowrap; }
+  .brand { color: #fff; font-size: 26px; font-weight: 600; letter-spacing: .02em; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+</style>
+</head>
+<body>
+  <div class="photo"></div>
+  <div class="shade"></div>
+  <div class="bubble">{{bubble_text}}</div>
+  <div class="caption">{{caption}}</div>
+  <div class="footer"><div class="brand">{{client_name}}</div><div class="cta">{{cta_text}}</div></div>
+</body>
+</html>

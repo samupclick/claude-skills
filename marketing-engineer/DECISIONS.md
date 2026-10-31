@@ -336,3 +336,35 @@ Three adversarial reviews (economics, safety, feasibility) produced 40 findings,
 | V6 | C0 | 250 USD/month cap | **cap raised to ~$500/month** (Sam); Grok wk2 with $/day source budget; Instantly once leads exist; weekend stack still ≈ $100 |
 
 The remaining amendments (A1–A24 in `CRUCIBLE.md` §2) add enforcement, statistics, compliance, and scope discipline without reversing a decision. Schema changes listed in the component blocks above are now folded into migration 0001; the "fold into 0001" notes are historical.
+
+---
+
+## Inspo vendor: Apify (2026-10-31)
+
+**Decided (Sam)**
+
+- **The Ad Library pull runs on Apify** (`INSPO_BACKEND=apify`), with Apify's own actor `apify/facebook-ads-scraper`,
+  instead of scrapecreators.
+  - Same data: both scrape Meta's Ad Library. Apify publishes its actor's output fields, and Sam already had an
+    Apify token.
+  - The actor runs on each seed brand's Facebook page, taken from `clients.config.inspo.pages` (brand → page URL).
+    Apify takes a page, not a name.
+  - Each run is capped in ads (`maxItems`) and in dollars (`maxTotalChargeUsd`, 1 USD); a run that does not end is
+    aborted.
+  - Price at the time: per ad, $5.80 per 1,000 on the free plan, $5.00 on Starter.
+- **`APIFY_TOKEN`** is the intel worker's only. On Sam's Mac it loads from the keychain item
+  `aeo-discovery-pipeline/apify`.
+- **`pull_inspo.py --per-brand N`** caps the ads per brand. Each new ad is one vision call to the model, so the cap
+  bounds model cost too. The default stays 50.
+
+**Kept**
+
+- The scrapecreators backend stays built and tested. Switching back is one environment value.
+
+**Open**
+
+- The dataset shape was seen in real runs on 2026-10-31 (`fixtures/apify/README.md`); the fixtures keep synthetic
+  values, so no third-party ad is committed. A non-empty `snapshot.images[]` entry has not been seen yet.
+- A brand's own website can link a page that is not its advertiser (Avocado's does). `clients.config.inspo.pages`
+  holds Ad Library URLs built from the advertiser's page id.
+- A DPA for Apify replaces the scrapecreators one in the Friday list.

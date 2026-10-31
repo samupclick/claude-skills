@@ -1,0 +1,5 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.cloudflare.com/turnstile/get-started/server-side-validation/ (failure example and error code invalid-input-response: token invalid, malformed, or expired), read 2026-10-28; replace with a recorded response at go-live",
+  "success": false,
+  "error-codes": ["invalid-input-response"]
+}

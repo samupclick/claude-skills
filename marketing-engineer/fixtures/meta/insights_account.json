@@ -1,0 +1,7 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-account/insights.md (level=account, spend and impressions as numeric strings, account timezone days) and https://developers.facebook.com/documentation/ads-commerce/marketing-api/insights/best-practices.md, read 2026-10-28; replace with a recorded response at go-live. GET /<report_run_id>/insights for level=account, time_range since=until=today",
+  "data": [
+    {"spend": "27.43", "impressions": "3911", "date_start": "2026-10-28", "date_stop": "2026-10-28"}
+  ],
+  "paging": {"cursors": {"before": "MAZDZD", "after": "MAZDZD"}}
+}

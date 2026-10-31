@@ -1,0 +1,7 @@
+# The quiz funnel function's dependencies only (api/funnel.py). The Vercel Python runtime reads the manifest nearest the
+# entrypoint first, so this file, not ../requirements.txt, is what the function installs. Pinned to the versions the
+# tests ran; bump them together with ../requirements.txt.
+psycopg[binary]==3.3.6
+python-dotenv==1.2.3
+jsonschema==4.26.0
+httpx==0.28.1

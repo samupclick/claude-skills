@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- product_photo_caption (references/families.md): the product in a real room, with one line of copy underneath.
+     Rendered by scripts/render_creatives.py at 1080x1080. The image is the only generated part (text-free, FR-24);
+     every word here is ours. Slots: {{image_data_uri}} {{caption}} {{cta_text}} {{client_name}}
+     {{brand_font}} {{brand_primary}} {{brand_accent}} {{brand_bg}}. Values are HTML-escaped by the script. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1080px; overflow: hidden; background: {{brand_bg}}; }
+  /* The band under the photo grows with the caption (up to the slot's 140 characters) and the photo gives up the
+     height, so no word is ever clipped or hidden behind the footer. */
+  body { display: flex; flex-direction: column; font-family: "{{brand_font}}", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         color: {{brand_primary}}; }
+  .photo { flex: 1 1 auto; min-height: 640px; background: url("{{image_data_uri}}") center / cover no-repeat; }
+  .band { flex: 0 0 auto; background: {{brand_bg}}; padding: 40px 72px 48px; display: flex; flex-direction: column; gap: 28px; }
+  .caption { font-size: 40px; line-height: 1.2; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+  .footer { display: flex; align-items: center; justify-content: space-between; }
+  .brand { font-size: 28px; font-weight: 600; letter-spacing: .02em; }
+  .cta { background: {{brand_accent}}; color: #fff; font-size: 30px; font-weight: 700; padding: 18px 36px; border-radius: 999px;
+         white-space: nowrap; }
+</style>
+</head>
+<body>
+  <div class="photo"></div>
+  <div class="band">
+    <div class="caption">{{caption}}</div>
+    <div class="footer"><div class="brand">{{client_name}}</div><div class="cta">{{cta_text}}</div></div>
+  </div>
+</body>
+</html>

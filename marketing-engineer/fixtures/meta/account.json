@@ -1,0 +1,6 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/currencies.md (offset table) and https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-account, read 2026-10-28; replace with a recorded response at go-live. GET /act_<id>?fields=id,currency,timezone_name",
+  "id": "act_100000000000001",
+  "currency": "EUR",
+  "timezone_name": "Europe/Dublin"
+}

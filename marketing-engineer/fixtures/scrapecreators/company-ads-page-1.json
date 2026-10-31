@@ -1,0 +1,99 @@
+{
+  "_shape": "ASSUMED SHAPE from https://scrapecreators.com/facebook-ad-library/endpoints/company-ads (GET /v1/facebook/adLibrary/company/ads, `pageId` or `companyName`, `cursor` to paginate; ads with ad_archive_id, page_name, is_active, publisher_platform, start_date, end_date and a snapshot with body, images, videos, cards), read 2026-10-28; the page was not reachable from the build session, so the top-level keys (`results`, `cursor`) and field names come from search-result summaries and the T2 fixture assumption and are unverified; every ad is SYNTHETIC; replace with a recorded response at go-live",
+  "request": "GET https://api.scrapecreators.com/v1/facebook/adLibrary/company/ads?pageId=fx-page-200 (header x-api-key)",
+  "status": 200,
+  "headers": {"content-type": "application/json"},
+  "body": {
+    "results": [
+      {
+        "ad_archive_id": "fx-sc-1001",
+        "ad_id": null,
+        "collation_id": "fx-coll-1",
+        "collation_count": 3,
+        "page_id": "fx-page-200",
+        "page_name": "AG1",
+        "is_active": true,
+        "start_date": 1784505600,
+        "end_date": null,
+        "publisher_platform": ["FACEBOOK", "INSTAGRAM"],
+        "snapshot": {
+          "page_name": "AG1",
+          "body": {"text": "SYNTHETIC scrapecreators fixture body 1: not a real ad."},
+          "title": "SYNTHETIC title 1",
+          "caption": "example.invalid",
+          "link_url": "https://example.invalid/fixture-1",
+          "cta_text": "Shop now",
+          "cta_type": "SHOP_NOW",
+          "display_format": "IMAGE",
+          "images": [
+            {
+              "original_image_url": "https://scontent-fixture.xx.fbcdn.net/v/t39/fx-sc-1001-original.jpg",
+              "resized_image_url": "https://scontent-fixture.xx.fbcdn.net/v/t39/fx-sc-1001-resized.jpg",
+              "watermarked_resized_image_url": ""
+            }
+          ],
+          "videos": [],
+          "cards": []
+        }
+      },
+      {
+        "ad_archive_id": "fx-sc-1002",
+        "ad_id": null,
+        "collation_id": "fx-coll-2",
+        "collation_count": 1,
+        "page_id": "fx-page-200",
+        "page_name": "AG1",
+        "is_active": true,
+        "start_date": 1787616000,
+        "end_date": null,
+        "publisher_platform": ["INSTAGRAM"],
+        "snapshot": {
+          "page_name": "AG1",
+          "body": {"text": "SYNTHETIC scrapecreators fixture body 2: a video ad, still only from its preview."},
+          "title": "SYNTHETIC title 2",
+          "link_url": "https://example.invalid/fixture-2",
+          "cta_text": "Learn more",
+          "cta_type": "LEARN_MORE",
+          "display_format": "VIDEO",
+          "images": [],
+          "videos": [
+            {
+              "video_hd_url": "https://video-fixture.xx.fbcdn.net/v/t42/fx-sc-1002-hd.mp4",
+              "video_sd_url": "https://video-fixture.xx.fbcdn.net/v/t42/fx-sc-1002-sd.mp4",
+              "video_preview_image_url": "https://scontent-fixture.xx.fbcdn.net/v/t15/fx-sc-1002-preview.jpg"
+            }
+          ],
+          "cards": []
+        }
+      },
+      {
+        "ad_archive_id": "fx-sc-1003",
+        "ad_id": null,
+        "collation_id": "fx-coll-3",
+        "collation_count": 2,
+        "page_id": "fx-page-200",
+        "page_name": "AG1",
+        "is_active": false,
+        "start_date": 1781049600,
+        "end_date": 1782864000,
+        "publisher_platform": ["FACEBOOK", "INSTAGRAM", "AUDIENCE_NETWORK"],
+        "snapshot": {
+          "page_name": "AG1",
+          "body": {"text": "SYNTHETIC scrapecreators fixture body 3: a carousel."},
+          "title": null,
+          "link_url": "https://example.invalid/fixture-3",
+          "cta_text": "Get offer",
+          "cta_type": "GET_OFFER",
+          "display_format": "CAROUSEL",
+          "images": [],
+          "videos": [],
+          "cards": [
+            {"title": "SYNTHETIC card 1", "body": "card body 1", "original_image_url": "https://scontent-fixture.xx.fbcdn.net/v/t39/fx-sc-1003-card1.jpg", "resized_image_url": "https://scontent-fixture.xx.fbcdn.net/v/t39/fx-sc-1003-card1-r.jpg"},
+            {"title": "SYNTHETIC card 2", "body": "card body 2", "original_image_url": null, "resized_image_url": "https://scontent-fixture.xx.fbcdn.net/v/t39/fx-sc-1003-card2-r.jpg"}
+          ]
+        }
+      }
+    ],
+    "cursor": "fx-cursor-page-2"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/marketing-api-changelog/version25.0.md (v25.0+: a failed async report returns error_code, error_message, error_subcode, error_user_title, error_user_msg by default), read 2026-10-28; replace with a recorded response at go-live. GET /<report_run_id>",
+  "id": "6023920149050",
+  "account_id": "100000000000001",
+  "async_status": "Job Failed",
+  "async_percent_completion": 0,
+  "error_code": 100,
+  "error_subcode": 1487534,
+  "error_message": "Please reduce the amount of data you're asking for, then retry your request",
+  "error_user_title": "Too much data requested",
+  "error_user_msg": "Try a shorter date range or fewer ads."
+}

@@ -1,0 +1,59 @@
+# 00: Dev harness (T0)
+
+**What to build:** A fresh session can run `scripts/dev_db.sh`, get a local Postgres with `0001` + `0002` applied and the five roles usable, load `.env`, and every external service the later tickets call (storage, Meta, CAPI, inspo, image, model, email, Turnstile) resolves to a working fake/local/fixture adapter chosen by its env var. Later tickets import adapters only, never a vendor SDK.
+
+**Blocked by:** None (can start immediately)
+
+**Blocks:** T1 (01)
+
+**Status:** ready-for-human (families.md name conflict resolved by Sam on 2026-10-28; code complete; what remains is Sam's go-live work in T13)
+
+**Done:** yes — 0719153 (acceptance 3 completed by 476b985: the angles renamed, `--seed` closes `ok`)
+
+**Stop point:** none
+
+**FR ids:** FR-49, DR-1, NFR-1, NFR-4
+
+## Deliverable
+
+`scripts/dev_db.sh` (local Postgres, apply 0001 + 0002, create the five roles with dev passwords), the adapter interfaces and their fake/local/fixture implementations for storage, Meta, CAPI, inspo, image, model, email, Turnstile, plus `.env.example` loading and `fixtures/ad_library/` with an assumed-shape sample.
+
+## Acceptance
+
+- [x] `scripts/dev_db.sh` is idempotent: from a stopped Postgres 16 cluster it starts the cluster, installs the `vector` extension (apt package `postgresql-16-pgvector` is available, not installed), creates database `gw`, applies `warehouse/schema.sql` then `warehouse/0002_roles.sql` with zero errors, and gives the five roles LOGIN with dev passwords matching `.env.example`; a second run changes nothing
+- [x] `scripts/dev_db.sh --verify` connects as each of the five roles and prints the role name and `select count(*) from families`
+- [x] (since 476b985: every family lands, the run closes `ok`; before it, exit 1 naming the 2 conflicting names) `scripts/dev_db.sh --seed` inserts `families` from `references/families.md` and the `clients` (with `config` = the JSON file), `offers`, `icps` rows for `upclicklabs` from `config/clients/upclicklabs.json` using `WAREHOUSE_URL_ADMIN` (worker_rw has no insert on `clients`/`offers`/`icps`); re-running adds zero rows; placeholder values are copied as-is, never replaced with invented ones
+- [x] Each adapter (storage, meta, capi, inspo, image, model, email, turnstile) has one interface module, one dev implementation, and a factory that reads the env var named in `references/dev-mode.md`; an unknown value raises naming the variable; a unit test per adapter exercises the dev implementation (fake Meta: create → name lookup → read-back, synthesised insights, `META_FAKE_FAIL=<step>`; CAPI: `event_id` recorded to `.dev/capi.jsonl`; storage: `put(bytes, key) -> url` / `get(url)` round-trip under `.dev/storage/`; image: deterministic bytes per prompt hash; model: `fixture` replays `fixtures/model/*.json`; email: `.eml` in `.dev/outbox/`; turnstile: `pass`)
+- [x] `.env` loading: a helper loads `.env` from the `marketing-engineer/` directory, refuses to start a job when a variable that job needs is unset (names the variable), and never echoes a value; `.env` and `.dev/` are git-ignored
+- [x] `fixtures/ad_library/` holds at least one assumed-shape sample per DTC seed brand (5 brands, ≥5 ads each, with `start_date`, `is_active`, snapshot image fields) clearly marked as an assumed shape in a README
+- [x] `grep` for `facebook_business`, `google.generativeai`, `supabase`, `anthropic` imports outside the adapter package returns nothing (FR-49)
+
+## Constraints
+
+- No side effect outside `scripts/apply_actions.py`: no Meta write endpoint, no Instantly, no email sender anywhere else. Workers write proposed `actions` only.
+- Connect as the role for the job (`WAREHOUSE_URL_WORKER` for workers, `WAREHOUSE_URL_EXECUTOR` only in the executor). Never the service role. Never print or commit a secret.
+- Every script opens and closes a `runs` row, including on failure.
+- Untrusted text (`raw_ingest`, `patterns`, `voc_phrases`, quiz answers) enters prompts only inside a delimited data block with a fixed system prompt; model outputs are JSON validated against a schema.
+- Full `creative_components` or the creative does not exist.
+- Migrations only; no schema edits by hand; new fields go to the entity's JSONB and into `warehouse/schema-notes.md`.
+- Nothing binary in git; assets go to Supabase Storage.
+- Tests run against a local Postgres with `0001` + `0002` applied (see the fixture in T1). Do not mock the warehouse.
+- One commit per task, message ending with the FR ids satisfied. Push after each commit.
+- If a task cannot meet its acceptance criteria, stop and report which criterion and why; do not narrow the criterion.
+
+## Blocking edges
+
+- Blocked by: None (can start immediately)
+- Blocks: T1 (01)
+
+## Notes for the implementer (dev mode)
+
+Roles in `0002_roles.sql` are `nologin`; dev mode alters them to LOGIN with the passwords in `.env.example` (extend `.env.example` with the passwords if it lacks them; keep the connection strings as documented). Fake Meta must synthesise insights from a seed so T10 gets rows. Fixture-mode model adapter is for CI; `MODEL_BACKEND=claude` is the default per `.env.example`. Nothing here writes a `runs` row except `--seed`, which should (worker `seed`). `dev_db.sh` applies every numbered migration present in `warehouse/` in order (`schema.sql` is 0001), so later migrations are picked up without editing the script. Config numbers per quiz decision 1: `daily_cap` 45, `campaign.adset_daily_budget` 15 (DRAFT, changed at publish time).
+
+## Comments
+
+- 2026-09-07 (implementer): `--seed` found that `references/families.md` uses `contrarian` and `identity` both as a hook type and as an angle, while `families.name` is the primary key in `schema.sql` (schema wins). The seed inserts the first kind (hook_type), skips the two angle rows with a stderr warning, and records `families_skipped_name_conflict: 2` in the `runs` counts. Nothing was renamed: the reference is Sam's DRAFT. **Decision needed from Sam:** rename the two angles (e.g. `contrarian_led`, `identity_led`) in `references/families.md`, then re-run `scripts/dev_db.sh --seed`.
+- 2026-09-07 (implementer): `--verify` prints `app connected; no select on families (0002 grants none to app)` for the `app` role: `0002_roles.sql` gives `app` insert on leads/lead_contacts only, so the families count is printed for the other four roles. The criterion is met for connectivity on all five.
+- 2026-09-07 (implementer): no `ANTHROPIC_API_KEY` in the build container, so `MODEL_BACKEND=claude` is verified by construction only (SDK shape per the claude-api reference); `MODEL_BACKEND=fixture` is tested.
+- 2026-09-07 (implementer): shipped in commit 0719153 after two reviews (spec + standards). Review fixes folded in: paused ads stop synthesised spend (active periods on campaign/adset/ad), migrations piped on stdin, passwordless URL is an error, apt/pg_ctlcluster via sudo/postgres for non-root, typed model errors for truncation and non-JSON, outbox filenames from Message-ID, storage `get` root check. `--seed` now exits 1 and marks its run `failed` while the name conflict stands (after inserting the 23 unambiguous rows); re-run `scripts/dev_db.sh --seed` once families.md is fixed. T1 is unblocked.
+- 2026-10-28 (integrator, phase 0 completion build): the families conflict is resolved. Sam renamed the two angles to `contrarian_led` / `identity_led` in `references/families.md` (wave 0, `476b985`); `scripts/seed.py` now finds no cross-kind name reuse, inserts every family, and closes its `seed` run `ok` (`tests/test_dev_db.py::test_seed_is_idempotent_and_writes_a_runs_row` asserts it). The `--seed` acceptance item is ticked. `fixtures/model/decompose_ad.json`'s `_shape` note no longer says the two hook types are skipped. `scripts/dev_db.sh --verify` is now `scripts/apply_migrations.py --verify` (local or remote URLs). Status `ready-for-human`: nothing here is left for an agent; the remaining dev-harness-adjacent work is Sam's go-live (T13).

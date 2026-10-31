@@ -1,0 +1,137 @@
+{
+  "_shape": "SYNTHETIC fixture for scripts/render_creatives.py in CI (MODEL_BACKEND=fixture): not recorded from Claude (no ANTHROPIC_API_KEY in the build container). Three outputs cycle in call order, one per chosen brief (config.batch.recipes). Every overlay carries the slots of both templates (job-photo-bubble: bubble_text, caption; screenshot-ad: app, title, lines) so the fixture validates whichever family Sam picked; the script uses only the slots its template names. hook_lines[0] is replaced by the brief's own hook line at run time. Copy says FIXTURE on purpose. Record a real one at go-live and replace.",
+  "outputs": [
+    {
+      "primary_text": {
+        "short": "FIXTURE: Ask an AI who does what you do. Is it you it names? Take the 2-minute quiz.",
+        "medium": "FIXTURE: Ask ChatGPT who does what you do. If it names a competitor, your buyers hear that too.\nThe AI visibility audit shows what the models say about your category and where you are missing.\nTwo minutes, then a free 15-minute call.",
+        "long": "FIXTURE: Every buyer's first step is now a question to an AI, not a search.\nAsk ChatGPT who does what you do and count how many competitors it names before you.\nThe AI visibility audit reads what the models say about your category, where you appear, and where you do not.\nNo report to decode, no retainer, no pitch.\nTwo minutes of questions, then a free 15-minute call to walk through what we found.\n\nTake the quiz."
+      },
+      "headlines": ["FIXTURE: Does the AI name you", "FIXTURE: Free AI visibility audit", "FIXTURE: What ChatGPT says about you", "FIXTURE: Two minutes, then a call", "FIXTURE: Seen by AI or not"],
+      "hook_lines": [
+        "FIXTURE hook A1: when a prospect asks an AI who does this, is it you or a competitor?",
+        "FIXTURE hook A2: ask ChatGPT who does what you do; count who it names first",
+        "FIXTURE hook A3: your buyers stopped searching; they ask an AI",
+        "FIXTURE hook A4: the first name the AI gives is the one that gets the call",
+        "FIXTURE hook A5: invisible to ChatGPT is the new page two",
+        "FIXTURE hook A6: what does the AI say when someone asks for a firm like yours?",
+        "FIXTURE hook A7: the shortlist is written by a model now",
+        "FIXTURE hook A8: three competitors named, you not once",
+        "FIXTURE hook A9: your next lead asked an AI before asking anyone",
+        "FIXTURE hook A10: an audit of what the models say, not what your agency says"
+      ],
+      "description": "FIXTURE: free 15-minute call",
+      "cta_text": "Take the quiz",
+      "executions": [
+        {
+          "hook_line": "FIXTURE hook A1: when a prospect asks an AI who does this, is it you or a competitor?",
+          "imagery_variation": "FIXTURE: morning light from a window on the left, laptop half open, a coffee cup, the chair pushed back",
+          "overlay": {
+            "bubble_text": "FIXTURE: Asked the AI who does this. It named three firms. None was us.",
+            "caption": "FIXTURE: The AI visibility audit shows what the models say before your buyers do.",
+            "app": "notes", "title": "FIXTURE: Before the call",
+            "lines": ["FIXTURE: Ask ChatGPT who does this for B2B services", "FIXTURE: Count the names before ours", "FIXTURE: Book the 15-minute audit call"]
+          }
+        },
+        {
+          "hook_line": "FIXTURE hook A3: your buyers stopped searching; they ask an AI",
+          "imagery_variation": "FIXTURE: late afternoon, desk seen from above, a notebook and a phone face down, warm tones",
+          "overlay": {
+            "bubble_text": "FIXTURE: Our buyers stopped searching. They ask an AI, and it does not say our name.",
+            "caption": "FIXTURE: Find out in two minutes what the models say about your category.",
+            "app": "notes", "title": "FIXTURE: Monday",
+            "lines": ["FIXTURE: Ask the AI for a provider like us", "FIXTURE: Write down who it names", "FIXTURE: Take the quiz, book the call"]
+          }
+        }
+      ]
+    },
+    {
+      "primary_text": {
+        "short": "FIXTURE: Three things the AI says about your category before it says your name. Take the quiz.",
+        "medium": "FIXTURE: Three things ChatGPT says about your category before it mentions you.\nThe AI visibility audit lists them, plus where you appear and where you do not.\nTwo minutes, then a free 15-minute call.",
+        "long": "FIXTURE: Ask an AI for a firm like yours and read the whole answer.\nThree things come up before your name: the category, the criteria, the competitors it trusts.\nThe AI visibility audit records what the models say about your category and where you are missing from it.\nNo retainer, no report to decode.\nTwo minutes of questions, then a free 15-minute call to go through it.\n\nTake the quiz."
+      },
+      "headlines": ["FIXTURE: Three things the AI says first", "FIXTURE: Free AI visibility audit", "FIXTURE: Where you are missing", "FIXTURE: Read the AI's answer", "FIXTURE: Two minutes, one call"],
+      "hook_lines": [
+        "FIXTURE hook B1: three things ChatGPT says about your category before it says your name",
+        "FIXTURE hook B2: the AI's answer has a shortlist; here is how to read it",
+        "FIXTURE hook B3: how many competitors does the AI name before you?",
+        "FIXTURE hook B4: the models already have an opinion about your category",
+        "FIXTURE hook B5: what a buyer reads before they ever reach your site",
+        "FIXTURE hook B6: the first paragraph of the AI's answer decides the shortlist",
+        "FIXTURE hook B7: read the answer your prospects read",
+        "FIXTURE hook B8: an audit of the answer, not the ranking",
+        "FIXTURE hook B9: three names before yours, every time",
+        "FIXTURE hook B10: the AI wrote your competitor's pitch for them"
+      ],
+      "description": "FIXTURE: free 15-minute call",
+      "cta_text": "Take the quiz",
+      "executions": [
+        {
+          "hook_line": "FIXTURE hook B1: three things ChatGPT says about your category before it says your name",
+          "imagery_variation": "FIXTURE: a marketing lead's desk at dusk, monitor glow, a plant on the right, no screen content",
+          "overlay": {
+            "bubble_text": "FIXTURE: Read the AI's answer about our category. Three names before ours.",
+            "caption": "FIXTURE: The AI visibility audit shows where you are missing.",
+            "app": "email", "title": "FIXTURE: Inbox",
+            "lines": ["FIXTURE: Your AI visibility audit: what the models say first", "FIXTURE: Re: agency report Q3", "FIXTURE: Calendar: 15-minute call confirmed", "FIXTURE: Newsletter: AI search this week"]
+          }
+        },
+        {
+          "hook_line": "FIXTURE hook B3: how many competitors does the AI name before you?",
+          "imagery_variation": "FIXTURE: the same desk at noon, hard shadows, keyboard in the foreground, the monitor off",
+          "overlay": {
+            "bubble_text": "FIXTURE: How many competitors does the AI name before us? We counted.",
+            "caption": "FIXTURE: Two minutes of questions, then a free 15-minute call.",
+            "app": "email", "title": "FIXTURE: Inbox",
+            "lines": ["FIXTURE: Your AI visibility audit is ready", "FIXTURE: Re: where do our leads come from", "FIXTURE: Calendar: 15-minute call"]
+          }
+        }
+      ]
+    },
+    {
+      "primary_text": {
+        "short": "FIXTURE: I want a prospect to say the AI told me to call you. Take the quiz.",
+        "medium": "FIXTURE: The best lead is the one who says the AI told them to call you.\nThe AI visibility audit shows what the models say about your category today and what is missing.\nTwo minutes, then a free 15-minute call.",
+        "long": "FIXTURE: A founder told us what they wanted: a prospect who says the AI told me to call you.\nThat starts with knowing what the models say now.\nThe AI visibility audit reads the answers ChatGPT and Google AI give about your category, notes where you appear, and where a competitor does instead.\nNo retainer, no promises about rankings.\nTwo minutes of questions, then a free 15-minute call.\n\nTake the quiz."
+      },
+      "headlines": ["FIXTURE: The AI told me to call you", "FIXTURE: Free AI visibility audit", "FIXTURE: Be the name the AI gives", "FIXTURE: What the models say today", "FIXTURE: Two minutes, then a call"],
+      "hook_lines": [
+        "FIXTURE hook C1: I want a prospect to say the AI told me to call you",
+        "FIXTURE hook C2: the lead that says the AI sent me is the easiest call you will take",
+        "FIXTURE hook C3: what would it take for the AI to send buyers to you?",
+        "FIXTURE hook C4: the models recommend someone in your category every day",
+        "FIXTURE hook C5: be the name in the AI's answer, not the one after",
+        "FIXTURE hook C6: your best referral source is a model now",
+        "FIXTURE hook C7: the AI already sends leads; the question is to whom",
+        "FIXTURE hook C8: a shortlist you did not know you were missing from",
+        "FIXTURE hook C9: the AI told me to call you: hear it once and you will want it weekly",
+        "FIXTURE hook C10: find out what the models say before you spend another retainer"
+      ],
+      "description": "FIXTURE: free 15-minute call",
+      "cta_text": "Take the quiz",
+      "executions": [
+        {
+          "hook_line": "FIXTURE hook C1: I want a prospect to say the AI told me to call you",
+          "imagery_variation": "FIXTURE: a founder's desk by a window, overcast light, a closed notebook and a phone, muted colours",
+          "overlay": {
+            "bubble_text": "FIXTURE: Best lead this year said: the AI told me to call you.",
+            "caption": "FIXTURE: Find out what the models say about your category today.",
+            "app": "imessage", "title": "FIXTURE: New lead",
+            "lines": ["FIXTURE: Hi, the AI told me to call you about visibility", "FIXTURE: Happy to. Take the two-minute quiz and grab a slot", "FIXTURE: Done, booked for Thursday", "FIXTURE: See you then"]
+          }
+        },
+        {
+          "hook_line": "FIXTURE hook C3: what would it take for the AI to send buyers to you?",
+          "imagery_variation": "FIXTURE: evening, desk lamp on, the same window dark, a mug and a pen",
+          "overlay": {
+            "bubble_text": "FIXTURE: What would it take for the AI to send buyers to us? We asked.",
+            "caption": "FIXTURE: Two minutes, then a free 15-minute call.",
+            "app": "imessage", "title": "FIXTURE: New lead",
+            "lines": ["FIXTURE: Asked the AI for a firm like yours. It named you", "FIXTURE: Great. Two-minute quiz, then a 15-minute call?", "FIXTURE: Booked"]
+          }
+        }
+      ]
+    }
+  ]
+}

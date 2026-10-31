@@ -1,0 +1,5 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.cloudflare.com/turnstile/get-started/server-side-validation/ (error code timeout-or-duplicate: tokens are single-use and valid for 300 seconds), read 2026-10-28; replace with a recorded response at go-live",
+  "success": false,
+  "error-codes": ["timeout-or-duplicate"]
+}

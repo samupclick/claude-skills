@@ -1,0 +1,11 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/error-reference.md (code 1 An unknown error occurred) and the Graph API error object with is_transient, read 2026-10-28; replace with a recorded response at go-live. The 500 status is an assumption",
+  "_status": 500,
+  "error": {
+    "message": "An unknown error occurred",
+    "type": "OAuthException",
+    "code": 1,
+    "is_transient": true,
+    "fbtrace_id": "TrAnSiEnT01234567"
+  }
+}

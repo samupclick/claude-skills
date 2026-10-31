@@ -8,6 +8,7 @@ Families are the fixed attribution keys (`families.name`). Variants are free tex
 |------|----------|------------------|
 | `job_photo_bubble` | real-looking work photo with a text bubble overlay, organic feel | yes |
 | `screenshot_ad` | fake native UI: iMessage thread, notes app, email, calendar | yes |
+| `product_photo_caption` | the product in a real room, one line of copy under the photo (DTC; Sam, 2026-10-31) | yes |
 | `ugly_ad` | plain text on a flat colour, no design, reads like a note | — |
 | `founder_caption` | founder selfie or desk shot with a caption line | — |
 | `tweet_card` | a tweet-style card with avatar, handle, and the hook as the post | — |
@@ -28,7 +29,7 @@ Families are the fixed attribution keys (`families.name`). Variants are free tex
 
 ## Angles (`kind = angle`)
 
-`pain_led`, `outcome_led`, `proof_led`, `contrarian`, `identity`
+`pain_led`, `outcome_led`, `proof_led`, `contrarian_led`, `identity_led`
 
 ## DTC seed list — PLACEHOLDER, Sam to confirm or replace
 

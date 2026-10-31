@@ -1,0 +1,13 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.facebook.com/documentation/ads-commerce/marketing-api/insights/best-practices.md (step 3, paged result) and https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-account/insights.md, read 2026-10-28; replace with a recorded response at go-live. Last page: no paging.next; a day without conversions carries no actions key",
+  "data": [
+    {
+      "ad_id": "120200000000000040", "ad_name": "ucl-new_recipes-b1-ad1", "adset_id": "120200000000000020", "campaign_id": "120200000000000010",
+      "impressions": "1977", "reach": "1650", "clicks": "33", "inline_link_clicks": "24", "spend": "13.05", "frequency": "1.198182",
+      "date_start": "2026-10-27", "date_stop": "2026-10-27"
+    }
+  ],
+  "paging": {
+    "cursors": {"before": "MgZDZD", "after": "MgZDZD"}
+  }
+}

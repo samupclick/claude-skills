@@ -1,0 +1,87 @@
+{
+  "_shape": "SYNTHETIC fixture for scripts/render_creatives.py retries in CI (MODEL_BACKEND=fixture, task revise_copy, FR-29): hand-written, not recorded from Claude (no ANTHROPIC_API_KEY in the build container). Same schema as write_copy with exactly one execution. Two outputs cycle in call order; their hook lines paraphrase and never repeat a customer phrase word for word, so a creative that failed `verbatim` passes on its retry. Every overlay carries the slots of both templates. Copy says FIXTURE on purpose. Record a real one at go-live and replace.",
+  "outputs": [
+    {
+      "primary_text": {
+        "short": "FIXTURE revised: Does the AI name you when a buyer asks? Two minutes to find out.",
+        "medium": "FIXTURE revised: Buyers ask an AI before they ask anyone.\nThe AI visibility audit shows what the models say about your category.\nTwo minutes, then a free 15-minute call.",
+        "long": "FIXTURE revised: Buyers now start with a question to an AI.\nThe AI visibility audit reads what the models say about your category and where you are missing.\nNo report to decode, no retainer.\nTwo minutes of questions, then a free 15-minute call to walk through it.\n\nTake the quiz."
+      },
+      "headlines": [
+        "FIXTURE revised: Does the AI name you",
+        "FIXTURE revised: Free AI visibility audit",
+        "FIXTURE revised: What the models say",
+        "FIXTURE revised: Two minutes, then a call",
+        "FIXTURE revised: Seen by AI or not"
+      ],
+      "hook_lines": [
+        "FIXTURE revised hook R1: when a buyer asks an AI for a firm like yours, whose name comes back?",
+        "FIXTURE revised hook R2: the models already have a shortlist for your category",
+        "FIXTURE revised hook R3: find out what the AI says before your buyers do",
+        "FIXTURE revised hook R4: one question to an AI decides who gets the call",
+        "FIXTURE revised hook R5: your category has a default answer now",
+        "FIXTURE revised hook R6: is your firm the answer or the footnote?",
+        "FIXTURE revised hook R7: what the models say about you, in two minutes",
+        "FIXTURE revised hook R8: the AI answers first; make sure it answers with you",
+        "FIXTURE revised hook R9: the shortlist your buyers read was written by a model",
+        "FIXTURE revised hook R10: an audit of the AI answers in your category"
+      ],
+      "description": "FIXTURE revised: free 15-minute call",
+      "cta_text": "Take the quiz",
+      "executions": [
+        {
+          "hook_line": "FIXTURE revised hook R1: when a buyer asks an AI for a firm like yours, whose name comes back?",
+          "imagery_variation": "FIXTURE revised: early evening, a tidy desk seen from the side, a closed laptop and a mug, soft light",
+          "overlay": {
+            "bubble_text": "FIXTURE revised: Asked the AI for a firm like ours. Three names came back.",
+            "caption": "FIXTURE revised: The AI visibility audit shows what the models say about your category.",
+            "app": "notes",
+            "title": "FIXTURE revised: Before the call",
+            "lines": ["FIXTURE revised: Ask the AI for a provider like us", "FIXTURE revised: Note who it names first"]
+          }
+        }
+      ]
+    },
+    {
+      "primary_text": {
+        "short": "FIXTURE revised: Which firms does the AI name for your category? Take the quiz.",
+        "medium": "FIXTURE revised: The first answer a buyer reads now comes from a model.\nSee what it says about your category.\nTwo minutes, then a free 15-minute call.",
+        "long": "FIXTURE revised: The first answer a buyer reads now comes from a model.\nThe AI visibility audit shows which firms it names and why.\nNo retainer, no pitch.\nTwo minutes of questions, then a free 15-minute call.\n\nTake the quiz."
+      },
+      "headlines": [
+        "FIXTURE revised: Which firms does it name",
+        "FIXTURE revised: Free AI visibility audit",
+        "FIXTURE revised: The model's shortlist",
+        "FIXTURE revised: Two minutes, then a call",
+        "FIXTURE revised: The first answer"
+      ],
+      "hook_lines": [
+        "FIXTURE revised hook S1: the first answer your buyer reads comes from a model",
+        "FIXTURE revised hook S2: which firms does the AI recommend in your category?",
+        "FIXTURE revised hook S3: the model's shortlist, read in two minutes",
+        "FIXTURE revised hook S4: buyers ask the model, then they call",
+        "FIXTURE revised hook S5: are you in the answer?",
+        "FIXTURE revised hook S6: the AI has an opinion about your category",
+        "FIXTURE revised hook S7: see the shortlist before your buyers do",
+        "FIXTURE revised hook S8: one answer, three names, is one of them yours?",
+        "FIXTURE revised hook S9: the default answer for your category",
+        "FIXTURE revised hook S10: what the models recommend, and why"
+      ],
+      "description": "FIXTURE revised: free 15-minute call",
+      "cta_text": "Take the quiz",
+      "executions": [
+        {
+          "hook_line": "FIXTURE revised hook S1: the first answer your buyer reads comes from a model",
+          "imagery_variation": "FIXTURE revised: morning, a meeting table with two empty chairs and a notebook, cool light",
+          "overlay": {
+            "bubble_text": "FIXTURE revised: The model named three firms in our category. We were not one.",
+            "caption": "FIXTURE revised: See which firms the AI recommends, then book a call.",
+            "app": "email",
+            "title": "FIXTURE revised: Inbox",
+            "lines": ["FIXTURE revised: What the AI says about your category", "FIXTURE revised: Two minutes, then a call"]
+          }
+        }
+      ]
+    }
+  ]
+}

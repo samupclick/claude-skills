@@ -1,0 +1,5 @@
+{
+  "_shape": "ASSUMED SHAPE from https://developers.cloudflare.com/turnstile/get-started/server-side-validation/ (error code internal-error: retry the request; idempotency_key makes the retry safe), read 2026-10-28; replace with a recorded response at go-live",
+  "success": false,
+  "error-codes": ["internal-error"]
+}

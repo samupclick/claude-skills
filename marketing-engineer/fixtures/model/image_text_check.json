@@ -1,0 +1,10 @@
+{
+  "_shape": "SYNTHETIC fixture for the FR-24 vision check in scripts/render_creatives.py (task image_text_check): always 'no text'. Placeholder images (IMAGE_BACKEND=placeholder) carry the adapter's small hash label, which a real check would flag; in dev mode this fixture lets renders proceed. The regenerate-then-drop path is tested with a temporary fixture that says true (tests/test_render_creatives.py). Record a real output with MODEL_BACKEND=claude at go-live step 5.",
+  "outputs": [
+    {
+      "contains_text": false,
+      "text_found": [],
+      "confidence": 0.95
+    }
+  ]
+}
