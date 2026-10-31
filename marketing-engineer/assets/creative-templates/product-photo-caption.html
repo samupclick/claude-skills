@@ -9,12 +9,13 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 1080px; height: 1080px; overflow: hidden; background: {{brand_bg}}; }
-  body { font-family: "{{brand_font}}", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: {{brand_primary}}; }
-  .photo { position: absolute; left: 0; right: 0; top: 0; height: 790px; background: url("{{image_data_uri}}") center / cover no-repeat; }
-  .band { position: absolute; left: 0; right: 0; bottom: 0; height: 290px; background: {{brand_bg}};
-          padding: 44px 72px 56px; display: flex; flex-direction: column; justify-content: space-between; }
-  .caption { font-size: 44px; line-height: 1.22; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere;
-             display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  /* The band under the photo grows with the caption (up to the slot's 140 characters) and the photo gives up the
+     height, so no word is ever clipped or hidden behind the footer. */
+  body { display: flex; flex-direction: column; font-family: "{{brand_font}}", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         color: {{brand_primary}}; }
+  .photo { flex: 1 1 auto; min-height: 640px; background: url("{{image_data_uri}}") center / cover no-repeat; }
+  .band { flex: 0 0 auto; background: {{brand_bg}}; padding: 40px 72px 48px; display: flex; flex-direction: column; gap: 28px; }
+  .caption { font-size: 40px; line-height: 1.2; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere; }
   .footer { display: flex; align-items: center; justify-content: space-between; }
   .brand { font-size: 28px; font-weight: 600; letter-spacing: .02em; }
   .cta { background: {{brand_accent}}; color: #fff; font-size: 30px; font-weight: 700; padding: 18px 36px; border-radius: 999px;

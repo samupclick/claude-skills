@@ -517,6 +517,19 @@ class PlaywrightRenderer:
         self.renders += 1
         return png
 
+    def evaluate(self, page_html: str, script: str) -> Any:
+        """Load `page_html` at the render size and return `script`'s result: layout checks run in the same browser."""
+        if self._browser is None:
+            self._start()
+        w, h = self.size
+        page = self._browser.new_page(viewport={"width": w, "height": h}, device_scale_factor=1)
+        try:
+            page.set_content(page_html, wait_until="load")
+            page.evaluate("document.fonts && document.fonts.ready")
+            return page.evaluate(script)
+        finally:
+            page.close()
+
     def close(self) -> None:
         if self._browser is not None:
             self._browser.close()

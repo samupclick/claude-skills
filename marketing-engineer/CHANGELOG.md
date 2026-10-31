@@ -76,6 +76,13 @@ Following `references/handoff-local.md`:
     from each advertiser's page id (active ads, US). Hullo has no Meta ads, active or past.
   - `scripts/seed.py --refresh-config` rewrites an existing client's `clients.config`, `currency` and `daily_cap` from
     its file. A plain re-seed leaves an existing client as it was, so the new pages never reached the database.
+- **First Circadian render and gate (2026-10-31)**:
+  - `product-photo-caption.html` hid a long caption's third line behind the footer (creatives 1, 2 and 5). The band now
+    grows with the caption and the photo gives up the height. `PlaywrightRenderer.evaluate` lets a test measure the
+    real layout, and a 140-character caption is checked to be neither clipped nor touching the footer.
+  - The gate's model check no longer gets the banned-words list. It read the brand's own name "Circadian" as a fragment
+    of "Circadian Rest" and failed all six creatives. Banned words stay enforced by rule (`brand_rule_hits`), and the
+    model is told the client's brand name is ours. The planner and producer still get the list.
 - **Structured outputs take a subset of JSON Schema** (found by the planner's first real call, 2026-10-31: HTTP 400
   `maxItems is not supported`).
   - `adapters/model/claude.py` now sends `api_schema(schema)`, the SDK's own `transform_schema`. It moves `maxItems`,

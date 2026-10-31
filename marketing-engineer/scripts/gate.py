@@ -283,7 +283,11 @@ def trusted_context(offer: dict[str, Any], icp: dict[str, Any] | None, config: d
              f"- price anchor: {offer.get('price_anchor')}", f"- proof points (the only figures allowed): {', '.join(offer.get('proof_points') or []) or '-'}",
              f"- offer layer (fixed): {json.dumps(offer.get('offer_layer') or {}, sort_keys=True)}",
              f"- landing page: {landing_text(offer, landing_page)}",
-             f"- brand hard blocks: {', '.join(brand.get('hard_blocks') or []) or '-'}", *banned_terms_lines(config)]
+             f"- brand hard blocks: {', '.join(brand.get('hard_blocks') or []) or '-'}"]
+    # Banned words are enforced by rule (`brand_rule_hits`), never by this model: given the list it read the brand's own
+    # name as a fragment of a banned term (2026-10-31). It is told the brand name is ours instead.
+    if (config.get("client") or {}).get("name"):
+        lines.append(f"- our brand name, rendered on every ad and always allowed: {config['client']['name']}")
     if icp:
         lines += ["Audience (ICP):", f"- {icp.get('label')}", f"- role: {icp.get('role')}; company: {icp.get('company_type')}; "
                   f"size: {icp.get('size_band')}; geo: {', '.join(icp.get('geo') or [])}",
@@ -312,12 +316,6 @@ def landing_text(offer: dict[str, Any], landing_page: str) -> str:
     if offer.get("landing_url"):
         return f"{landing_page}, the offer's own page (terminal metric: {offer.get('terminal_metric') or 'booked_call'})"
     return f"the quiz at {landing_page}, then a 15-minute call"
-
-
-def banned_terms_lines(config: dict[str, Any]) -> list[str]:
-    """The prompt line for `clients.config.brand.banned_terms`; none when the client has none. Same as the producer."""
-    terms = [t for t in ((config.get("brand") or {}).get("banned_terms") or []) if str(t).strip()]
-    return [f"- banned words (never write them, in any spelling): {', '.join(terms)}"] if terms else []
 
 
 def landing_page_for(offer: dict[str, Any]) -> str:

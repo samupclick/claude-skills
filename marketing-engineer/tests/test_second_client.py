@@ -70,10 +70,14 @@ def test_prompts_name_the_product_page_not_the_quiz():
         assert "quiz" not in text and "15-minute call" not in text
 
 
-def test_every_prompt_lists_the_banned_words():
-    assert BANNED_LINE in gt.trusted_context(SHOP_OFFER, None, SHOP_CONFIG, PRODUCT)
+def test_the_writers_are_told_the_banned_words_and_the_gate_model_is_not():
+    """The planner and producer avoid the words; the gate enforces them by rule (`brand_rule_hits`). Its model, given the
+    list, read the brand's own name as a 'fragment' of 'Circadian Rest' and failed every creative (2026-10-31)."""
     assert BANNED_LINE in _producer(SHOP_OFFER, SHOP_CONFIG, PRODUCT)
     assert BANNED_LINE in pb.offer_instructions(SHOP_OFFER, None, SHOP_CONFIG)
+    ctx = gt.trusted_context(SHOP_OFFER, None, {**SHOP_CONFIG, "client": {"name": "Circadian"}}, PRODUCT)
+    assert "banned words" not in ctx and "Circadian Rest" not in ctx
+    assert "- our brand name, rendered on every ad and always allowed: Circadian" in ctx
 
 
 def test_upclicklabs_prompts_are_unchanged():
@@ -203,3 +207,26 @@ def test_circadian_reference_photos_are_real_photos_from_jacobs_library():
         pytest.skip("Jacob's reference library is on Sam's Mac only")
     sets = rc.load_image_references(cfg)
     assert len(sets) == 3 and all(len(s) == 2 for s in sets)
+
+
+CAPTION_140 = ("Hulls flex under the head, then lock and hold the neck in line all night. Try it for 60 nights, with free "
+               "shipping on every order.")
+MEASURE = """() => {
+  const box = s => document.querySelector(s).getBoundingClientRect();
+  const c = document.querySelector('.caption');
+  return {hidden: c.scrollHeight - c.clientHeight, gap: box('.footer').top - box('.caption').bottom,
+          band_bottom: box('.band').bottom, photo: box('.photo').height};
+}"""
+
+
+@pytest.mark.parametrize("caption", [CAPTION_140, "What if the pillow held the neck in line all night?"])
+def test_a_caption_up_to_the_slot_limit_is_never_clipped_or_hidden_by_the_footer(caption):
+    assert len(CAPTION_140) <= 140, "the copy schema's caption limit"
+    renderer = rc.PlaywrightRenderer()
+    try:
+        m = renderer.evaluate(rc.render_template("product-photo-caption", _slots(caption=caption)), MEASURE)
+    finally:
+        renderer.close()
+    assert m["hidden"] <= 1, f"caption text is clipped: {m}"
+    assert m["gap"] >= 16, f"caption runs into the footer: {m}"
+    assert m["band_bottom"] <= 1080 and m["photo"] >= 640, f"the photo keeps most of the square: {m}"
